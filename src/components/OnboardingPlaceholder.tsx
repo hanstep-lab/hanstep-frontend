@@ -1,32 +1,21 @@
-import { View, Text, Pressable, StyleSheet } from 'react-native';
+import Screen from './Screen';
+import Button from './Button';
+import OnboardingProgress from './OnboardingProgress';
+import StepBadge from './StepBadge';
+import ScreenTitle from './ScreenTitle';
 import { useOnboardingStep } from '../hooks/useOnboardingStep';
-import {colors, typography, spacing, radius} from '../constants/theme'
 
-//임시 화면 
-export default function OnboardingPlaceholder(){
-      const { step, current, total, goNext } = useOnboardingStep();
+export default function OnboardingPlaceholder() {
+  const { step, stage, totalStages, isFirst, isLast, goNext } = useOnboardingStep();
 
-
-      
   return (
-    <View style={styles.container}>
-      <Text style={styles.progress}>{current} / {total}</Text>
-      <Text style={styles.title}>{step.id} {step.title}</Text>
-      <Pressable style={styles.button} onPress={goNext}>
-        <Text style={styles.buttonText}>다음</Text>
-      </Pressable>
-    </View>
+    <Screen
+    showBack={!isFirst}
+      footer={<Button title={isLast ? '신한걸음 시작하기' : '다음'} onPress={goNext} showArrow />}
+    >
+      <OnboardingProgress current={stage} total={totalStages} />
+      <StepBadge label={step.badge} />
+      <ScreenTitle title={step.title} description={`${step.id} 화면 준비 중`} />
+    </Screen>
   );
 }
-
-//스타일시트-> 디자인 토큰을 import후 인자를 토큰으로 교체함.
-const styles = StyleSheet.create({
-    container: { flex: 1, justifyContent: 'center', alignItems: 'center', gap: spacing.lg },
-    progress: { ...typography.caption, color: colors.text.muted },
-    title: { fontSize: 20, fontWeight: 'bold' },
-    button: { backgroundColor: colors.primary, 
-        paddingVertical: spacing.md, 
-        paddingHorizontal: spacing.xxl, 
-        borderRadius: radius.xl },
-    buttonText: { ...typography.button, color: colors.text.inverse },
-});

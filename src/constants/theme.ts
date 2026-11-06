@@ -4,9 +4,9 @@
 
 //색상
 export const colors = {
-  primary: '#0046FF',               // 신한 블루 (메인 버튼, 강조)
-  primarySoft: 'rgba(0, 70, 255, 0.1)', // primary 10% 투명 (아이콘 박스 배경)
-  primaryLight: '#EFF3FF',          // 연파랑 (보조 버튼 배경)
+  primary: '#0046FF',               // 신한 블루
+  primarySoft: 'rgba(0, 70, 255, 0.1)', // 아이콘 박스 배경-primary 10% 투명
+  primaryLight: '#EFF3FF',          // 연파랑-보조
 
   text: {
     strong: '#0F172A',  // 제목
@@ -18,6 +18,8 @@ export const colors = {
 
   background: '#F9F9FF', // 화면 바탕
   surface: '#FFFFFF',    // 카드
+border: '#E2E8F0',   // 비활성 점, 구분선
+  disabled: '#CBD5E1', // 비활성 버튼
 };
 
 //폰트
