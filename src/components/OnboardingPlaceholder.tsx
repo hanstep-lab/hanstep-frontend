@@ -1,5 +1,6 @@
 import { View, Text, Pressable, StyleSheet } from 'react-native';
 import { useOnboardingStep } from '../hooks/useOnboardingStep';
+import {colors, typography, spacing, radius} from '../constants/theme'
 
 //임시 화면 
 export default function OnboardingPlaceholder(){
@@ -18,11 +19,14 @@ export default function OnboardingPlaceholder(){
   );
 }
 
-//스타일시트
+//스타일시트-> 디자인 토큰을 import후 인자를 토큰으로 교체함.
 const styles = StyleSheet.create({
-      container: { flex: 1, justifyContent: 'center', alignItems: 'center', gap: 16 },
-  progress: { fontSize: 14, color: '#888' },
-  title: { fontSize: 20, fontWeight: 'bold' },
-  button: { backgroundColor: '#0046FF', paddingVertical: 12, paddingHorizontal: 32, borderRadius: 8 },
-  buttonText: { color: '#fff', fontSize: 16 },
-})
+    container: { flex: 1, justifyContent: 'center', alignItems: 'center', gap: spacing.lg },
+    progress: { ...typography.caption, color: colors.text.muted },
+    title: { fontSize: 20, fontWeight: 'bold' },
+    button: { backgroundColor: colors.primary, 
+        paddingVertical: spacing.md, 
+        paddingHorizontal: spacing.xxl, 
+        borderRadius: radius.xl },
+    buttonText: { ...typography.button, color: colors.text.inverse },
+});
