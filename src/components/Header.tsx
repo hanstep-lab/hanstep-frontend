@@ -3,11 +3,10 @@ import { router } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { colors, typography, spacing, radius } from '../constants/theme';
 
-type HeaderProps = { title: string; showBack?: boolean }; //화면이 뒤로 이동할 때, 숨김을 props로 넘기기 위한 boolean
+// showBack: 뒤로가기 버튼 표시 여부 (안 넘기면 true)
+type HeaderProps = { title: string; showBack?: boolean };
 
 export default function Header({ title, showBack = true }: HeaderProps) {
-  const canGoBack = router.canGoBack();
-
   return (
     <View style={styles.container}>
       <View style={styles.side}>
@@ -40,7 +39,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingHorizontal: spacing.lg,
   },
-  side: { width: 72, flexDirection: 'row', alignItems: 'center' }, // 양쪽 폭을 같게 → 제목이 정가운데
+  side: { width: 72, flexDirection: 'row', alignItems: 'center' },
   right: { justifyContent: 'flex-end', gap: spacing.md },
   title: { ...typography.h3, color: colors.text.strong, flex: 1, textAlign: 'center' },
   profile: {
