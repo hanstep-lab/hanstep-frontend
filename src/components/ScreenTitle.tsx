@@ -15,5 +15,5 @@ export default function ScreenTitle({ title, description }: ScreenTitleProps) {
 const styles = StyleSheet.create({
   container: { gap: spacing.sm },
   title: { ...typography.h2, color: colors.text.strong },
-  description: { ...typography.body, color: colors.text.default },
+  description: { ...typography.subtitle, color: colors.text.sub },
 });

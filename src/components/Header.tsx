@@ -1,7 +1,7 @@
 import { View, Text, Pressable, StyleSheet } from 'react-native';
 import { router } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
-import { colors, typography, spacing, radius } from '../constants/theme';
+import { colors, fonts, typography, spacing, radius } from '../constants/theme';
 
 // showBack: 뒤로가기 버튼 표시 여부 (안 넘기면 true)
 type HeaderProps = { title: string; showBack?: boolean };
@@ -41,7 +41,7 @@ const styles = StyleSheet.create({
   },
   side: { width: 72, flexDirection: 'row', alignItems: 'center' },
   right: { justifyContent: 'flex-end', gap: spacing.md },
-  title: { ...typography.h3, color: colors.text.strong, flex: 1, textAlign: 'center' },
+  title: { ...typography.h3, fontFamily: fonts.medium, color: colors.text.strong, flex: 1, textAlign: 'center' },
   profile: {
     width: 32,
     height: 32,

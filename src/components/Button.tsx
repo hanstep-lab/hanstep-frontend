@@ -39,7 +39,7 @@ export default function Button({
 const styles = StyleSheet.create({
   base: {
     height: 52,
-    borderRadius: radius.xl,
+    borderRadius: radius.lg,
     flexDirection: 'row', // flexDirection-글자와 화살표를 가로로 배열
     alignItems: 'center',
     justifyContent: 'center',
