@@ -1,26 +1,20 @@
-//zustand
+// 온보딩 화면에서 임시로 보관하는 선택값. 메모리 전용(앱 재시작 시 초기화).
+// Language·ResidencePurpose 타입은 api.ts 에서 단일 관리한다.
 
 import { create } from 'zustand';
+import type { Language, ResidencePurpose } from '../types/api';
 
-// 선택지 타입: 이 값들 중 하나만 들어갈 수 있음
-export type Language = 'ko' | 'en' | 'vi' | 'zh';
-export type ResidencePurpose = 'work' | 'study' | 'family';
-
-// 저장소 모양 정의: 담을 값 + 값을 바꾸는 함수
 type OnboardingState = {
-  language: Language | null;          // 아직 안 골랐으면 null
+  language: Language | null;
   purpose: ResidencePurpose | null;
   setLanguage: (language: Language) => void;
   setPurpose: (purpose: ResidencePurpose) => void;
-  reset: () => void;                  // 처음 상태로 되돌리기
+  reset: () => void;
 };
 
 export const useOnboardingStore = create<OnboardingState>((set) => ({
-  // 초기값
   language: null,
   purpose: null,
-
-  // 값을 바꾸는 함수들
   setLanguage: (language) => set({ language }),
   setPurpose: (purpose) => set({ purpose }),
   reset: () => set({ language: null, purpose: null }),
