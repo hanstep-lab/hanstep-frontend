@@ -25,19 +25,25 @@ expo-env.d.ts
 npm-debug.*
 yarn-debug.*
 yarn-error.*
+*.log
 
-# macOS
+# OS
 .DS_Store
+Thumbs.db
 *.pem
 
-# local env files
+# env files (.env.example은 올림)
+.env
 .env*.local
 
 # typescript
 *.tsbuildinfo
 
-example
-
 # generated native folders
 /ios
 /android
+
+# AI 도구 설정 (개인용, 올리지 않음)
+CLAUDE.md
+claude.md
+.claude/
