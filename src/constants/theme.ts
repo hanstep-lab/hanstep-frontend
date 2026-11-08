@@ -16,6 +16,7 @@ export const colors = {
   surface: '#FFFFFF',    // 카드
   border: '#DCDCDC',     // 구분선, 비활성 단계
   disabled: '#CBD5E1',   // 비활성 버튼
+  error: '#EF4444',      // 오류, 미확보 상태
 };
 
 //폰트

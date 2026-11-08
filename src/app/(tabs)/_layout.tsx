@@ -38,6 +38,7 @@ export default function TabsLayout() {
         name="visa"
         options={{
           title: '비자',
+          headerShown: false,
           tabBarIcon: ({ focused, color }) => (
             <Ionicons
               name={focused ? 'document-text' : 'document-text-outline'}
