@@ -21,6 +21,12 @@ import {
   LANDING_SUGGESTIONS,
   MENU_GROUPS,
 } from '../../api/mock/chat';
+import { useTransferStore } from '../../store/transferStore';
+
+function openTransfer(amountKRW: number | null) {
+  useTransferStore.getState().setInitialAmount(amountKRW);
+  router.push('/transfer' as any);
+}
 
 type ChatMessage = {
   id: string;
@@ -306,7 +312,7 @@ function RemitConfirmCard({ onSend }: { onSend: (t: string) => void }) {
           </Pressable>
         ))}
       </View>
-      <Pressable style={cardStyles.remitRow} onPress={preparingAlert}>
+      <Pressable style={cardStyles.remitRow} onPress={() => openTransfer(50_000)}>
         <View style={cardStyles.remitLeft}>
           <View style={cardStyles.remitIcon}>
             <Ionicons name="swap-horizontal-outline" size={18} color={colors.primary} />
@@ -347,7 +353,7 @@ function RemitCalcCard() {
           <Text style={calcStyles.total}>약 9,210,000 VND</Text>
         </View>
       </View>
-      <Pressable style={calcStyles.btn} onPress={preparingAlert}>
+      <Pressable style={calcStyles.btn} onPress={() => openTransfer(500_000)}>
         <Text style={calcStyles.btnText}>송금하기 →</Text>
       </Pressable>
       <Pressable onPress={preparingAlert}>
@@ -423,7 +429,7 @@ function RateInfoCard() {
       <Pressable onPress={preparingAlert}>
         <Text style={rateStyles.link}>환율 상세 보기 ↗</Text>
       </Pressable>
-      <Pressable style={rateStyles.btn} onPress={preparingAlert}>
+      <Pressable style={rateStyles.btn} onPress={() => openTransfer(null)}>
         <Text style={rateStyles.btnText}>▶ 이 환율로 바로 송금하기</Text>
       </Pressable>
     </View>
