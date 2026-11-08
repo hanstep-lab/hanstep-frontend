@@ -1,50 +1,38 @@
-// ON-002 외국인등록증 OCR 화면 (P0 Mock).
-// 실제 카메라/OCR 없이 UI만 구현. 촬영 버튼 → updateStep('ID_DOCUMENT') → 다음 화면.
-// 나중에 expo-camera + FastAPI OCR 연동 시 handleCapture의 beforeComplete에 추가.
-
 import { View, Text, Pressable, ScrollView, StyleSheet } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
+import { router } from 'expo-router';
 import Header from '../../components/Header';
-import { useOnboardingStep } from '../../hooks/useOnboardingStep';
 import { colors, typography, spacing, radius, fonts } from '../../constants/theme';
 
-// 뷰파인더 모서리 L자 가이드 
 function CornerGuide({ pos }: { pos: 'tl' | 'tr' | 'bl' | 'br' }) {
   const isLeft = pos === 'tl' || pos === 'bl';
-  const isTop = pos === 'tl' || pos === 'tr';
+  const isTop  = pos === 'tl' || pos === 'tr';
 
   return (
     <View
       style={[
         styles.corner,
-        isTop ? { top: 8 } : { bottom: 8 },
+        isTop  ? { top: 8 }  : { bottom: 8 },
         isLeft ? { left: 8 } : { right: 8 },
         !isLeft && { alignItems: 'flex-end' },
       ]}
     >
-      {isTop && <View style={styles.cornerH} />}
+      {isTop  && <View style={styles.cornerH} />}
       <View style={styles.cornerV} />
       {!isTop && <View style={styles.cornerH} />}
     </View>
   );
 }
 
-// 화면 
 export default function IdCardScreen() {
-  const { isFirst, goNext, isNavigating, navError } = useOnboardingStep();
-
-  const handleCapture = () => {
-    // P0 Mock: OCR 없이 바로 단계 완료. 실제 연동 시 beforeComplete 추가.
-    goNext();
-  };
+  const goToConfirm = () => router.push('/onboarding/id-confirm' as any);
 
   return (
     <SafeAreaView style={styles.safe} edges={['top', 'bottom']}>
-      <Header title="외국인등록증 촬영" showBack={!isFirst} />
+      <Header title="외국인등록증 촬영" showBack />
 
       <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
-        {/* 플래시 컨트롤 */}
         <View style={styles.row}>
           <Pressable style={styles.chip}>
             <Ionicons name="flash-off" size={16} color={colors.text.strong} />
@@ -52,7 +40,6 @@ export default function IdCardScreen() {
           </Pressable>
         </View>
 
-        {/* 안내 카드 */}
         <View style={styles.px}>
           <View style={styles.infoCard}>
             <View style={styles.infoCardTop}>
@@ -67,7 +54,6 @@ export default function IdCardScreen() {
           </View>
         </View>
 
-        {/* 카메라 뷰파인더 (Mock) */}
         <View style={styles.viewfinderWrap}>
           <View style={styles.viewfinder}>
             <CornerGuide pos="tl" />
@@ -75,7 +61,6 @@ export default function IdCardScreen() {
             <CornerGuide pos="bl" />
             <CornerGuide pos="br" />
 
-            {/* Mock 카드 내용 */}
             <View style={styles.mockCard}>
               <View style={styles.mockCardHeader}>
                 <View>
@@ -106,14 +91,12 @@ export default function IdCardScreen() {
           </View>
         </View>
 
-        {/* 가이드 힌트 칩 */}
         <View style={[styles.row, { justifyContent: 'center' }]}>
           <View style={styles.hintChip}>
             <Text style={styles.hintChipText}>가이드라인에 맞춘 뒤 촬영 버튼을 눌러 주세요</Text>
           </View>
         </View>
 
-        {/* 팁 카드 2개 */}
         <View style={[styles.px, styles.tipRow]}>
           {[
             { title: '조명 조절', sub: '빛 반사 피하기' },
@@ -126,23 +109,12 @@ export default function IdCardScreen() {
           ))}
         </View>
 
-        {/* 촬영 버튼 + 직접 입력 */}
         <View style={styles.captureSection}>
-          {navError ? <Text style={styles.navError}>{navError}</Text> : null}
-
-          <Pressable
-            onPress={handleCapture}
-            disabled={isNavigating}
-            style={[styles.captureBtn, isNavigating && { opacity: 0.6 }]}
-          >
+          <Pressable onPress={goToConfirm} style={styles.captureBtn}>
             <View style={styles.captureOuter}>
               <View style={styles.captureInner}>
                 <View style={styles.captureCenter}>
-                  <Ionicons
-                    name={isNavigating ? 'hourglass-outline' : 'camera'}
-                    size={24}
-                    color={colors.primary}
-                  />
+                  <Ionicons name="camera" size={24} color={colors.primary} />
                 </View>
               </View>
             </View>
@@ -150,7 +122,7 @@ export default function IdCardScreen() {
 
           <View style={styles.manualWrap}>
             <Text style={styles.manualHint}>인식이 잘 되지 않나요?</Text>
-            <Pressable style={styles.manualBtn} onPress={handleCapture} disabled={isNavigating}>
+            <Pressable style={styles.manualBtn} onPress={goToConfirm}>
               <Text style={styles.manualBtnText}>직접 정보 입력하기</Text>
               <Ionicons name="chevron-forward" size={12} color={colors.primary} />
             </Pressable>
@@ -161,7 +133,6 @@ export default function IdCardScreen() {
   );
 }
 
-// ── 스타일 ────────────────────────────────────────────────────────────────
 const cardShadow = {
   shadowColor: '#000',
   shadowOffset: { width: 0, height: 1 },
@@ -176,7 +147,6 @@ const styles = StyleSheet.create({
   px: { paddingHorizontal: spacing.xl },
   row: { flexDirection: 'row', paddingHorizontal: spacing.xl, paddingVertical: spacing.sm },
 
-  // 플래시
   chip: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -188,7 +158,6 @@ const styles = StyleSheet.create({
   },
   chipText: { ...typography.body, fontFamily: fonts.bold, color: colors.text.strong },
 
-  // 안내 카드
   infoCard: {
     backgroundColor: colors.surface,
     borderRadius: radius.lg,
@@ -207,7 +176,6 @@ const styles = StyleSheet.create({
   progressBadgeText: { ...typography.badge, color: colors.text.inverse },
   infoCardDesc: { ...typography.body, color: colors.text.sub },
 
-  // 뷰파인더
   viewfinderWrap: { paddingHorizontal: spacing.xl, alignItems: 'center' },
   viewfinder: {
     width: '100%',
@@ -221,7 +189,6 @@ const styles = StyleSheet.create({
   cornerH: { width: 24, height: 4, backgroundColor: colors.primary, borderRadius: radius.full },
   cornerV: { width: 4, height: 20, backgroundColor: colors.primary, borderRadius: radius.full },
 
-  // Mock 카드 내용
   mockCard: { flex: 1, padding: 12, justifyContent: 'space-between' },
   mockCardHeader: { flexDirection: 'row', justifyContent: 'space-between' },
   mockCountry: { fontSize: 10, fontFamily: fonts.bold, color: '#fff', letterSpacing: 0.5 },
@@ -249,7 +216,6 @@ const styles = StyleSheet.create({
   mockFieldValue: { fontSize: 9, fontFamily: fonts.bold, color: '#fff' },
   mockMrz: { fontSize: 8, fontFamily: fonts.light, color: 'rgba(220,220,220,0.5)', letterSpacing: 0.9 },
 
-  // 가이드 힌트
   hintChip: {
     backgroundColor: colors.background,
     paddingHorizontal: 14,
@@ -258,7 +224,6 @@ const styles = StyleSheet.create({
   },
   hintChipText: { ...typography.body, fontFamily: fonts.bold, color: colors.text.strong },
 
-  // 팁 카드
   tipRow: { flexDirection: 'row', gap: spacing.sm },
   tipCard: {
     flex: 1,
@@ -271,7 +236,6 @@ const styles = StyleSheet.create({
   tipTitle: { ...typography.badge, fontFamily: fonts.bold, color: colors.text.strong },
   tipSub: { ...typography.badge, color: colors.text.sub },
 
-  // 촬영 버튼
   captureSection: { alignItems: 'center', gap: 14, paddingTop: spacing.sm },
   captureBtn: { width: 80, height: 80 },
   captureOuter: {
@@ -296,11 +260,16 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
 
-  // 직접 입력
   manualWrap: { alignItems: 'center', gap: spacing.xs },
   manualHint: { ...typography.badge, color: colors.text.sub },
-  manualBtn: { flexDirection: 'row', alignItems: 'center', gap: spacing.xs, backgroundColor: colors.background, paddingHorizontal: 14, paddingVertical: spacing.xs, borderRadius: radius.full },
+  manualBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.xs,
+    backgroundColor: colors.background,
+    paddingHorizontal: 14,
+    paddingVertical: spacing.xs,
+    borderRadius: radius.full,
+  },
   manualBtnText: { ...typography.body, fontFamily: fonts.bold, color: colors.primary },
-
-  navError: { ...typography.body, color: '#D32F2F', textAlign: 'center' },
 });
