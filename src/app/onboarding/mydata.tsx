@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { View, Text, Pressable, ScrollView, StyleSheet } from 'react-native';
+import { View, Text, Pressable, ScrollView, StyleSheet, Modal } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import Header from '../../components/Header';
@@ -20,6 +20,7 @@ const CONSENTS = [
 export default function MydataScreen() {
   const { goNext, isNavigating, navError } = useOnboardingStep();
   const [checks, setChecks] = useState([false, false, false]);
+  const [showModal, setShowModal] = useState(false);
 
   const allChecked  = checks.every(Boolean);
   const requiredOk  = checks[0] && checks[1];
@@ -109,7 +110,7 @@ export default function MydataScreen() {
         {navError ? <Text style={styles.navError}>{navError}</Text> : null}
         <Pressable
           style={[styles.btn, (!requiredOk || isNavigating) && styles.btnDisabled]}
-          onPress={() => goNext()}
+          onPress={() => setShowModal(true)}
           disabled={!requiredOk || isNavigating}
         >
           <Text style={styles.btnText}>
@@ -121,6 +122,48 @@ export default function MydataScreen() {
           <Text style={styles.skipText}>나중에 연결할게요</Text>
         </Pressable>
       </View>
+      <Modal visible={showModal} transparent animationType="slide" onRequestClose={() => setShowModal(false)}>
+        <View style={styles.modalWrap}>
+          <Pressable style={styles.dim} onPress={() => setShowModal(false)} />
+          <View style={styles.sheet}>
+            <View style={styles.handle} />
+
+            <View style={styles.sheetTitleArea}>
+              <Text style={styles.sheetTitle}>금융 데이터를 연결할게요</Text>
+              <Text style={styles.sheetSubtitle}>아래 내용으로 마이데이터 연결을 진행해요.</Text>
+            </View>
+
+            <View style={styles.summaryBox}>
+              {[
+                { label: '연결 기관',  value: '신한은행, 신한카드' },
+                { label: '불러올 정보', value: '계좌 잔액 · 거래내역 · 카드 이용내역' },
+                { label: '조회 기간',  value: '최근 12개월' },
+                { label: '이용 목적',  value: '소득·지출 분석, 금융 진단' },
+              ].map((row) => (
+                <View key={row.label} style={styles.summaryRow}>
+                  <Text style={styles.summaryLabel}>{row.label}</Text>
+                  <Text style={styles.summaryValue}>{row.value}</Text>
+                </View>
+              ))}
+            </View>
+
+            <View style={styles.sheetActions}>
+              <Pressable style={styles.cancelBtn} onPress={() => setShowModal(false)}>
+                <Text style={styles.cancelText}>취소</Text>
+              </Pressable>
+              <Pressable
+                style={[styles.confirmBtn, isNavigating && { opacity: 0.7 }]}
+                onPress={() => { setShowModal(false); goNext(); }}
+                disabled={isNavigating}
+              >
+                <Text style={styles.confirmText}>
+                  {isNavigating ? '처리 중...' : '확인하고 연결'}
+                </Text>
+              </Pressable>
+            </View>
+          </View>
+        </View>
+      </Modal>
     </SafeAreaView>
   );
 }
@@ -267,4 +310,52 @@ const styles = StyleSheet.create({
   btnText: { ...typography.button, color: colors.text.inverse },
   skipText: { ...typography.body, color: colors.text.sub, textAlign: 'center' },
   navError: { ...typography.body, color: '#D32F2F', textAlign: 'center' },
+
+  modalWrap: { flex: 1, justifyContent: 'flex-end' },
+  dim: { ...StyleSheet.absoluteFill, backgroundColor: 'rgba(15,20,31,0.5)' },
+  sheet: {
+    backgroundColor: colors.surface,
+    borderTopLeftRadius: spacing.xxl,
+    borderTopRightRadius: spacing.xxl,
+    paddingHorizontal: spacing.xxl,
+    paddingTop: spacing.md,
+    paddingBottom: spacing.xxl,
+    gap: spacing.lg,
+  },
+  handle: {
+    width: 40,
+    height: 4,
+    backgroundColor: colors.border,
+    borderRadius: 2,
+    alignSelf: 'center',
+  },
+  sheetTitleArea: { gap: 6 },
+  sheetTitle: { ...typography.h2, color: colors.text.strong },
+  sheetSubtitle: { ...typography.body, color: colors.text.sub },
+  summaryBox: {
+    backgroundColor: colors.background,
+    borderRadius: radius.lg,
+    padding: spacing.lg,
+    gap: spacing.md,
+  },
+  summaryRow: { flexDirection: 'row', alignItems: 'flex-start', gap: spacing.md },
+  summaryLabel: { ...typography.body, color: colors.text.sub, width: 76 },
+  summaryValue: { ...typography.body, fontFamily: fonts.bold, color: colors.text.strong, flex: 1 },
+  sheetActions: { flexDirection: 'row', gap: spacing.sm },
+  cancelBtn: {
+    width: 104,
+    backgroundColor: colors.background,
+    borderRadius: radius.lg,
+    paddingVertical: 15,
+    alignItems: 'center',
+  },
+  cancelText: { ...typography.title, color: colors.primary },
+  confirmBtn: {
+    flex: 1,
+    backgroundColor: colors.primary,
+    borderRadius: radius.lg,
+    paddingVertical: 15,
+    alignItems: 'center',
+  },
+  confirmText: { ...typography.title, color: colors.text.inverse },
 });
