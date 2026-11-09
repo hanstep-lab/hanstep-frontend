@@ -454,7 +454,11 @@ function MenuSheet({ visible, onClose }: { visible: boolean; onClose: () => void
     if (label === '비자 로드맵') {
       onClose();
       router.push('/(tabs)/visa' as any);
+    } else if (label === '내 금융 분석') {
+      onClose();
+      router.push('/finance/diagnosis' as any);
     } else {
+      // 대안신용 사전진단(CR-001)은 P1 → 준비 중
       preparingAlert();
     }
   };
