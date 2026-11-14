@@ -2,11 +2,11 @@ import { useState } from 'react';
 import { View, Text, Pressable, ScrollView, StyleSheet } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
-import { router } from 'expo-router';
+import { router, type Href } from 'expo-router';
 import Header from '../../components/Header';
 import { updateStep } from '../../api/onboarding';
 import { getRouteFromStepCode } from '../../constants/onboardingSteps';
-import { colors, typography, spacing, radius, fonts } from '../../constants/theme';
+import { colors, typography, spacing, radius, fonts, shadow } from '../../constants/theme';
 
 const MOCK = {
   nameEn: 'NGUYEN VAN MINH',
@@ -32,7 +32,7 @@ export default function IdConfirmScreen() {
       if (res.onboardingCompleted) {
         router.replace('/home');
       } else if (res.currentStep) {
-        router.push(getRouteFromStepCode(res.currentStep) as any);
+        router.push(getRouteFromStepCode(res.currentStep) as Href);
       } else {
         router.replace('/home');
       }
@@ -178,14 +178,6 @@ export default function IdConfirmScreen() {
   );
 }
 
-const cardShadow = {
-  shadowColor: '#000',
-  shadowOffset: { width: 0, height: 2 },
-  shadowOpacity: 0.06,
-  shadowRadius: 4,
-  elevation: 2,
-} as const;
-
 const styles = StyleSheet.create({
   safe: { flex: 1, backgroundColor: colors.background },
   scroll: { flex: 1 },
@@ -220,7 +212,7 @@ const styles = StyleSheet.create({
   ocrBanner: {
     marginHorizontal: spacing.xl,
     height: 144,
-    backgroundColor: '#2a313c',
+    backgroundColor: colors.idCard.bg,
     borderRadius: radius.lg,
     alignItems: 'center',
     justifyContent: 'center',
@@ -237,7 +229,7 @@ const styles = StyleSheet.create({
     backgroundColor: colors.surface,
     borderRadius: radius.lg,
     overflow: 'hidden',
-    ...cardShadow,
+    ...shadow.card,
   },
   cardHead: {
     backgroundColor: colors.background,
@@ -319,5 +311,5 @@ const styles = StyleSheet.create({
   btnBlue: { flex: 3, backgroundColor: colors.primary },
   btnGrayText: { ...typography.title, color: colors.text.strong },
   btnBlueText: { ...typography.title, color: colors.text.inverse },
-  navError: { ...typography.body, color: '#D32F2F', textAlign: 'center' },
+  navError: { ...typography.body, color: colors.errorText, textAlign: 'center' },
 });

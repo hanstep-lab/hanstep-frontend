@@ -1,9 +1,9 @@
 import { View, Text, Pressable, ScrollView, StyleSheet } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
-import { router } from 'expo-router';
+import { router, type Href } from 'expo-router';
 import Header from '../../components/Header';
-import { colors, typography, spacing, radius, fonts } from '../../constants/theme';
+import { colors, typography, spacing, radius, fonts, shadow } from '../../constants/theme';
 
 function CornerGuide({ pos }: { pos: 'tl' | 'tr' | 'bl' | 'br' }) {
   const isLeft = pos === 'tl' || pos === 'bl';
@@ -26,7 +26,7 @@ function CornerGuide({ pos }: { pos: 'tl' | 'tr' | 'bl' | 'br' }) {
 }
 
 export default function IdCardScreen() {
-  const goToConfirm = () => router.push('/onboarding/id-confirm' as any);
+  const goToConfirm = () => router.push('/onboarding/id-confirm' as Href);
 
   return (
     <SafeAreaView style={styles.safe} edges={['top', 'bottom']}>
@@ -133,14 +133,6 @@ export default function IdCardScreen() {
   );
 }
 
-const cardShadow = {
-  shadowColor: '#000',
-  shadowOffset: { width: 0, height: 1 },
-  shadowOpacity: 0.05,
-  shadowRadius: 2,
-  elevation: 1,
-} as const;
-
 const styles = StyleSheet.create({
   safe: { flex: 1, backgroundColor: colors.background },
   content: { paddingBottom: spacing.xl, gap: spacing.sm },
@@ -163,7 +155,7 @@ const styles = StyleSheet.create({
     borderRadius: radius.lg,
     padding: 14,
     gap: spacing.xs,
-    ...cardShadow,
+    ...shadow.card,
   },
   infoCardTop: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
   infoCardTitle: { ...typography.h3, color: colors.text.strong },
@@ -181,7 +173,7 @@ const styles = StyleSheet.create({
     width: '100%',
     maxWidth: 340,
     aspectRatio: 340 / 215,
-    backgroundColor: '#2a313c',
+    backgroundColor: colors.idCard.bg,
     borderRadius: radius.lg,
     overflow: 'hidden',
   },
@@ -191,12 +183,12 @@ const styles = StyleSheet.create({
 
   mockCard: { flex: 1, padding: 12, justifyContent: 'space-between' },
   mockCardHeader: { flexDirection: 'row', justifyContent: 'space-between' },
-  mockCountry: { fontSize: 10, fontFamily: fonts.bold, color: '#fff', letterSpacing: 0.5 },
-  mockCardName: { fontSize: 9, fontFamily: fonts.medium, color: 'rgba(255,255,255,0.85)' },
+  mockCountry: { fontSize: 10, fontFamily: fonts.bold, color: colors.text.inverse, letterSpacing: 0.5 },
+  mockCardName: { fontSize: 9, fontFamily: fonts.medium, color: colors.onColor.sub },
   mockCardBody: { flexDirection: 'row', gap: 12, alignItems: 'center' },
   mockPhoto: {
     width: 64, height: 80,
-    backgroundColor: 'rgba(255,255,255,0.15)',
+    backgroundColor: colors.idCard.photo,
     borderRadius: 6,
     alignItems: 'center',
     justifyContent: 'center',
@@ -207,14 +199,14 @@ const styles = StyleSheet.create({
   mockField: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    backgroundColor: 'rgba(255,255,255,0.12)',
+    backgroundColor: colors.idCard.field,
     borderRadius: 4,
     paddingHorizontal: 8,
     paddingVertical: 2,
   },
   mockFieldLabel: { fontSize: 9, fontFamily: fonts.medium, color: colors.text.sub },
-  mockFieldValue: { fontSize: 9, fontFamily: fonts.bold, color: '#fff' },
-  mockMrz: { fontSize: 8, fontFamily: fonts.light, color: 'rgba(220,220,220,0.5)', letterSpacing: 0.9 },
+  mockFieldValue: { fontSize: 9, fontFamily: fonts.bold, color: colors.text.inverse },
+  mockMrz: { fontSize: 8, fontFamily: fonts.light, color: colors.idCard.mrz, letterSpacing: 0.9 },
 
   hintChip: {
     backgroundColor: colors.background,
@@ -231,7 +223,7 @@ const styles = StyleSheet.create({
     borderRadius: radius.lg,
     padding: spacing.sm,
     gap: 2,
-    ...cardShadow,
+    ...shadow.card,
   },
   tipTitle: { ...typography.badge, fontFamily: fonts.bold, color: colors.text.strong },
   tipSub: { ...typography.badge, color: colors.text.sub },

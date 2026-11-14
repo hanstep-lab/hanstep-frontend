@@ -1,8 +1,9 @@
-import { View, Text, Pressable, ScrollView, StyleSheet } from 'react-native';
+import { View, Text, ScrollView, StyleSheet } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
 import Header from '../../components/Header';
+import Button from '../../components/Button';
 import { useOnboardingStep } from '../../hooks/useOnboardingStep';
 import { colors, typography, spacing, radius, fonts } from '../../constants/theme';
 
@@ -29,8 +30,8 @@ const GOALS = [
 
 const BALANCE_ROWS = [
   { color: colors.primary, label: '고정 지출',               amount: '520,000원',   amountBlue: false },
-  { color: '#005df9',      label: '본국 송금',               amount: '700,000원',   amountBlue: false },
-  { color: '#c7ccdb',      label: '변동 지출 (식비·교통 등)',  amount: '약 450,000원', amountBlue: false },
+  { color: colors.primary,  label: '본국 송금',               amount: '700,000원',   amountBlue: false },
+  { color: colors.disabled, label: '변동 지출 (식비·교통 등)',  amount: '약 450,000원', amountBlue: false },
   { color: colors.primary, label: '여유자금 (사용 가능 자금)', amount: '약 680,000원', amountBlue: true },
 ];
 
@@ -82,7 +83,7 @@ export default function ConfirmScreen() {
               </View>
             </View>
             <View style={styles.langChip}>
-              <Ionicons name="globe-outline" size={12} color="#005df9" />
+              <Ionicons name="globe-outline" size={12} color={colors.primary} />
               <Text style={styles.langChipText}>한국어</Text>
             </View>
           </View>
@@ -137,8 +138,8 @@ export default function ConfirmScreen() {
             </View>
             <View style={styles.distBar}>
               <View style={[styles.distSeg, { flexGrow: 52, backgroundColor: colors.primary }]} />
-              <View style={[styles.distSeg, { flexGrow: 70, backgroundColor: '#005df9' }]} />
-              <View style={[styles.distSeg, { flexGrow: 45, backgroundColor: '#c7ccdb' }]} />
+              <View style={[styles.distSeg, { flexGrow: 70, backgroundColor: colors.primary }]} />
+              <View style={[styles.distSeg, { flexGrow: 45, backgroundColor: colors.disabled }]} />
               <View style={[styles.distSeg, { flexGrow: 68, backgroundColor: colors.primary }]} />
             </View>
           </View>
@@ -163,24 +164,19 @@ export default function ConfirmScreen() {
         {/* 하단 버튼 (스크롤 콘텐츠 내부) */}
         <View style={styles.btnBlock}>
           {navError ? <Text style={styles.navError}>{navError}</Text> : null}
-          <Pressable
-            style={[styles.btnPrimary, isNavigating && styles.btnDisabled]}
+          <Button
+            title={isNavigating ? '처리 중...' : '네, 맞아요! 신한걸음 시작하기'}
+            showArrow={!isNavigating}
             onPress={() => goNext()}
             disabled={isNavigating}
-          >
-            <Text style={styles.btnPrimaryText}>
-              {isNavigating ? '처리 중...' : '네, 맞아요! 신한걸음 시작하기'}
-            </Text>
-            {!isNavigating && <Ionicons name="arrow-forward" size={16} color={colors.text.inverse} />}
-          </Pressable>
-          <Pressable
-            style={styles.btnSecondary}
+          />
+          <Button
+            title="정보 수정하기"
+            variant="secondary"
+            icon="pencil-outline"
             onPress={() => router.back()}
             disabled={isNavigating}
-          >
-            <Ionicons name="pencil-outline" size={14} color={colors.text.strong} />
-            <Text style={styles.btnSecondaryText}>정보 수정하기</Text>
-          </Pressable>
+          />
         </View>
       </ScrollView>
     </SafeAreaView>
@@ -226,7 +222,7 @@ const styles = StyleSheet.create({
     width: 48,
     height: 48,
     borderRadius: radius.full,
-    backgroundColor: '#005df9',
+    backgroundColor: colors.primary,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -251,7 +247,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 10,
     paddingVertical: 4,
   },
-  langChipText: { ...typography.badge, color: '#005df9' },
+  langChipText: { ...typography.badge, color: colors.primary },
 
   infoBoxRow: { flexDirection: 'row', gap: spacing.sm },
   infoBox: {
@@ -286,7 +282,7 @@ const styles = StyleSheet.create({
     gap: 2,
   },
   incomeLabel: { ...typography.body, color: colors.text.sub },
-  incomeAmount: { fontSize: 19, fontFamily: fonts.bold, color: colors.text.strong },
+  incomeAmount: { ...typography.amount, color: colors.text.strong },
 
   distSection: { gap: spacing.sm },
   distLabelRow: { flexDirection: 'row', justifyContent: 'space-between' },
@@ -306,29 +302,8 @@ const styles = StyleSheet.create({
   legendDot: { width: 10, height: 10, borderRadius: radius.full },
   legendLabel: { ...typography.body, color: colors.text.strong },
   legendAmount: { ...typography.body, fontFamily: fonts.bold, color: colors.text.strong },
-  balanceFootNote: { fontSize: 12, fontFamily: fonts.bold, color: colors.text.sub },
+  balanceFootNote: { ...typography.caption, fontFamily: fonts.bold, color: colors.text.sub },
 
   btnBlock: { gap: 12, paddingTop: spacing.sm },
-  btnPrimary: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: spacing.sm,
-    backgroundColor: colors.primary,
-    borderRadius: radius.lg,
-    height: 56,
-  },
-  btnDisabled: { backgroundColor: colors.disabled },
-  btnPrimaryText: { ...typography.button, color: colors.text.inverse },
-  btnSecondary: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 6,
-    backgroundColor: colors.surface,
-    borderRadius: radius.lg,
-    height: 48,
-  },
-  btnSecondaryText: { ...typography.subtitle, fontFamily: fonts.bold, color: colors.text.strong },
-  navError: { ...typography.body, color: '#D32F2F', textAlign: 'center' },
+  navError: { ...typography.body, color: colors.errorText, textAlign: 'center' },
 });

@@ -3,6 +3,7 @@ import { View, Text, Pressable, ScrollView, StyleSheet } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import Header from '../../components/Header';
+import Button from '../../components/Button';
 import { useOnboardingStep } from '../../hooks/useOnboardingStep';
 import { colors, typography, spacing, radius, fonts } from '../../constants/theme';
 
@@ -97,22 +98,18 @@ export default function GoalScreen() {
 
       <View style={styles.footer}>
         {navError ? <Text style={styles.navError}>{navError}</Text> : null}
-        <Pressable
-          style={[styles.btn, (count === 0 || isNavigating) && styles.btnDisabled]}
-          onPress={() => goNext()}
-          disabled={count === 0 || isNavigating}
-        >
-          <Text style={styles.btnText}>
-            {isNavigating
+        <Button
+          title={
+            isNavigating
               ? '처리 중...'
               : count > 0
                 ? `선택 완료 (${count}개) - 세부 계획 세우기`
-                : '목표를 선택해 주세요'}
-          </Text>
-          {!isNavigating && count > 0 && (
-            <Ionicons name="arrow-forward" size={16} color={colors.text.inverse} />
-          )}
-        </Pressable>
+                : '목표를 선택해 주세요'
+          }
+          showArrow={!isNavigating && count > 0}
+          onPress={() => goNext()}
+          disabled={count === 0 || isNavigating}
+        />
       </View>
     </SafeAreaView>
   );
@@ -159,11 +156,11 @@ const styles = StyleSheet.create({
   labelOff:  { color: colors.text.strong },
 
   cardDesc: { ...typography.body },
-  descOn:   { color: 'rgba(255,255,255,0.85)' },
+  descOn:   { color: colors.onColor.sub },
   descOff:  { color: colors.text.sub },
 
   tagPill: { paddingHorizontal: spacing.sm, paddingVertical: 2, borderRadius: radius.full },
-  tagPillOn:  { backgroundColor: 'rgba(255,255,255,0.2)' },
+  tagPillOn:  { backgroundColor: colors.onColor.fill },
   tagPillOff: { backgroundColor: colors.background },
   tagText: { ...typography.badge },
   tagTextOn:  { color: colors.text.inverse },
@@ -176,7 +173,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  checkOn:  { backgroundColor: 'rgba(255,255,255,0.2)' },
+  checkOn:  { backgroundColor: colors.onColor.fill },
   checkOff: { backgroundColor: colors.background },
 
   helperNote: {
@@ -194,16 +191,5 @@ const styles = StyleSheet.create({
     paddingVertical: spacing.md,
     backgroundColor: colors.background,
   },
-  btn: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: spacing.sm,
-    backgroundColor: colors.primary,
-    borderRadius: radius.lg,
-    height: 52,
-  },
-  btnDisabled: { backgroundColor: colors.disabled },
-  btnText: { ...typography.button, color: colors.text.inverse },
-  navError: { ...typography.body, color: '#D32F2F', textAlign: 'center', marginBottom: spacing.sm },
+  navError: { ...typography.body, color: colors.errorText, textAlign: 'center', marginBottom: spacing.sm },
 });

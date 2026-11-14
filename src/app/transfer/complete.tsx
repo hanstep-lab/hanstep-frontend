@@ -1,7 +1,8 @@
-import { View, Text, Pressable, StyleSheet } from 'react-native';
+import { View, Text, StyleSheet } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { router, Redirect, type Href } from 'expo-router';
+import Button from '../../components/Button';
 import { colors, typography, spacing, radius, fonts } from '../../constants/theme';
 import { useTransferStore } from '../../store/transferStore';
 import { fmtNumber, fmtRate } from '../../utils/format';
@@ -65,9 +66,9 @@ export default function TransferCompleteScreen() {
           />
         </View>
 
-        <Pressable style={s.btn} onPress={handleBack}>
-          <Text style={s.btnText}>챗봇으로 돌아가기</Text>
-        </Pressable>
+        <View style={s.btnWrap}>
+          <Button title="챗봇으로 돌아가기" onPress={handleBack} />
+        </View>
       </View>
     </SafeAreaView>
   );
@@ -125,13 +126,5 @@ const s = StyleSheet.create({
     marginVertical: spacing.xs,
   },
 
-  btn: {
-    width: '100%',
-    backgroundColor: colors.primary,
-    borderRadius: radius.lg,
-    height: 56,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  btnText: { ...typography.button, color: colors.text.inverse },
+  btnWrap: { width: '100%' },
 });

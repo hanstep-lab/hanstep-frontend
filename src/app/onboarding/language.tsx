@@ -14,7 +14,7 @@ import { useOnboardingStep } from '../../hooks/useOnboardingStep';
 import { useOnboardingStore } from '../../store/onboardingStore';
 import { changeLanguage } from '../../api/user';
 import { saveProfile } from '../../api/onboarding';
-import { colors, typography, spacing, radius, fonts } from '../../constants/theme';
+import { colors, typography, spacing, radius, fonts, shadow } from '../../constants/theme';
 import type { Language, ResidencePurpose } from '../../types/api';
 
 // ── 데이터 ──────────────────────────────────────────────────────────────
@@ -162,14 +162,6 @@ export default function LanguageScreen() {
 }
 
 // ── 스타일 ────────────────────────────────────────────────────────────────
-const cardShadow = {
-  shadowColor: '#000',
-  shadowOffset: { width: 0, height: 1 },
-  shadowOpacity: 0.05,
-  shadowRadius: 2,
-  elevation: 1,
-} as const;
-
 const styles = StyleSheet.create({
   // 배지 + 제목 묶음 (gap 6px — Figma 277:21)
   heading: { gap: 6 },
@@ -184,7 +176,7 @@ const styles = StyleSheet.create({
     borderRadius: radius.lg,
     padding: spacing.lg,
     gap: 2,
-    ...cardShadow,
+    ...shadow.card,
   },
   langCardSelected: {
     borderWidth: 1.5,
@@ -221,7 +213,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    ...cardShadow,
+    ...shadow.card,
   },
   purposeText:  { flex: 1, gap: 2 },
   purposeLabel: { ...typography.title, color: colors.text.strong },
@@ -249,5 +241,5 @@ const styles = StyleSheet.create({
 
   // 푸터
   footerInner: { gap: spacing.sm },
-  navError: { ...typography.body, color: '#D32F2F', textAlign: 'center' },
+  navError: { ...typography.body, color: colors.errorText, textAlign: 'center' },
 });
