@@ -254,7 +254,7 @@ const s = StyleSheet.create({
   statusTop: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start' },
   statusLeft: { gap: 7, paddingTop: 6 },
   currentRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
-  currentVisa: { fontFamily: fonts.bold, fontSize: 19, lineHeight: 26, letterSpacing: -0.38, color: colors.text.strong },
+  currentVisa: { ...typography.amount, color: colors.text.strong },
   grayPill: { backgroundColor: colors.tagBg, borderRadius: radius.full, paddingHorizontal: spacing.sm, paddingVertical: 2 },
   targetBox: {
     gap: spacing.md,

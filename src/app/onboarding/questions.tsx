@@ -3,6 +3,7 @@ import { View, Text, Pressable, ScrollView, StyleSheet, TextInput } from 'react-
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import Header from '../../components/Header';
+import Button from '../../components/Button';
 import { useOnboardingStep } from '../../hooks/useOnboardingStep';
 import { colors, typography, spacing, radius, fonts } from '../../constants/theme';
 
@@ -210,16 +211,12 @@ export default function QuestionsScreen() {
 
       <View style={styles.footer}>
         {navError ? <Text style={styles.navError}>{navError}</Text> : null}
-        <Pressable
-          style={[styles.btn, isNavigating && styles.btnDisabled]}
+        <Button
+          title={isNavigating ? '처리 중...' : '세부 설정 완료하고 요약 확인하기'}
+          showArrow={!isNavigating}
           onPress={() => goNext()}
           disabled={isNavigating}
-        >
-          <Text style={styles.btnText}>
-            {isNavigating ? '처리 중...' : '세부 설정 완료하고 요약 확인하기'}
-          </Text>
-          {!isNavigating && <Ionicons name="arrow-forward" size={16} color={colors.text.inverse} />}
-        </Pressable>
+        />
       </View>
     </SafeAreaView>
   );
@@ -413,13 +410,13 @@ const styles = StyleSheet.create({
   },
   autoTransferLeft: { flexDirection: 'row', alignItems: 'center', gap: 10 },
   autoTransferTitle: { ...typography.body, fontFamily: fonts.bold, color: colors.text.inverse },
-  autoTransferSub: { ...typography.badge, color: 'rgba(255,255,255,0.75)' },
+  autoTransferSub: { ...typography.badge, color: colors.onColor.sub },
 
   toggleTrack: {
     width: 44,
     height: 24,
     borderRadius: 12,
-    backgroundColor: 'rgba(255,255,255,0.3)',
+    backgroundColor: colors.onColor.fillStrong,
     justifyContent: 'center',
     padding: 2,
   },
@@ -432,23 +429,12 @@ const styles = StyleSheet.create({
   },
   toggleThumbOn: { alignSelf: 'flex-end' as const },
 
-  helperText: { fontSize: 12, fontFamily: fonts.medium, color: colors.text.sub },
+  helperText: { ...typography.caption, color: colors.text.sub },
 
   footer: {
     paddingHorizontal: spacing.xl,
     paddingVertical: spacing.md,
     backgroundColor: colors.background,
   },
-  btn: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: spacing.sm,
-    backgroundColor: colors.primary,
-    borderRadius: radius.lg,
-    height: 56,
-  },
-  btnDisabled: { backgroundColor: colors.disabled },
-  btnText: { ...typography.button, color: colors.text.inverse },
-  navError: { ...typography.body, color: '#D32F2F', textAlign: 'center', marginBottom: spacing.sm },
+  navError: { ...typography.body, color: colors.errorText, textAlign: 'center', marginBottom: spacing.sm },
 });

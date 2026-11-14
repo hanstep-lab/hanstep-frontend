@@ -3,6 +3,7 @@ import { View, Text, Pressable, ScrollView, StyleSheet, Modal } from 'react-nati
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import Header from '../../components/Header';
+import Button from '../../components/Button';
 import { useOnboardingStep } from '../../hooks/useOnboardingStep';
 import { colors, typography, spacing, radius, fonts } from '../../constants/theme';
 
@@ -108,16 +109,12 @@ export default function MydataScreen() {
 
       <View style={styles.footer}>
         {navError ? <Text style={styles.navError}>{navError}</Text> : null}
-        <Pressable
-          style={[styles.btn, (!requiredOk || isNavigating) && styles.btnDisabled]}
+        <Button
+          title={isNavigating ? '처리 중...' : '동의하고 연결하기'}
+          showArrow={!isNavigating}
           onPress={() => setShowModal(true)}
           disabled={!requiredOk || isNavigating}
-        >
-          <Text style={styles.btnText}>
-            {isNavigating ? '처리 중...' : '동의하고 연결하기'}
-          </Text>
-          {!isNavigating && <Ionicons name="arrow-forward" size={16} color={colors.text.inverse} />}
-        </Pressable>
+        />
         <Pressable onPress={() => goNext()} disabled={isNavigating}>
           <Text style={styles.skipText}>나중에 연결할게요</Text>
         </Pressable>
@@ -220,19 +217,19 @@ const styles = StyleSheet.create({
   instName: { ...typography.h3, color: colors.text.inverse },
   instNameDark: { ...typography.h3, color: colors.text.strong },
   instTag: {
-    backgroundColor: 'rgba(255,255,255,0.2)',
+    backgroundColor: colors.onColor.fill,
     paddingHorizontal: spacing.sm,
     paddingVertical: 2,
     borderRadius: radius.full,
   },
   instTagText: { ...typography.badge, color: colors.text.inverse },
-  instDesc: { ...typography.body, color: 'rgba(255,255,255,0.85)' },
+  instDesc: { ...typography.body, color: colors.onColor.sub },
   instDescDark: { ...typography.body, color: colors.text.sub },
   instCheck: {
     width: 28,
     height: 28,
     borderRadius: radius.full,
-    backgroundColor: 'rgba(255,255,255,0.2)',
+    backgroundColor: colors.onColor.fill,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -297,22 +294,11 @@ const styles = StyleSheet.create({
     gap: spacing.md,
     backgroundColor: colors.background,
   },
-  btn: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: spacing.sm,
-    backgroundColor: colors.primary,
-    borderRadius: radius.lg,
-    paddingVertical: 14,
-  },
-  btnDisabled: { backgroundColor: colors.disabled },
-  btnText: { ...typography.button, color: colors.text.inverse },
   skipText: { ...typography.body, color: colors.text.sub, textAlign: 'center' },
-  navError: { ...typography.body, color: '#D32F2F', textAlign: 'center' },
+  navError: { ...typography.body, color: colors.errorText, textAlign: 'center' },
 
   modalWrap: { flex: 1, justifyContent: 'flex-end' },
-  dim: { ...StyleSheet.absoluteFill, backgroundColor: 'rgba(15,20,31,0.5)' },
+  dim: { ...StyleSheet.absoluteFill, backgroundColor: colors.dim },
   sheet: {
     backgroundColor: colors.surface,
     borderTopLeftRadius: spacing.xxl,

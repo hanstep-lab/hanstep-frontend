@@ -36,6 +36,24 @@ export const colors = {
     pillBg: '#FDE7E4',   // 필수 pill 배경
   },
   pending: '#B54708',    // 증빙 대기 안내 글자
+
+  errorText: '#D32F2F',  // 오류 안내 문구 (작은 글자라 error 보다 진하게)
+  dim: 'rgba(15, 20, 31, 0.5)', // 모달 뒤 어둡게
+
+  // 파란·어두운 배경 위 흰색 계열
+  onColor: {
+    sub: 'rgba(255, 255, 255, 0.85)',       // 보조 글자
+    fill: 'rgba(255, 255, 255, 0.2)',       // 태그·체크 원 배경
+    fillStrong: 'rgba(255, 255, 255, 0.3)', // 토글 트랙
+  },
+
+  // 외국인등록증 일러스트 (ON-002, ON-003)
+  idCard: {
+    bg: '#2A313C',
+    photo: 'rgba(255, 255, 255, 0.15)',
+    field: 'rgba(255, 255, 255, 0.12)',
+    mrz: 'rgba(220, 220, 220, 0.5)',
+  },
 };
 
 //폰트
@@ -58,6 +76,7 @@ export const typography = {
   caption: { fontFamily: fonts.medium, fontSize: 12, lineHeight: 16, letterSpacing: -0.24 }, // 태그, 점수 행 설명
   bodyLg: { fontFamily: fonts.medium, fontSize: 14, lineHeight: 22, letterSpacing: -0.28 }, // 단계 카드 설명
   titleLg: { fontFamily: fonts.bold, fontSize: 18, lineHeight: 24, letterSpacing: -0.36 }, // 단계 카드 제목
+  amount: { fontFamily: fonts.bold, fontSize: 19, lineHeight: 26, letterSpacing: -0.38 }, // 금액·현재 자격 강조
 };
 
 //간격
