@@ -15,7 +15,7 @@ export default function Screen({ children, footer, title = '신한걸음', showB
   return (
     <SafeAreaView style={styles.safe} edges={['top', 'bottom']}>
       <Header title={title} showBack={showBack} />
-      <ScrollView contentContainerStyle={styles.content}>{children}</ScrollView>
+      <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">{children}</ScrollView>
       {footer && <View style={styles.footer}>{footer}</View>}
     </SafeAreaView>
   );

@@ -17,6 +17,12 @@ export const colors = {
   border: '#DCDCDC',     // 구분선, 비활성 단계
   disabled: '#CBD5E1',   // 비활성 버튼
   error: '#EF4444',      // 오류, 미확보 상태
+
+  // 환율 상승·하락 (한국 표준: 상승 빨강, 하락 파랑)
+  rise: '#BA1A1A',                    // 상승 글자 (Figma ext/negative)
+  riseSoft: 'rgba(255, 218, 214, 0.6)', // 상승 % 배지 배경 (Figma)
+  fall: '#0046FF',                    // 하락 글자 (primary와 같은 파랑)
+  fallSoft: '#EFF3FF',                // 하락 % 배지 배경 (primaryLight와 같음)
 };
 
 //폰트
