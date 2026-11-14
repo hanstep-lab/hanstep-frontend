@@ -11,7 +11,7 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
-import { router } from 'expo-router';
+import { router, type Href } from 'expo-router';
 import { colors, typography, spacing, radius, fonts } from '../../constants/theme';
 import {
   type ChatCardType,
@@ -25,7 +25,7 @@ import { useTransferStore } from '../../store/transferStore';
 
 function openTransfer(amountKRW: number | null) {
   useTransferStore.getState().setInitialAmount(amountKRW);
-  router.push('/transfer' as any);
+  router.push('/transfer' as Href);
 }
 
 type ChatMessage = {
@@ -454,6 +454,12 @@ function MenuSheet({ visible, onClose }: { visible: boolean; onClose: () => void
     if (label === '비자 로드맵') {
       onClose();
       router.push('/(tabs)/visa' as any);
+    } else if (label === '해외송금') {
+      onClose();
+      openTransfer(null);
+    } else if (label === '환율 정보') {
+      onClose();
+      router.push('/fx' as Href);
     } else if (label === '내 금융 분석') {
       onClose();
       router.push('/finance/diagnosis' as any);

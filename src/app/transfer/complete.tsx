@@ -1,10 +1,10 @@
 import { View, Text, Pressable, StyleSheet } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
-import { router } from 'expo-router';
+import { router, Redirect, type Href } from 'expo-router';
 import { colors, typography, spacing, radius, fonts } from '../../constants/theme';
 import { useTransferStore } from '../../store/transferStore';
-import { MOCK_RECIPIENT, RATE, calcVND, fmtKRW } from '../../api/mock/transfer';
+import { fmtNumber, fmtRate } from '../../utils/format';
 
 function SummaryRow({ label, value, highlight }: {
   label: string;
@@ -20,12 +20,18 @@ function SummaryRow({ label, value, highlight }: {
 }
 
 export default function TransferCompleteScreen() {
-  const { confirmedAmountKRW, reset } = useTransferStore();
-  const vnd = calcVND(confirmedAmountKRW);
+  const { result, reset } = useTransferStore();
+
+  // 결과 없이 들어온 경우(새로고침 등)는 송금 화면으로 돌려보냄
+  if (!result) {
+    return <Redirect href={'/transfer' as Href} />;
+  }
+
+  const { sendAmount, receiveAmount, appliedRate, recipient } = result;
 
   const handleBack = () => {
     reset();
-    router.replace('/(tabs)/chat' as any);
+    router.replace('/(tabs)/chat' as Href);
   };
 
   return (
@@ -36,26 +42,26 @@ export default function TransferCompleteScreen() {
         </View>
 
         <Text style={s.title}>{'송금 요청이\n완료됐어요'}</Text>
-        <Text style={s.subtitle}>처리 완료까지 1-2 영업일이 소요돼요.</Text>
+        <Text style={s.subtitle}>{result.guide}</Text>
 
         <View style={s.summaryCard}>
           <SummaryRow
             label="보낸 금액"
-            value={`${fmtKRW(confirmedAmountKRW)} 원`}
+            value={`${fmtNumber(sendAmount.amount)} 원`}
             highlight
           />
           <View style={s.divider} />
           <SummaryRow
             label="받는 분"
-            value={`${MOCK_RECIPIENT.name} (${MOCK_RECIPIENT.relation})`}
+            value={`${recipient.name} (${recipient.relation})`}
           />
           <SummaryRow
             label="수취 예상"
-            value={`약 ${fmtKRW(vnd)} VND`}
+            value={`약 ${fmtNumber(receiveAmount.amount)} ${receiveAmount.currency}`}
           />
           <SummaryRow
             label="적용 환율"
-            value={`${RATE.unit} VND = ${RATE.krw} KRW`}
+            value={`${appliedRate.unit} ${appliedRate.currency} = ${fmtRate(appliedRate.rate)} KRW`}
           />
         </View>
 

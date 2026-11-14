@@ -81,3 +81,60 @@ export type StepUpdateResponse = {
   onboardingCompleted: boolean;
   currentStep: StepCode | null; // 다음 이동할 단계
 };
+
+// 해외송금 (TR-001). 명세가 아직 없어서 Mock 기준으로 정한 모양. 백엔드와 맞춘 뒤 수정.
+
+export type TransferRecipient = {
+  name: string;
+  relation: string;     // 관계 (예: 어머니)
+  bank: string;
+  accountLast4: string;
+  country: string;      // 화면 표시용 국가명
+  countryCode: string;  // ISO 3166 두 글자 (VN)
+};
+
+export type TransferAccount = {
+  name: string;
+  number: string;
+  balance: Money; // 출금가능 잔액
+};
+
+export type TransferPurpose = { code: string; label: string };
+
+// 송금 화면 진입 시 한 번 받는 정보
+export type TransferContext = {
+  recipient: TransferRecipient;
+  account: TransferAccount;
+  purpose: TransferPurpose;
+  quickAmounts: number[]; // 빠른 금액 버튼 (원)
+};
+
+// 적용 환율. unit 외화 = rate 원 (예: 100 VND = 5.43 KRW)
+export type AppliedRate = {
+  currency: string;
+  unit: number;
+  rate: number;
+  sourceLabel: string; // 예: ECB 기준환율 기반 참고값. 문구는 서버가 정함
+  asOf: string;        // ECB 기준일 (YYYY-MM-DD)
+};
+
+// 보낼 금액을 넣으면 서버가 계산해서 주는 견적
+export type TransferQuote = {
+  sendAmount: Money;
+  receiveAmount: Money; // 수취 예상액 (서버가 반올림까지 끝낸 값)
+  appliedRate: AppliedRate;
+};
+
+export type TransferRequest = {
+  sendAmount: Money;
+  purposeCode: string;
+};
+
+export type TransferResult = {
+  transferId: string;
+  sendAmount: Money;
+  receiveAmount: Money;
+  appliedRate: AppliedRate;
+  recipient: TransferRecipient;
+  guide: string; // 예: 처리 완료까지 1-2 영업일이 소요돼요.
+};
