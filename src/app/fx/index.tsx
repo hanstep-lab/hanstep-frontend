@@ -1,7 +1,7 @@
 // FX-001 환율 정보. 데이터는 src/api/fx.ts 에서만 받고, 평균·대비·최저/최고는 서버(Mock) 값을 그대로 쓴다.
 // 출처는 ECB 기준환율. "실시간", "종가" 표현은 쓰지 않는다.
 import { useEffect, useState } from 'react';
-import { View, Text, Pressable, StyleSheet, Alert } from 'react-native';
+import { View, Text, Pressable, StyleSheet } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { router, type Href } from 'expo-router';
 import Screen from '../../components/Screen';
@@ -64,8 +64,7 @@ export default function FxScreen() {
     router.push('/transfer' as Href);
   };
 
-  // FX-002 를 만들면 /fx/alert 로 연결
-  const goAlert = () => Alert.alert('준비 중', '곧 사용할 수 있어요.');
+  const goAlert = () => router.push('/fx/alert' as Href);
 
   return (
     <Screen
