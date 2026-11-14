@@ -100,3 +100,102 @@ export const MOCK_FX_PERIODS = (Object.keys(PERIODS) as MockFxPeriod[]).map((key
   key,
   label: PERIODS[key].label,
 }));
+
+// ---------------------------------------------------------------------------
+// FX-002 목표 환율 알림 Mock
+// 프리셋(-1/-3/-5%), 슬라이더 범위, 최저·최고 같은 계산은 서버 역할이라 여기서만 한다.
+// TODO(B): 통화 목록(VND 포함 여부), 슬라이더 기간, 프리셋 의미, 알림 개수 제한·삭제 방식 확인
+// ---------------------------------------------------------------------------
+
+const ALERT_CURRENCIES = {
+  PHP: { name: '필리핀', unit: 1, scale: 1, step: 0.05 },
+  USD: { name: '미국', unit: 1, scale: 1380 / 24.9, step: 1 },
+  VND: { name: '베트남', unit: 100, scale: 5.43 / 24.9, step: 0.01 },
+  IDR: { name: '인도네시아', unit: 100, scale: 8.65 / 24.9, step: 0.01 },
+} as const;
+
+export type MockAlertCurrency = keyof typeof ALERT_CURRENCIES;
+export const MOCK_ALERT_CURRENCIES = (Object.keys(ALERT_CURRENCIES) as MockAlertCurrency[]).map(
+  (code) => ({ code, name: ALERT_CURRENCIES[code].name }),
+);
+
+// 소수 오차 없이 step 단위로 맞추기
+const toStep = (n: number, step: number, mode: 'round' | 'floor' = 'round') =>
+  round2(Math[mode](Math.round((n / step) * 1000) / 1000) * step);
+
+export function mockFxAlertSetup(currency: MockAlertCurrency) {
+  const cfg = ALERT_CURRENCIES[currency];
+  // 최근 1개월 흐름을 통화별 크기에 맞춰 늘린 임시값
+  const series = LAST_20.map((v) => round2(v * cfg.scale));
+  const current = series[series.length - 1];
+  const prev = series[series.length - 2];
+  const low = Math.min(...series);
+  const high = Math.max(...series);
+
+  const presets = [
+    ...[1, 3, 5].map((p) => ({
+      key: `-${p}%`,
+      label: `-${p}%`,
+      value: toStep(current * (1 - p / 100), cfg.step),
+    })),
+    { key: 'low', label: '최저점', value: low },
+  ];
+
+  return {
+    currency,
+    name: cfg.name,
+    unit: cfg.unit,
+    rate: current,
+    changeRate: round2(((current - prev) / prev) * 100),
+    asOf: AS_OF,
+    sourceLabel: 'ECB 기준환율 기반 참고값',
+    sparkline: series,
+    low,
+    high,
+    slider: {
+      min: toStep(Math.min(low, presets[2].value), cfg.step, 'floor'),
+      max: high,
+      step: cfg.step,
+    },
+    presets,
+    defaultPresetKey: '-3%',
+  };
+}
+
+type MockFxAlert = {
+  id: string;
+  currency: MockAlertCurrency;
+  unit: number;
+  target: number;
+  direction: 'below' | 'above';
+  push: boolean;
+  status: 'waiting';
+};
+
+// 앱을 끄기 전까지만 유지되는 임시 목록 (서버 저장 대신)
+let alerts: MockFxAlert[] = [
+  { id: 'alert-1', currency: 'USD', unit: 1, target: 1350, direction: 'below', push: true, status: 'waiting' },
+];
+
+export function mockFxAlerts() {
+  return { items: [...alerts], activeCount: alerts.length };
+}
+
+export function mockCreateFxAlert(input: { currency: MockAlertCurrency; target: number; push: boolean }) {
+  const current = mockFxAlertSetup(input.currency).rate;
+  const item: MockFxAlert = {
+    id: `alert-${Date.now()}`,
+    currency: input.currency,
+    unit: ALERT_CURRENCIES[input.currency].unit,
+    target: input.target,
+    direction: input.target <= current ? 'below' : 'above',
+    push: input.push,
+    status: 'waiting',
+  };
+  alerts = [item, ...alerts];
+  return item;
+}
+
+export function mockDeleteFxAlert(id: string) {
+  alerts = alerts.filter((a) => a.id !== id);
+}
