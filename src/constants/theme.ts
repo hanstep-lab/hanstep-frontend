@@ -23,6 +23,19 @@ export const colors = {
   riseSoft: 'rgba(255, 218, 214, 0.6)', // 상승 % 배지 배경 (Figma)
   fall: '#0046FF',                    // 하락 글자 (primary와 같은 파랑)
   fallSoft: '#EFF3FF',                // 하락 % 배지 배경 (primaryLight와 같음)
+
+  // 로드맵 컴포넌트 (Figma 522:2)
+  box: '#F7F9FC',        // 점수 행 배경
+  tagBg: '#EEF1F5',      // 서류 태그, 단계 pill 배경
+  stepBorder: '#86909C', // 단계 번호 원 테두리
+  required: {
+    strong: '#C4320A',   // 필수 단계 번호, 필수요건 태그
+    text: '#B42318',     // 필수 pill 글자, 미확보 점수
+    bg: '#FFF4F3',       // 필수 점수 행 배경
+    border: '#F8C9C4',   // 필수 카드·행 테두리
+    pillBg: '#FDE7E4',   // 필수 pill 배경
+  },
+  pending: '#B54708',    // 증빙 대기 안내 글자
 };
 
 //폰트
@@ -42,6 +55,9 @@ export const typography = {
   title: { fontFamily: fonts.bold, fontSize: 15, lineHeight: 20, letterSpacing: -0.3 },  // 카드 제목
   body: { fontFamily: fonts.medium, fontSize: 13, lineHeight: 18, letterSpacing: -0.26 }, // 본문, 카드 설명
   badge: { fontFamily: fonts.medium, fontSize: 11, lineHeight: 14, letterSpacing: -0.22 }, // 배지
+  caption: { fontFamily: fonts.medium, fontSize: 12, lineHeight: 16, letterSpacing: -0.24 }, // 태그, 점수 행 설명
+  bodyLg: { fontFamily: fonts.medium, fontSize: 14, lineHeight: 22, letterSpacing: -0.28 }, // 단계 카드 설명
+  titleLg: { fontFamily: fonts.bold, fontSize: 18, lineHeight: 24, letterSpacing: -0.36 }, // 단계 카드 제목
 };
 
 //간격
