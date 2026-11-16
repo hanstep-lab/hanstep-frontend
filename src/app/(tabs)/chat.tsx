@@ -191,7 +191,7 @@ function LandingContent({ onSend }: { onSend: (t: string) => void }) {
     <View style={landStyles.wrap}>
       <Text style={landStyles.date}>{getLandingDateString()}</Text>
       <Text style={landStyles.greeting}>
-        {'안녕하세요, Nguyen님.\n한국 생활과 금융, 무엇이 궁금하신가요?'}
+        {'안녕하세요, Mark님.\n한국 생활과 금융, 무엇이 궁금하신가요?'}
       </Text>
       <Text style={landStyles.sub}>아래 질문 확인해 보세요</Text>
       <View style={landStyles.card}>
@@ -296,7 +296,7 @@ function MessageItem({
 }
 
 function RemitConfirmCard({ onSend }: { onSend: (t: string) => void }) {
-  const OPTIONS = ['네, 맞아요', 'VND 기준이에요', '어머니는 한국에 계세요'];
+  const OPTIONS = ['네, 맞아요', 'PHP 기준이에요', '어머니는 한국에 계세요'];
   return (
     <View style={cardStyles.wrap}>
       <View style={cardStyles.quickRow}>
@@ -319,8 +319,8 @@ function RemitConfirmCard({ onSend }: { onSend: (t: string) => void }) {
           </View>
           <View style={{ flex: 1 }}>
             <Text style={cardStyles.remitTitle}>해외송금 ↗</Text>
-            <Text style={cardStyles.remitDesc}>받는 분: 어머니 · Vietcombank (베트남)</Text>
-            <Text style={cardStyles.remitDesc}>출금 50,000 KRW → 수취 약 921,000 VND</Text>
+            <Text style={cardStyles.remitDesc}>받는 분: 어머니 · BDO (필리핀)</Text>
+            <Text style={cardStyles.remitDesc}>출금 50,000 KRW → 수취 약 2,008 PHP</Text>
           </View>
         </View>
         <Ionicons name="chevron-forward" size={16} color={colors.text.sub} />
@@ -336,7 +336,7 @@ function RemitCalcCard() {
         <View style={calcStyles.cardHead}>
           <Text style={calcStyles.cardTitle}>예상 수취 금액 계산</Text>
           <View style={calcStyles.badge}>
-            <Text style={calcStyles.badgeText}>시장 환율 참고값</Text>
+            <Text style={calcStyles.badgeText}>ECB 기준환율 기반 참고값</Text>
           </View>
         </View>
         <View style={calcStyles.row}>
@@ -345,12 +345,12 @@ function RemitCalcCard() {
         </View>
         <View style={calcStyles.row}>
           <Text style={calcStyles.rowLabel}>적용 환율</Text>
-          <Text style={calcStyles.rowVal}>100 VND = 5.43 KRW</Text>
+          <Text style={calcStyles.rowVal}>1 PHP = 24.90 KRW</Text>
         </View>
         <View style={calcStyles.divider} />
         <View style={calcStyles.row}>
           <Text style={calcStyles.rowLabel}>현지 수취 예상</Text>
-          <Text style={calcStyles.total}>약 9,210,000 VND</Text>
+          <Text style={calcStyles.total}>약 20,080 PHP</Text>
         </View>
       </View>
       <Pressable style={calcStyles.btn} onPress={() => openTransfer(500_000)}>
