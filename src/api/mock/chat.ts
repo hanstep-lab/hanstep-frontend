@@ -25,7 +25,7 @@ export function getVisaDday(): number {
 
 export const LANDING_SUGGESTIONS = [
   '한국에서 오래 살고 싶은데 어떻게 해요?',
-  '베트남에 50만 원 보내면 얼마 받아요?',
+  '필리핀에 50만 원 보내면 얼마 받아요?',
   '이번 달 얼마까지 저축할 수 있어요?',
   '비자 만료까지 얼마나 남았어요?',
 ];
@@ -34,9 +34,9 @@ export const MENU_GROUPS = [
   {
     section: '환율·송금',
     items: [
-      { label: '환율 정보', desc: '오늘 고시환율·추이·기간별 평균' },
+      { label: '환율 정보', desc: '오늘 기준환율·추이·기간별 평균' },
       { label: '목표 환율 알림', desc: '원하는 환율 도달 시 푸시' },
-      { label: '해외송금', desc: 'Vietcombank ****5566' },
+      { label: '해외송금', desc: 'BDO ****5566' },
     ],
   },
   {
@@ -54,14 +54,14 @@ export const MENU_GROUPS = [
     section: '설정',
     items: [
       { label: '내 정보 수정', desc: '온보딩 답변 다시 입력' },
-      { label: '화면 언어', desc: '한국어·English·Tiếng Việt·中文' },
+      { label: '화면 언어', desc: '한국어·English·Filipino·中文' },
     ],
   },
 ];
 
 const MOCK: Record<string, MockChatResponse> = {
   remitConfirm: {
-    text: '"엄마"는 베트남에 계신 어머니로 이해했어요. 베트남으로 해외송금하고, 5만 원은 내 통장에서 빠져나가는 금액(KRW) 기준이 맞을까요?',
+    text: '"엄마"는 필리핀에 계신 어머니로 이해했어요. 필리핀으로 해외송금하고, 5만 원은 내 통장에서 빠져나가는 금액(KRW) 기준이 맞을까요?',
     card: 'remit_confirm',
     suggestions: [
       { label: '엄마 계좌번호 확인해줘' },
@@ -70,7 +70,7 @@ const MOCK: Record<string, MockChatResponse> = {
     suggestionsLabel: '추천 질문',
   },
   remitCalc: {
-    text: '어머니 Vietcombank 계좌로 50만 원을 보내면\n약 9,210,000 VND를 받아요.',
+    text: '어머니 BDO 계좌로 50만 원을 보내면\n약 20,080 PHP를 받아요.',
     card: 'remit_calc',
     suggestions: [
       { label: '이번 달 송금해도 여유자금 괜찮아?' },
@@ -95,7 +95,7 @@ const MOCK: Record<string, MockChatResponse> = {
     suggestionsLabel: '연관 질문',
   },
   visaRoadmap: {
-    text: 'E-9 비자에서 장기 체류로 가는 가장 현실적인 방법은 E-7-4(숙련기능인력) 비자예요.\n\n현재 근무 기간, 소득, 한국어 점수를 합산해 신청해요. 비자 탭에서 Nguyen님의 예상 점수를 확인할 수 있어요.',
+    text: 'E-9 비자에서 장기 체류로 가는 가장 현실적인 방법은 E-7-4(숙련기능인력) 비자예요.\n\n현재 근무 기간, 소득, 한국어 점수를 합산해 신청해요. 비자 탭에서 Mark님의 예상 점수를 확인할 수 있어요.',
     card: 'visa_roadmap',
     suggestions: [
       { label: '현재 점수 얼마나 돼?' },
@@ -120,7 +120,7 @@ function getVisaDdayResponse(): MockChatResponse {
 const GENERIC_POOL = [
   '네, 도와드릴게요! 송금, 환율, 비자, 저축에 대해 질문해 보세요.',
   '아직 그 내용은 학습 중이에요. 환율이나 송금 관련 질문은 바로 답할 수 있어요!',
-  '더 구체적으로 말씀해 주시면 좋겠어요.\n예: "베트남에 50만 원 보내면 얼마 받아?"',
+  '더 구체적으로 말씀해 주시면 좋겠어요.\n예: "필리핀에 50만 원 보내면 얼마 받아?"',
 ];
 
 export function getMockResponse(input: string, callCount: number): MockChatResponse {
@@ -129,7 +129,7 @@ export function getMockResponse(input: string, callCount: number): MockChatRespo
 
   if (t === '네, 맞아요') return MOCK.remitCalc;
 
-  if (lower.includes('얼마 받아') || lower.includes('보내면 얼마') || lower.includes('베트남에')) {
+  if (lower.includes('얼마 받아') || lower.includes('보내면 얼마') || lower.includes('필리핀에')) {
     return MOCK.remitCalc;
   }
   if (
@@ -164,7 +164,7 @@ export function getMockResponse(input: string, callCount: number): MockChatRespo
   return {
     text: GENERIC_POOL[callCount % GENERIC_POOL.length],
     suggestions: [
-      { label: '베트남에 50만 원 보내면 얼마 받아요?' },
+      { label: '필리핀에 50만 원 보내면 얼마 받아요?' },
       { label: '오늘 환율 알려줘' },
     ],
     suggestionsLabel: '추천 질문',
