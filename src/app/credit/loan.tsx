@@ -2,17 +2,15 @@
 // 입력 없이 보여주기만 하는 화면. 메뉴에 연결하지 않고 /credit/loan 주소로만 연다.
 // 진단과 비교 구역은 CR-001 대안신용 진단이 생긴 뒤 추가.
 import { useEffect, useState } from 'react';
-import { View, Text, StyleSheet } from 'react-native';
+import { View, Text, StyleSheet, Alert } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import { router, type Href } from 'expo-router';
 import Screen from '../../components/Screen';
 import Button from '../../components/Button';
 import Pill from '../../components/Pill';
 import { colors, typography, spacing, radius, fonts, shadow } from '../../constants/theme';
 import { getGlobalLoan, type GlobalLoan } from '../../api/credit';
 import type { ApiError } from '../../types/api';
-
-// 버튼 연결은 나중에. 지금은 눌러도 아무 동작 없음.
-const noop = () => {};
 
 export default function GlobalLoanScreen() {
   const [loan, setLoan] = useState<GlobalLoan | null>(null);
@@ -38,8 +36,8 @@ export default function GlobalLoanScreen() {
     <Screen
       footer={
         <View style={s.footer}>
-          <Button title="신한 SOL에서 신청하기" showArrow onPress={noop} />
-          <Button title="신한걸음에 물어보기" variant="text" onPress={noop} />
+          <Button title="신한 SOL에서 신청하기" showArrow onPress={() => Alert.alert('준비 중', '곧 사용할 수 있어요.')} />
+          <Button title="신한걸음에 물어보기" variant="text" onPress={() => router.push('/(tabs)/chat' as Href)} />
         </View>
       }
     >

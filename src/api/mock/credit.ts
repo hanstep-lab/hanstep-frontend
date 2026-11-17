@@ -1,7 +1,7 @@
 // CR-002 SOL 글로벌론 상품 상세 Mock (Figma 447:2 기준). 화면은 이 파일을 직접 import 하지 않고 src/api/credit.ts 를 거친다.
 // 상품 값은 신한은행 SOL 글로벌론 상품 안내 자료 기준. 날짜·남은 기간·한도는 계산하지 않고 완성된 글자로 둔다.
-// TODO: 사용자 이름은 B의 ai-001 에서 정하면 앱 전체와 맞추기 (이 화면은 Figma 를 따라 Mark)
 // 진단과 비교 구역은 CR-001 대안신용 진단이 생긴 뒤 추가.
+import { DEMO_USER } from './demoUser';
 
 export function mockGlobalLoan() {
   return {
@@ -10,7 +10,7 @@ export function mockGlobalLoan() {
     summary: '외국인 전용 직장인 신용대출이에요.',
 
     eligibility: {
-      title: 'Mark님 가입 조건 확인',
+      title: `${DEMO_USER.firstName}님 가입 조건 확인`,
       source: '마이데이터와 외국인등록증 정보로 확인했어요',
       resultLabel: '3개 모두 충족',
       conditions: [
@@ -23,7 +23,7 @@ export function mockGlobalLoan() {
         {
           key: 'visa',
           title: '대상 체류자격',
-          desc: 'E-9·E-7·F-2·F-5 중 하나 · Mark님 E-9',
+          desc: `E-9·E-7·F-2·F-5 중 하나 · ${DEMO_USER.firstName}님 E-9`,
           met: true,
         },
         {
