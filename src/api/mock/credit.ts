@@ -39,10 +39,10 @@ export function mockGlobalLoan() {
       title: '상품 조건',
       basis: '신한은행 상품 안내 기준',
       rows: [
-        { label: '대출 한도', value: '최대 5,000만 원' },
-        { label: '대출 기간', value: '6개월 ~ 36개월' },
-        { label: '신청 방법', value: '비대면 · 영업점' },
-        { label: '금리·상환 방식', value: '상품설명서에서 확인' },
+        { key: 'limit', label: '대출 한도', value: '최대 5,000만 원' },
+        { key: 'term', label: '대출 기간', value: '6개월 ~ 36개월' },
+        { key: 'channel', label: '신청 방법', value: '비대면 · 영업점' },
+        { key: 'rate', label: '금리·상환 방식', value: '상품설명서에서 확인' },
       ],
     },
 

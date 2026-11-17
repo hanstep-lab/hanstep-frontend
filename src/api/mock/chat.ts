@@ -14,7 +14,7 @@ export type SuggestionChip = {
 };
 
 // 칩·메뉴를 누르면 이동하는 곳. 주소는 chat.tsx 의 ACTION_ROUTES 에 있다
-export type ChatAction = 'visa_tab' | 'fx' | 'fx_alert' | 'products' | 'diagnosis' | 'transfer';
+export type ChatAction = 'visa_tab' | 'fx' | 'fx_alert' | 'products' | 'transfer';
 
 export type MockChatResponse = {
   text: string;
@@ -53,7 +53,6 @@ export const MENU_GROUPS: { section: string; items: MenuItem[] }[] = [
   {
     section: '금융 성장',
     items: [
-      { label: '내 금융 분석', desc: '여유자금·송금 플랜·저축', action: 'diagnosis' },
       { label: '금융상품 추천', desc: '여유자금에 맞춘 적금 추천', action: 'products' },
       { label: '대안신용 사전진단', desc: '대안신용 점수·참고 한도' },
     ],
