@@ -78,7 +78,6 @@ export async function getFxAlerts(): Promise<FxAlertList> {
 export async function createFxAlert(input: {
   currency: AlertCurrency;
   target: number;
-  push: boolean;
 }): Promise<FxAlert> {
   if (USE_MOCK) {
     await mockDelay();
