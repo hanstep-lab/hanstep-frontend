@@ -4,6 +4,7 @@
 // - Mock(USE_MOCK)이면 서버 대신 mock/chat.ts 답을 조금씩 흘려보낸다
 
 import type { ApiError } from '../types/api';
+import { client } from './client';
 import { USE_MOCK, mockDelay } from './config';
 import { getMockResponse, type ChatCardType, type SuggestionChip } from './mock/chat';
 
@@ -22,19 +23,31 @@ export type ChatStreamHandlers = {
   signal?: AbortSignal;              // 화면을 떠나거나 새 대화를 누르면 끊기
 };
 
-// 대화방 만들기 → 세션 id
-export async function createChatSession(): Promise<string> {
+// 대화방 (CHT-01 POST /api/v1/chat/sessions 의 201 응답)
+type ChatSession = {
+  id: number; // 메시지 보내기·목록의 sessionId
+  title: string | null;
+  status: string; // ACTIVE 등
+  lastMessageAt: string | null;
+  createdAt: string;
+};
+
+// 대화방 만들기 → 세션 id(숫자).
+// 삭제 API 가 없어 만든 대화방은 서버에 남는다. 화면은 첫 질문 때와 "새 대화" 때만 부른다.
+export async function createChatSession(): Promise<number> {
   if (USE_MOCK) {
     await mockDelay();
-    return `mock-${Date.now()}`;
+    return Date.now();
   }
-  throw notYet();
+  // 본문은 생략하거나 { title: null } (Swagger). 토큰·에러 변환은 client 가 한다
+  const res = await client.post<ChatSession>('/api/v1/chat/sessions', { title: null });
+  return res.data.id;
 }
 
 // 질문 보내고 답변 받기.
 // 글자가 올 때마다 onDelta, 다 끝나면 결과를 돌려주고, 실패하면 ApiError({ code, message })를 던진다.
 export async function streamChatMessage(
-  sessionId: string,
+  sessionId: number,
   content: string,
   handlers: ChatStreamHandlers,
 ): Promise<ChatStreamResult> {
@@ -91,7 +104,7 @@ function aborted(): ApiError {
   return { code: 'ABORTED', message: '답변을 멈췄어요.' };
 }
 
-// 3-3·3-4(실서버)에서 채운다
+// 3-4(실서버 스트림)에서 채운다
 function notYet(): ApiError {
   return { code: 'NOT_IMPLEMENTED', message: '아직 만들지 않았어요.' };
 }
