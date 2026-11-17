@@ -15,12 +15,12 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { router, type Href } from 'expo-router';
 import { colors, typography, spacing, radius, fonts } from '../../constants/theme';
+import { createChatSession, streamChatMessage } from '../../api/chat';
+import type { ApiError } from '../../types/api';
 import {
   type ChatAction,
   type ChatCardType,
   type SuggestionChip,
-  type MockChatResponse,
-  getMockResponse,
   LANDING_SUGGESTIONS,
   MENU_GROUPS,
   RATE_INFO,
@@ -55,6 +55,7 @@ type ChatMessage = {
   card?: ChatCardType;
   suggestions?: SuggestionChip[];
   suggestionsLabel?: string;
+  pending?: boolean; // AI 답변을 스트림으로 받는 중
 };
 
 function nowTime(): string {
@@ -85,42 +86,71 @@ export default function ChatScreen() {
   const [showMenu, setShowMenu] = useState(false);
   const [askedSet, setAskedSet] = useState<Set<string>>(new Set());
   const scrollRef = useRef<ComponentRef<typeof ScrollView>>(null);
-  const aiCallCount = useRef(0);
+  const sessionRef = useRef<string | null>(null); // 새 대화마다 서버 세션 1개
+  const abortRef = useRef<AbortController | null>(null); // 답변 받는 중에 "새 대화"를 누르면 끊기
+  const [streaming, setStreaming] = useState(false); // 답변 받는 중에는 다음 질문을 막는다
+  const streamingRef = useRef(false);
 
-  const send = useCallback((text: string) => {
+  const send = useCallback(async (text: string) => {
     const trimmed = text.trim();
-    if (!trimmed) return;
+    if (!trimmed || streamingRef.current) return;
 
-    aiCallCount.current += 1;
-    const raw: MockChatResponse = getMockResponse(trimmed, aiCallCount.current);
-
-    const userMsg: ChatMessage = {
-      id: `u${Date.now()}`,
-      role: 'user',
-      text: trimmed,
-      time: nowTime(),
-    };
-    const aiMsg: ChatMessage = {
-      id: `a${Date.now() + 1}`,
-      role: 'ai',
-      time: nowTime(),
-      text: raw.text,
-      card: raw.card,
-      suggestions: raw.suggestions,
-      suggestionsLabel: raw.suggestionsLabel,
-    };
-
-    setMessages(prev => [...prev, userMsg, aiMsg]);
+    const aiId = `a${Date.now()}`;
+    // AI 말풍선은 빈 글자로 먼저 넣고, 스트림 조각이 올 때마다 뒤에 붙인다
+    setMessages(prev => [
+      ...prev,
+      { id: `u${Date.now()}`, role: 'user', text: trimmed, time: nowTime() },
+      { id: aiId, role: 'ai', text: '', time: nowTime(), pending: true },
+    ]);
     setInput('');
     setAskedSet(prev => new Set([...prev, trimmed]));
-    setTimeout(() => scrollRef.current?.scrollToEnd({ animated: true }), 150);
+    streamingRef.current = true;
+    setStreaming(true);
+
+    const updateAi = (patch: (m: ChatMessage) => Partial<ChatMessage>) =>
+      setMessages(prev => prev.map(m => (m.id === aiId ? { ...m, ...patch(m) } : m)));
+
+    const ctrl = new AbortController();
+    abortRef.current = ctrl;
+    try {
+      sessionRef.current ??= await createChatSession();
+      const reply = await streamChatMessage(sessionRef.current, trimmed, {
+        signal: ctrl.signal,
+        onDelta: delta => updateAi(m => ({ text: m.text + delta })),
+      });
+      if (ctrl.signal.aborted) return;
+      // 끝나면 카드·추천 질문을 붙인다
+      updateAi(() => ({
+        text: reply.text,
+        card: reply.card,
+        suggestions: reply.suggestions,
+        suggestionsLabel: reply.suggestionsLabel,
+        pending: false,
+      }));
+    } catch (e) {
+      if (ctrl.signal.aborted) return;
+      const message = (e as ApiError).message ?? '답변을 받지 못했어요. 다시 시도해 주세요.';
+      updateAi(m => ({ text: m.text ? `${m.text}\n\n(${message})` : message, pending: false }));
+    } finally {
+      if (abortRef.current === ctrl) {
+        abortRef.current = null;
+        streamingRef.current = false;
+        setStreaming(false);
+      }
+    }
   }, []);
 
   const clearChat = () => {
+    abortRef.current?.abort();
+    abortRef.current = null;
+    sessionRef.current = null;
+    streamingRef.current = false;
+    setStreaming(false);
     setMessages([]);
     setAskedSet(new Set());
-    aiCallCount.current = 0;
   };
+
+  const canSend = !!input.trim() && !streaming;
 
   return (
     <SafeAreaView style={styles.safe} edges={['top', 'bottom']}>
@@ -157,6 +187,9 @@ export default function ChatScreen() {
           contentContainerStyle={styles.msgContent}
           showsVerticalScrollIndicator={false}
           keyboardShouldPersistTaps="handled"
+          // 글자가 붙거나 키보드로 화면이 줄어들 때마다 맨 아래로
+          onContentSizeChange={() => scrollRef.current?.scrollToEnd({ animated: true })}
+          onLayout={() => scrollRef.current?.scrollToEnd({ animated: false })}
         >
           {messages.length === 0 ? (
             <LandingContent onSend={send} />
@@ -186,14 +219,14 @@ export default function ChatScreen() {
             onSubmitEditing={() => send(input)}
           />
           <Pressable
-            style={[styles.sendBtn, !!input.trim() && styles.sendBtnOn]}
+            style={[styles.sendBtn, canSend && styles.sendBtnOn]}
             onPress={() => send(input)}
-            disabled={!input.trim()}
+            disabled={!canSend}
           >
             <Ionicons
               name="arrow-up"
               size={16}
-              color={input.trim() ? colors.text.inverse : colors.text.sub}
+              color={canSend ? colors.text.inverse : colors.text.sub}
             />
           </Pressable>
         </View>
@@ -292,7 +325,11 @@ function MessageItem({
 
   return (
     <View style={msgStyles.aiWrap}>
-      <Text style={msgStyles.aiText}>{msg.text}</Text>
+      {msg.pending && !msg.text ? (
+        <Text style={msgStyles.aiPending}>답변을 준비하고 있어요…</Text>
+      ) : (
+        <Text style={msgStyles.aiText}>{msg.text}</Text>
+      )}
       {msg.card === 'remit_confirm' && <RemitConfirmCard onSend={onSend} />}
       {msg.card === 'remit_calc' && <RemitCalcCard />}
       {msg.card === 'rate_info' && <RateInfoCard />}
@@ -583,6 +620,7 @@ const msgStyles = StyleSheet.create({
   time: { ...typography.badge, color: colors.text.sub },
   aiWrap: { gap: spacing.sm, paddingRight: spacing.md },
   aiText: { ...typography.body, color: colors.text.strong, lineHeight: 22 },
+  aiPending: { ...typography.body, color: colors.text.sub },
   sugWrap: { gap: spacing.xs, marginTop: spacing.xs },
   sugLabel: { ...typography.badge, color: colors.text.sub },
   sugRow: { flexDirection: 'row', gap: spacing.sm, paddingVertical: 2 },
