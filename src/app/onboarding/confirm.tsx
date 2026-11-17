@@ -18,7 +18,7 @@ const GOALS = [
     label: '본국 정기 송금',
     amount: '월 70만 원',
     amountBlue: false,
-    sub: 'Vietcombank 외 1건',
+    sub: 'BDO 외 1건',
   },
   {
     label: '고정 생활비',
@@ -70,16 +70,16 @@ export default function ConfirmScreen() {
           <View style={styles.profileTop}>
             <View style={styles.profileLeft}>
               <View style={styles.avatar}>
-                <Text style={styles.avatarText}>NV</Text>
+                <Text style={styles.avatarText}>MR</Text>
               </View>
               <View style={styles.profileInfo}>
                 <View style={styles.profileNameRow}>
-                  <Text style={styles.profileName}>Nguyen Van Minh</Text>
+                  <Text style={styles.profileName}>Mark Anthony Reyes</Text>
                   <View style={styles.countryTag}>
-                    <Text style={styles.countryTagText}>VN</Text>
+                    <Text style={styles.countryTagText}>PH</Text>
                   </View>
                 </View>
-                <Text style={styles.profileNameKo}>응우옌 반 민</Text>
+                <Text style={styles.profileNameKo}>마크 앤서니 레예스</Text>
               </View>
             </View>
             <View style={styles.langChip}>

@@ -3,11 +3,12 @@
 import { client } from './client';
 import { USE_MOCK, mockDelay } from './config';
 import type { Language, UserMeResponse } from '../types/api';
+import { DEMO_USER } from './mock/demoUser';
 
 // Mock: 명세 example 기준. 온보딩 미완료 상태라 currentStep 이 LANGUAGE.
 const MOCK_ME: UserMeResponse = {
   id: 1,
-  displayName: 'NGUYEN VAN MINH',
+  displayName: DEMO_USER.nameEn,
   preferredLanguage: 'en',
   status: 'ACTIVE',
   onboarding: { completed: false, currentStep: 'LANGUAGE' },

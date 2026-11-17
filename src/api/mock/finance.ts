@@ -1,6 +1,8 @@
 // FN-001 Mock 금융 생활 진단 데이터. 실제 API 연결 시 이 파일만 교체.
 // 금액은 만 원 단위. chat.ts budget 응답(235만 − 52만 − 70만 − 45만 = 68만)과 맞춤.
 
+import { DEMO_USER } from './demoUser';
+
 export const MONTHLY_FLOW = {
   income: 235,         // 월 소득
   fixedExpense: 52,    // 고정 생활비
@@ -139,7 +141,7 @@ export function getFinanceDiagnosis(): FinanceDiagnosis {
   ];
 
   return {
-    userName: 'Nguyen',
+    userName: DEMO_USER.firstName,
     totalScore,
     maxScore,
     grade,

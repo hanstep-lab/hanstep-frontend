@@ -9,8 +9,8 @@ import { getRouteFromStepCode } from '../../constants/onboardingSteps';
 import { colors, typography, spacing, radius, fonts, shadow } from '../../constants/theme';
 
 const MOCK = {
-  nameEn: 'NGUYEN VAN MINH',
-  nameKo: '응우옌 반 민',
+  nameEn: 'MARK ANTHONY REYES',
+  nameKo: '마크 앤서니 레예스',
   arcNo: '950815 - 5*******',
   visaCode: 'E-9',
   visaName: '비전문취업 (Non-professional)',

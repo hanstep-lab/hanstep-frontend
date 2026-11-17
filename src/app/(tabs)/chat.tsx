@@ -1,4 +1,4 @@
-import { useState, useRef, useCallback } from 'react';
+import { useState, useRef, useCallback, type ComponentRef } from 'react';
 import {
   View,
   Text,
@@ -14,18 +14,35 @@ import { Ionicons } from '@expo/vector-icons';
 import { router, type Href } from 'expo-router';
 import { colors, typography, spacing, radius, fonts } from '../../constants/theme';
 import {
+  type ChatAction,
   type ChatCardType,
   type SuggestionChip,
   type MockChatResponse,
   getMockResponse,
   LANDING_SUGGESTIONS,
   MENU_GROUPS,
+  RATE_INFO,
+  USER_NAME,
 } from '../../api/mock/chat';
 import { useTransferStore } from '../../store/transferStore';
 
 function openTransfer(amountKRW: number | null) {
   useTransferStore.getState().setInitialAmount(amountKRW);
   router.push('/transfer' as Href);
+}
+
+// 칩·메뉴 action → 화면 주소. 송금은 금액을 같이 넘겨야 해서 openTransfer 로 따로 연다.
+const ACTION_ROUTES: Record<Exclude<ChatAction, 'transfer'>, Href> = {
+  visa_tab: '/(tabs)/visa' as Href,
+  fx: '/fx' as Href,
+  fx_alert: '/fx/alert' as Href,
+  products: '/finance/products' as Href,
+  diagnosis: '/finance/diagnosis' as Href,
+};
+
+function runAction(action: ChatAction) {
+  if (action === 'transfer') openTransfer(null);
+  else router.push(ACTION_ROUTES[action]);
 }
 
 type ChatMessage = {
@@ -56,14 +73,6 @@ function getLandingDateString(): string {
   return `${d.getFullYear()}년 ${d.getMonth() + 1}월 ${d.getDate()}일`;
 }
 
-function getTodayRateDate(): string {
-  const d = new Date();
-  const y = d.getFullYear();
-  const mo = String(d.getMonth() + 1).padStart(2, '0');
-  const day = String(d.getDate()).padStart(2, '0');
-  return `${y}.${mo}.${day} 수출입은행 고시`;
-}
-
 function preparingAlert() {
   Alert.alert('준비 중', '곧 사용할 수 있어요.');
 }
@@ -73,7 +82,7 @@ export default function ChatScreen() {
   const [input, setInput] = useState('');
   const [showMenu, setShowMenu] = useState(false);
   const [askedSet, setAskedSet] = useState<Set<string>>(new Set());
-  const scrollRef = useRef<{ scrollToEnd: (options?: { animated?: boolean }) => void }>(null);
+  const scrollRef = useRef<ComponentRef<typeof ScrollView>>(null);
   const aiCallCount = useRef(0);
 
   const send = useCallback((text: string) => {
@@ -135,7 +144,7 @@ export default function ChatScreen() {
       </View>
 
       <ScrollView
-        ref={scrollRef as any}
+        ref={scrollRef}
         style={styles.scroll}
         contentContainerStyle={styles.msgContent}
         showsVerticalScrollIndicator={false}
@@ -191,7 +200,7 @@ function LandingContent({ onSend }: { onSend: (t: string) => void }) {
     <View style={landStyles.wrap}>
       <Text style={landStyles.date}>{getLandingDateString()}</Text>
       <Text style={landStyles.greeting}>
-        {'안녕하세요, Mark님.\n한국 생활과 금융, 무엇이 궁금하신가요?'}
+        {`안녕하세요, ${USER_NAME}님.\n한국 생활과 금융, 무엇이 궁금하신가요?`}
       </Text>
       <Text style={landStyles.sub}>아래 질문 확인해 보세요</Text>
       <View style={landStyles.card}>
@@ -234,15 +243,11 @@ function SuggestionChipRow({
           <Pressable
             key={chip.label}
             style={msgStyles.sugChip}
-            onPress={() =>
-              chip.action === 'visa_tab'
-                ? router.push('/(tabs)/visa' as any)
-                : onSend(chip.label)
-            }
+            onPress={() => (chip.action ? runAction(chip.action) : onSend(chip.label))}
           >
             {chip.icon ? (
               <Ionicons
-                name={chip.icon as any}
+                name={chip.icon}
                 size={12}
                 color={colors.text.strong}
                 style={msgStyles.chipIcon}
@@ -356,18 +361,14 @@ function RemitCalcCard() {
       <Pressable style={calcStyles.btn} onPress={() => openTransfer(500_000)}>
         <Text style={calcStyles.btnText}>송금하기 →</Text>
       </Pressable>
-      <Pressable onPress={preparingAlert}>
-        <Text style={calcStyles.link}>환율 알림 및 상세 계산기 ↗</Text>
+      <Pressable onPress={() => runAction('fx_alert')}>
+        <Text style={calcStyles.link}>목표 환율 알림 설정 ↗</Text>
       </Pressable>
     </View>
   );
 }
 
-const RATE_TABLE = [
-  { currency: 'USD', base: '1,382.50', send: '1,389.20', recv: '1,375.80' },
-  { currency: 'VND(100)', base: '5.43', send: '시장 환율\n참고값', recv: '—' },
-];
-
+// AI-004. Figma 는 3열 표(매매기준율/보낼 때/받을 때)지만 ECB 에는 송금 환율이 없어서 기준환율 행만 보여 준다.
 function RateInfoCard() {
   return (
     <View style={rateStyles.wrap}>
@@ -375,58 +376,36 @@ function RateInfoCard() {
         <View style={rateStyles.cardTop}>
           <View style={rateStyles.dotLabel}>
             <View style={rateStyles.dot} />
-            <Text style={rateStyles.cardTitle}>오늘 고시 환율</Text>
+            <Text style={rateStyles.cardTitle}>{RATE_INFO.title}</Text>
           </View>
-          <Text style={rateStyles.cardDate}>{getTodayRateDate()}</Text>
+          <Text style={rateStyles.cardDate}>{RATE_INFO.asOfText}</Text>
         </View>
-        <View style={rateStyles.rateRow}>
-          <View style={rateStyles.flagBox}>
-            <Text style={rateStyles.flag}>$</Text>
-          </View>
-          <View style={{ flex: 1 }}>
-            <Text style={rateStyles.rateName}>미국 USD</Text>
-            <Text style={rateStyles.rateDesc}>매매기준율</Text>
-          </View>
-          <View style={{ alignItems: 'flex-end' }}>
-            <Text style={rateStyles.rateVal}>1,382.50 원</Text>
-            <Text style={[rateStyles.rateChange, { color: '#E53935' }]}>▲+3.20 (0.23%)</Text>
-          </View>
-        </View>
-        <View style={rateStyles.divider} />
-        <View style={rateStyles.rateRow}>
-          <View style={rateStyles.flagBox}>
-            <Text style={rateStyles.flag}>₫</Text>
-          </View>
-          <View style={{ flex: 1 }}>
-            <Text style={rateStyles.rateName}>베트남 VND</Text>
-            <Text style={rateStyles.rateDesc}>100 VND · 시장 환율 참고값</Text>
-          </View>
-          <View style={{ alignItems: 'flex-end' }}>
-            <Text style={rateStyles.rateVal}>5.43 원</Text>
-            <Text style={[rateStyles.rateChange, { color: colors.primary }]}>▼-0.02 (-0.36%)</Text>
-          </View>
-        </View>
-        <View style={rateStyles.divider} />
-        <View style={rateStyles.table}>
-          <View style={rateStyles.tableRow}>
-            {['통화', '매매기준율', '송금 보낼 때', '송금 받을 때'].map((h, i) => (
-              <Text key={h} style={[rateStyles.th, i === 0 && { textAlign: 'left' }]}>{h}</Text>
-            ))}
-          </View>
-          {RATE_TABLE.map(r => (
-            <View key={r.currency} style={rateStyles.tableRow}>
-              <Text style={[rateStyles.td, { textAlign: 'left' }]}>{r.currency}</Text>
-              <Text style={rateStyles.td}>{r.base}</Text>
-              <Text style={[rateStyles.td, { fontSize: 10 }]}>{r.send}</Text>
-              <Text style={rateStyles.td}>{r.recv}</Text>
+        {RATE_INFO.rows.map((r, i) => (
+          <View key={r.currency} style={rateStyles.rowGroup}>
+            {i > 0 && <View style={rateStyles.divider} />}
+            <View style={rateStyles.rateRow}>
+              <View style={rateStyles.flagBox}>
+                <Text style={rateStyles.flag}>{r.symbol}</Text>
+              </View>
+              <View style={rateStyles.flex}>
+                <Text style={rateStyles.rateName}>{r.name}</Text>
+                <Text style={rateStyles.rateDesc}>{r.unitText} 기준환율</Text>
+              </View>
+              <View style={rateStyles.rateRight}>
+                <Text style={rateStyles.rateVal}>{r.rateText}</Text>
+                <Text
+                  style={[rateStyles.rateChange, { color: r.direction === 'up' ? colors.rise : colors.fall }]}
+                >
+                  {r.changeText}
+                </Text>
+              </View>
             </View>
-          ))}
-          <Text style={rateStyles.note}>
-            기준: 수출입은행 일별 고시 · VND는 시장 환율 참고값(10:00 기준)
-          </Text>
-        </View>
+          </View>
+        ))}
+        <View style={rateStyles.divider} />
+        <Text style={rateStyles.note}>{RATE_INFO.note}</Text>
       </View>
-      <Pressable onPress={preparingAlert}>
+      <Pressable onPress={() => runAction('fx')}>
         <Text style={rateStyles.link}>환율 상세 보기 ↗</Text>
       </Pressable>
       <Pressable style={rateStyles.btn} onPress={() => openTransfer(null)}>
@@ -441,7 +420,7 @@ function VisaRoadmapCard() {
     <View style={calcStyles.wrap}>
       <Pressable
         style={calcStyles.btn}
-        onPress={() => router.push('/(tabs)/visa' as any)}
+        onPress={() => runAction('visa_tab')}
       >
         <Text style={calcStyles.btnText}>비자 탭에서 내 점수 확인하기 →</Text>
       </Pressable>
@@ -450,23 +429,11 @@ function VisaRoadmapCard() {
 }
 
 function MenuSheet({ visible, onClose }: { visible: boolean; onClose: () => void }) {
-  const handleItem = (label: string) => {
-    if (label === '비자 로드맵') {
-      onClose();
-      router.push('/(tabs)/visa' as any);
-    } else if (label === '해외송금') {
-      onClose();
-      openTransfer(null);
-    } else if (label === '환율 정보') {
-      onClose();
-      router.push('/fx' as Href);
-    } else if (label === '내 금융 분석') {
-      onClose();
-      router.push('/finance/diagnosis' as any);
-    } else {
-      // 대안신용 사전진단(CR-001)은 P1 → 준비 중
-      preparingAlert();
-    }
+  // action 이 없는 메뉴(대안신용 CR-001, 설정)는 아직 "준비 중"
+  const handleItem = (action?: ChatAction) => {
+    if (!action) return preparingAlert();
+    onClose();
+    runAction(action);
   };
 
   return (
@@ -489,7 +456,7 @@ function MenuSheet({ visible, onClose }: { visible: boolean; onClose: () => void
                   <Pressable
                     key={item.label}
                     style={menuStyles.menuRow}
-                    onPress={() => handleItem(item.label)}
+                    onPress={() => handleItem(item.action)}
                   >
                     <View style={{ flex: 1 }}>
                       <Text style={menuStyles.menuLabel}>{item.label}</Text>
@@ -704,7 +671,10 @@ const rateStyles = StyleSheet.create({
   dot: { width: 8, height: 8, borderRadius: 4, backgroundColor: colors.primary },
   cardTitle: { ...typography.body, fontFamily: fonts.bold, color: colors.text.strong },
   cardDate: { ...typography.badge, color: colors.text.sub },
+  flex: { flex: 1 },
+  rowGroup: { gap: spacing.md },
   rateRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
+  rateRight: { alignItems: 'flex-end' },
   flagBox: {
     width: 32,
     height: 32,
@@ -719,11 +689,7 @@ const rateStyles = StyleSheet.create({
   rateVal: { ...typography.subtitle, fontFamily: fonts.bold, color: colors.text.strong },
   rateChange: { ...typography.badge },
   divider: { height: StyleSheet.hairlineWidth, backgroundColor: colors.border },
-  table: { gap: 6 },
-  tableRow: { flexDirection: 'row' },
-  th: { flex: 1, ...typography.badge, color: colors.text.sub, textAlign: 'right' },
-  td: { flex: 1, ...typography.badge, color: colors.text.strong, textAlign: 'right' },
-  note: { fontSize: 10, fontFamily: fonts.medium, color: colors.text.sub, marginTop: 2 },
+  note: { ...typography.badge, color: colors.text.sub },
   link: { ...typography.body, color: colors.primary },
   btn: {
     backgroundColor: colors.primary,
@@ -743,7 +709,7 @@ const menuStyles = StyleSheet.create({
     left: 0,
     right: 0,
     bottom: 0,
-    backgroundColor: 'rgba(15,20,31,0.5)',
+    backgroundColor: colors.dim,
   },
   sheet: {
     backgroundColor: colors.surface,

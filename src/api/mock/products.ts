@@ -2,9 +2,9 @@
 // 화면은 이 파일을 직접 import 하지 않고 src/api/products.ts 를 거친다.
 // 금리·한도는 각 상품설명서(2026.09~10월 기준) 세전 값. TODO(B): 상품설명서와 숫자 확인
 import { MONTHLY_FLOW, calcSpareMoney } from './finance';
+import { DEMO_USER } from './demoUser';
 
-// TODO: 사용자 이름은 B의 ai-001 에서 정하면 앱 전체와 맞추기 (Figma 는 Mark, FN-001 은 Nguyen)
-const USER_NAME = 'Nguyen';
+const USER_NAME = DEMO_USER.firstName;
 const EXPIRY_DATE = '2027-10-04'; // VS-001 체류 만료일과 같음
 
 const fmtDot = (iso: string) => iso.replaceAll('-', '.');
