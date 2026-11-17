@@ -9,6 +9,7 @@ import { DEMO_USER } from './mock/demoUser';
 const MOCK_ME: UserMeResponse = {
   id: 1,
   displayName: DEMO_USER.nameEn,
+  shortName: DEMO_USER.firstName,
   preferredLanguage: 'en',
   status: 'ACTIVE',
   onboarding: { completed: false, currentStep: 'LANGUAGE' },

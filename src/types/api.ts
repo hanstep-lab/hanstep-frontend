@@ -48,6 +48,7 @@ export type Onboarding = {
 export type UserMeResponse = {
   id: number;
   displayName: string;
+  shortName?: string | null; // 짧은 이름 (예: Mark). 없으면 displayName 사용
   preferredLanguage: Language;
   status: UserStatus;
   onboarding: Onboarding;
