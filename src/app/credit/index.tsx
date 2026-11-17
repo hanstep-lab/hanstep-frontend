@@ -44,6 +44,9 @@ type Loaded = { alt: AltCreditAssessment; name: string; loan: GlobalLoan };
 
 const preparing = () => Alert.alert('준비 중', '곧 사용할 수 있어요.');
 
+// 원 → 만 원 표시. 만 원 미만은 버린다. 6,234,567 → "623만 원", 30,000,000 → "3,000만 원"
+const fmtManWon = (won: number) => `${fmtNumber(Math.floor(won / 10000))}만 원`;
+
 // 오류 코드 → 안내 문구. 표에 없는 코드(404·401 등)는 기본 문구
 function errorText(code: string | undefined): string {
   if (code && Object.prototype.hasOwnProperty.call(ERROR_TEXT, code)) {
@@ -276,7 +279,7 @@ export default function AltCreditScreen() {
             <View style={s.terms}>
               <TermRow
                 label={T.limitLabel}
-                value={`${fmtNumber(alt.minLimit)}원 ~ ${fmtNumber(alt.maxLimit)}원`}
+                value={`${fmtManWon(alt.minLimit)} ~ ${fmtManWon(alt.maxLimit)}`}
               />
               <TermRow label={T.termLabel} value={`${alt.loanTermMonths}개월`} />
             </View>
