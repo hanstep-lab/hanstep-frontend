@@ -15,8 +15,8 @@ const AMOUNT_OPTIONS = [
 ];
 
 const REMITTANCES = [
-  { name: 'Nguyen Thi Mai',  bank: 'Vietcombank', desc: '매월 송금 · 월 평균 500,000원' },
-  { name: '본인 명의 계좌',  bank: 'Techcombank', desc: '매월 송금 · 월 평균 200,000원' },
+  { name: 'Lorna Reyes',     bank: 'BDO', desc: '매월 송금 · 월 평균 500,000원' },
+  { name: '본인 명의 계좌',  bank: 'BPI', desc: '매월 송금 · 월 평균 200,000원' },
 ];
 
 const EXPENSES = [
@@ -62,19 +62,19 @@ export default function QuestionsScreen() {
 
         <View style={styles.titleArea}>
           <Text style={styles.title}>{'선택하신 목표에 대한\n맞춤 질문이에요'}</Text>
-          <Text style={styles.subtitle}>{'Nguyen님의 상황에 맞춰\n지출·저축 루틴을 제안해 드릴게요.'}</Text>
+          <Text style={styles.subtitle}>{'Mark님의 상황에 맞춰\n지출·저축 루틴을 제안해 드릴게요.'}</Text>
         </View>
 
         {/* 사용자 정보 미니 배너 */}
         <View style={styles.userBanner}>
           <View style={styles.userAvatar}>
-            <Text style={styles.userInitial}>NV</Text>
+            <Text style={styles.userInitial}>MR</Text>
           </View>
           <View style={styles.userInfo}>
             <View style={styles.userNameRow}>
-              <Text style={styles.userName}>Nguyen Van Minh 님</Text>
+              <Text style={styles.userName}>Mark Anthony Reyes 님</Text>
               <View style={styles.countryTag}>
-                <Text style={styles.countryTagText}>베트남</Text>
+                <Text style={styles.countryTagText}>필리핀</Text>
               </View>
             </View>
             <Text style={styles.userSub}>체류 만료 2027.10.04 · 약 10개월 남음 (E-9)</Text>

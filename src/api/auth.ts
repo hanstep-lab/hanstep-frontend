@@ -4,6 +4,7 @@
 import { client } from './client';
 import { USE_MOCK, mockDelay } from './config';
 import type { EntryRequest, EntryResponse } from '../types/api';
+import { DEMO_USER } from './mock/demoUser';
 
 // Mock: 명세 example 기준. 새 사용자라 온보딩 첫 단계(LANGUAGE)부터 시작.
 const MOCK_ENTRY: EntryResponse = {
@@ -12,7 +13,7 @@ const MOCK_ENTRY: EntryResponse = {
   expiresIn: 3600,
   user: {
     id: 1,
-    displayName: 'NGUYEN VAN MINH',
+    displayName: DEMO_USER.nameEn,
     preferredLanguage: 'en',
     status: 'ACTIVE',
     onboarding: { completed: false, currentStep: 'LANGUAGE' },

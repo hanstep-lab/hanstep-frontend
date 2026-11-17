@@ -1,5 +1,5 @@
 import { View, Text, Button } from 'react-native';
-import { router, type Href } from 'expo-router';
+import { router } from 'expo-router';
 import { useOnboardingStore } from '../../store/onboardingStore'; // 임시: 저장소 테스트
 
 export default function HomeScreen() {
@@ -26,10 +26,6 @@ export default function HomeScreen() {
           router.replace('/onboarding/language'); // 온보딩으로 이동
         }}
       />
-
-      {/* 임시: 메뉴에 아직 연결 안 된 화면 확인용. 메뉴 연결 후 지울 것 */}
-      <Text>개발용 바로가기</Text>
-      <Button title="FP-001 금융상품 추천" onPress={() => router.push('/finance/products' as Href)} />
     </View>
   );
 }
