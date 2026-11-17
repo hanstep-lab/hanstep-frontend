@@ -9,7 +9,6 @@ import {
   Modal,
   Alert,
   KeyboardAvoidingView,
-  Platform,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
@@ -176,11 +175,8 @@ export default function ChatScreen() {
       </View>
 
       {/* 키보드가 올라오면 대화 목록과 입력창을 키보드 높이만큼 위로 올린다.
-          iOS 는 직접 올려야 해서 padding, Android 는 시스템이 처리해서 그대로 둔다 */}
-      <KeyboardAvoidingView
-        style={styles.flex}
-        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-      >
+          iOS 는 원래 안 올려 주고, Android 도 edge-to-edge(SDK 54~)라 시스템이 화면을 줄여 주지 않아서 둘 다 padding */}
+      <KeyboardAvoidingView style={styles.flex} behavior="padding">
         <ScrollView
           ref={scrollRef}
           style={styles.scroll}
