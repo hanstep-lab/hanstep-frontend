@@ -106,9 +106,6 @@ export default function ProductsScreen() {
 
           <View style={s.actions}>
             <Button title="신한걸음에 물어보기" onPress={() => router.push('/(tabs)/chat' as Href)} />
-            <Pressable onPress={() => router.push('/finance/diagnosis' as Href)} hitSlop={8}>
-              <Text style={s.linkText}>내 금융 분석 보기</Text>
-            </Pressable>
           </View>
         </>
       )}
@@ -167,5 +164,4 @@ const s = StyleSheet.create({
   loanTitle: { ...typography.title, color: colors.text.strong },
 
   actions: { gap: 10, paddingTop: spacing.xs, alignItems: 'stretch' },
-  linkText: { ...typography.body, color: colors.text.sub, textAlign: 'center' },
 });

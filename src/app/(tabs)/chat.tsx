@@ -38,7 +38,6 @@ const ACTION_ROUTES: Record<Exclude<ChatAction, 'transfer'>, Href> = {
   fx: '/fx' as Href,
   fx_alert: '/fx/alert' as Href,
   products: '/finance/products' as Href,
-  diagnosis: '/finance/diagnosis' as Href,
 };
 
 function runAction(action: ChatAction) {
