@@ -39,7 +39,7 @@ export default function ProductsScreen() {
   }, []);
 
   // CR-001 대안신용 화면이 생기면 /credit 으로 연결
-  const goCredit = () => Alert.alert('준비 중', '곧 사용할 수 있어요.');
+  const goCredit = () => router.push('/credit' as Href);
 
   return (
     <Screen title="금융상품 추천">

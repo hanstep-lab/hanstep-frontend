@@ -33,6 +33,25 @@ export type AltCreditRateBreakdown = {
   final: number;
 };
 
+// ── 추가 요청한 필드 (이름 미확정 — 백엔드 확정 후 다시 맞출 것) ──
+// 점수 구간. 구간 계산은 서버가 하고, 화면은 코드를 칸 수로만 바꾼다.
+export type AltCreditBandCode = 'BAND_1' | 'BAND_2' | 'BAND_3' | 'BAND_4' | 'BAND_5';
+export type AltCreditScoreBand = { code: AltCreditBandCode; min: number; max: number }; // 점
+
+// 진단 근거 항목과 등급. 등급 판단은 서버가 한다.
+export type AltCreditFactorKey =
+  | 'TEL_PAYMENT'
+  | 'REMIT_REGULARITY'
+  | 'REMIT_RATIO'
+  | 'STAY_DURATION'
+  | 'UTIL_PAYMENT';
+export type AltCreditGrade = 'GOOD' | 'NORMAL' | 'NEEDS_IMPROVEMENT' | 'NO_DATA';
+export type AltCreditFactor = { key: AltCreditFactorKey; grade: AltCreditGrade };
+
+// 신한걸음 글로벌론 가입 조건 충족 여부
+export type AltCreditCheckKey = 'WORK_PERMITTED' | 'SALARY_3M' | 'EXPIRY_OVER_6M';
+export type AltCreditEligibilityCheck = { key: AltCreditCheckKey; met: boolean };
+
 // 진단에 쓴 입력값. 날짜는 'YYYY-MM-DD' 문자열
 export type AltCreditInputs = {
   stayDurationMonths: number;
@@ -70,6 +89,10 @@ export type AltCreditAssessment = {
   disclaimer: string;
   inputs: AltCreditInputs;
   mockFields: string[];
+  // 추가 요청한 필드. 아직 배포 전이라 없거나 비어 있을 수 있다 (화면은 해당 부분만 숨김)
+  scoreBand?: AltCreditScoreBand | null;
+  factors?: AltCreditFactor[] | null;
+  eligibilityChecks?: AltCreditEligibilityCheck[] | null;
 };
 
 // 화면에서 오류별로 나눌 때 쓰는 코드. 401 은 서버가 code 를 안 주면 'HTTP_401' 로 온다.
