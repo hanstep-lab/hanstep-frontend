@@ -33,24 +33,28 @@ export type AltCreditRateBreakdown = {
   final: number;
 };
 
-// ── 추가 요청한 필드 (이름 미확정 — 백엔드 확정 후 다시 맞출 것) ──
-// 점수 구간. 구간 계산은 서버가 하고, 화면은 코드를 칸 수로만 바꾼다.
-export type AltCreditBandCode = 'BAND_1' | 'BAND_2' | 'BAND_3' | 'BAND_4' | 'BAND_5';
-export type AltCreditScoreBand = { code: AltCreditBandCode; min: number; max: number }; // 점
+// ── 추가 필드 (백엔드 명세 기준) ──
+// 점수 구간. 구간 계산은 서버가 하고, 화면은 index(1~5) 칸만큼 칠하기만 한다.
+export type AltCreditScoreBand = { index: number; min: number; max: number }; // min·max 는 점
 
-// 진단 근거 항목과 등급. 등급 판단은 서버가 한다.
+// 진단 근거 항목과 수준. 수준 판단은 서버가 한다.
 export type AltCreditFactorKey =
-  | 'TEL_PAYMENT'
+  | 'TEL_LATE'
+  | 'UTIL_LATE'
   | 'REMIT_REGULARITY'
   | 'REMIT_RATIO'
-  | 'STAY_DURATION'
-  | 'UTIL_PAYMENT';
-export type AltCreditGrade = 'GOOD' | 'NORMAL' | 'NEEDS_IMPROVEMENT' | 'NO_DATA';
-export type AltCreditFactor = { key: AltCreditFactorKey; grade: AltCreditGrade };
+  | 'STAY_DURATION';
+export type AltCreditLevel = 'GOOD' | 'FAIR' | 'NEEDS_IMPROVEMENT' | 'NO_RECORD';
+// value 는 화면에 표시하지 않는다
+export type AltCreditFactor = { key: AltCreditFactorKey; level: AltCreditLevel; value: number | null };
 
-// 신한걸음 글로벌론 가입 조건 충족 여부
+// 신한걸음 글로벌론 가입 조건 충족 여부. met 이 null 이면 확인 안 됨
 export type AltCreditCheckKey = 'WORK_PERMITTED' | 'SALARY_3M' | 'EXPIRY_OVER_6M';
-export type AltCreditEligibilityCheck = { key: AltCreditCheckKey; met: boolean };
+export type AltCreditEligibilityCheck = {
+  key: AltCreditCheckKey;
+  met: boolean | null;
+  value: number | null; // 화면 옆 값은 inputs 를 쓴다 (같은 값)
+};
 
 // 진단에 쓴 입력값. 날짜는 'YYYY-MM-DD' 문자열
 export type AltCreditInputs = {

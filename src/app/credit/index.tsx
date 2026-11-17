@@ -14,10 +14,9 @@ import Button from '../../components/Button';
 import { colors, typography, spacing, radius, fonts, shadow } from '../../constants/theme';
 import {
   ALT_CREDIT_TEXT as T,
-  GRADE_BADGE,
+  LEVEL_BADGE,
   ELIGIBILITY_BADGE,
   BAND_SEGMENTS,
-  BAND_FILL,
   FACTOR_ORDER,
   FACTOR_NAME,
   FACTOR_DESC,
@@ -27,7 +26,7 @@ import {
   REASON_TEXT,
   REASON_FALLBACK,
   TIP_ORDER,
-  TIP_GRADES,
+  TIP_LEVELS,
   TIP_MAX,
   TIPS,
   DEFAULT_TIP,
@@ -74,15 +73,19 @@ function EligibilityBadge({ met }: { met: boolean }) {
   return <Badge label={tone.label} tone={tone} />;
 }
 
+// 충족 여부 아이콘: 충족 = 파란 체크, 미충족 = X, 확인 안 됨(null) = 회색 빈 원
+function checkIcon(met: boolean | null) {
+  if (met === true) return { name: 'checkmark-circle' as const, color: colors.primary };
+  if (met === false) return { name: 'close-circle' as const, color: colors.required.text };
+  return { name: 'ellipse-outline' as const, color: colors.text.muted };
+}
+
 // 가입 조건 한 줄: 충족 아이콘 + 조건 + (옆 값)
-function CheckRow({ title, met, value }: { title: string; met: boolean; value?: string | null }) {
+function CheckRow({ title, met, value }: { title: string; met: boolean | null; value?: string | null }) {
+  const icon = checkIcon(met);
   return (
     <View style={s.checkRow}>
-      <Ionicons
-        name={met ? 'checkmark-circle' : 'ellipse-outline'}
-        size={18}
-        color={met ? colors.primary : colors.disabled}
-      />
+      <Ionicons name={icon.name} size={18} color={icon.color} />
       <Text style={s.checkTitle}>{title}</Text>
       {value != null && <Text style={s.checkValue}>{value}</Text>}
     </View>
@@ -134,7 +137,7 @@ export default function AltCreditScreen() {
 
   useEffect(() => {
     Promise.all([getAltAssessment(), getMe(), getGlobalLoan()])
-      .then(([alt, me, loan]) => setData({ alt, name: me.displayName, loan }))
+      .then(([alt, me, loan]) => setData({ alt, name: me.shortName || me.displayName, loan }))
       .catch((e: ApiError) => setError(errorText(e?.code)));
   }, []);
 
@@ -148,7 +151,7 @@ export default function AltCreditScreen() {
 
   const { alt, name, loan } = data;
   const band = alt.scoreBand ?? null;
-  const bandFill = band ? BAND_FILL[band.code] : undefined;
+  const bandFill = band?.index;
   const factors = alt.factors ?? [];
   const checks = alt.eligibilityChecks ?? [];
 
@@ -172,7 +175,7 @@ export default function AltCreditScreen() {
 
   // 점수를 높이는 방법: 정한 순서에서 보통·보완 필요 항목을 앞에서부터 최대 2개, 없으면 기본 카드
   const tipKeys = TIP_ORDER.filter((key) =>
-    factors.some((f) => f.key === key && TIP_GRADES.includes(f.grade)),
+    factors.some((f) => f.key === key && TIP_LEVELS.includes(f.level)),
   ).slice(0, TIP_MAX);
   const tips = tipKeys.length > 0 ? tipKeys.map((key) => TIPS[key]) : [DEFAULT_TIP];
 
@@ -221,13 +224,13 @@ export default function AltCreditScreen() {
 
           <View style={[s.card, s.listCard]}>
             {factorRows.map((f, i) => {
-              const grade = GRADE_BADGE[f.grade];
-              const desc = FACTOR_DESC[f.key]?.[f.grade];
+              const level = LEVEL_BADGE[f.level];
+              const desc = FACTOR_DESC[f.key]?.[f.level];
               return (
                 <View key={f.key} style={[s.factorRow, i > 0 && s.divider]}>
                   <View style={s.factorHeader}>
                     <Text style={s.factorName}>{FACTOR_NAME[f.key]}</Text>
-                    {grade && <Badge label={grade.label} tone={grade} />}
+                    {level && <Badge label={level.label} tone={level} />}
                   </View>
                   {desc != null && <Text style={s.caption}>{desc}</Text>}
                 </View>
