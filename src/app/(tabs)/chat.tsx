@@ -8,6 +8,8 @@ import {
   StyleSheet,
   Modal,
   Alert,
+  KeyboardAvoidingView,
+  Platform,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
@@ -143,52 +145,59 @@ export default function ChatScreen() {
         </View>
       </View>
 
-      <ScrollView
-        ref={scrollRef}
-        style={styles.scroll}
-        contentContainerStyle={styles.msgContent}
-        showsVerticalScrollIndicator={false}
-        keyboardShouldPersistTaps="handled"
+      {/* 키보드가 올라오면 대화 목록과 입력창을 키보드 높이만큼 위로 올린다.
+          iOS 는 직접 올려야 해서 padding, Android 는 시스템이 처리해서 그대로 둔다 */}
+      <KeyboardAvoidingView
+        style={styles.flex}
+        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
       >
-        {messages.length === 0 ? (
-          <LandingContent onSend={send} />
-        ) : (
-          <>
-            <Text style={styles.dateSep}>{getTodayString()}</Text>
-            {messages.map(msg => (
-              <MessageItem key={msg.id} msg={msg} onSend={send} askedSet={askedSet} />
-            ))}
-          </>
-        )}
-      </ScrollView>
-
-      <View style={styles.inputBar}>
-        <Pressable style={styles.micBtn}>
-          <Ionicons name="mic-outline" size={24} color={colors.text.sub} />
-        </Pressable>
-        <TextInput
-          style={styles.textInput}
-          value={input}
-          onChangeText={setInput}
-          placeholder="메시지를 입력하세요"
-          placeholderTextColor={colors.text.sub}
-          multiline
-          returnKeyType="send"
-          blurOnSubmit={false}
-          onSubmitEditing={() => send(input)}
-        />
-        <Pressable
-          style={[styles.sendBtn, !!input.trim() && styles.sendBtnOn]}
-          onPress={() => send(input)}
-          disabled={!input.trim()}
+        <ScrollView
+          ref={scrollRef}
+          style={styles.scroll}
+          contentContainerStyle={styles.msgContent}
+          showsVerticalScrollIndicator={false}
+          keyboardShouldPersistTaps="handled"
         >
-          <Ionicons
-            name="arrow-up"
-            size={16}
-            color={input.trim() ? colors.text.inverse : colors.text.sub}
+          {messages.length === 0 ? (
+            <LandingContent onSend={send} />
+          ) : (
+            <>
+              <Text style={styles.dateSep}>{getTodayString()}</Text>
+              {messages.map(msg => (
+                <MessageItem key={msg.id} msg={msg} onSend={send} askedSet={askedSet} />
+              ))}
+            </>
+          )}
+        </ScrollView>
+
+        <View style={styles.inputBar}>
+          <Pressable style={styles.micBtn}>
+            <Ionicons name="mic-outline" size={24} color={colors.text.sub} />
+          </Pressable>
+          <TextInput
+            style={styles.textInput}
+            value={input}
+            onChangeText={setInput}
+            placeholder="메시지를 입력하세요"
+            placeholderTextColor={colors.text.sub}
+            multiline
+            returnKeyType="send"
+            blurOnSubmit={false}
+            onSubmitEditing={() => send(input)}
           />
-        </Pressable>
-      </View>
+          <Pressable
+            style={[styles.sendBtn, !!input.trim() && styles.sendBtnOn]}
+            onPress={() => send(input)}
+            disabled={!input.trim()}
+          >
+            <Ionicons
+              name="arrow-up"
+              size={16}
+              color={input.trim() ? colors.text.inverse : colors.text.sub}
+            />
+          </Pressable>
+        </View>
+      </KeyboardAvoidingView>
 
       <MenuSheet visible={showMenu} onClose={() => setShowMenu(false)} />
     </SafeAreaView>
@@ -479,6 +488,7 @@ function MenuSheet({ visible, onClose }: { visible: boolean; onClose: () => void
 
 const styles = StyleSheet.create({
   safe: { flex: 1, backgroundColor: colors.background },
+  flex: { flex: 1 },
   header: {
     flexDirection: 'row',
     alignItems: 'center',
