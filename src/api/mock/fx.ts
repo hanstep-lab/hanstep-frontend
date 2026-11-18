@@ -3,6 +3,15 @@
 // 출처는 ECB 기준환율(백엔드가 하루 1번 수집). 숫자는 전부 Mock 임시값.
 // TODO: FX-01, FX-02 명세가 오면 필드 이름을 맞출 것.
 
+import type {
+  ApiError,
+  FxAlertCreateRequest,
+  FxAlertListResponse,
+  FxAlertResponse,
+  FxRateHistoryResponse,
+  FxRateResponse,
+} from '../../types/api';
+
 const AS_OF = '2026-11-13';
 
 // 최근 1개월(20영업일) 기준환율. 1 PHP 당 KRW. 마지막 값이 현재(기준일) 값.
@@ -102,14 +111,15 @@ export const MOCK_FX_PERIODS = (Object.keys(PERIODS) as MockFxPeriod[]).map((key
 }));
 
 // ---------------------------------------------------------------------------
-// FX-002 목표 환율 알림 Mock
-// 프리셋(-1/-3/-5%), 슬라이더 범위, 최저·최고 같은 계산은 서버 역할이라 여기서만 한다.
-// 알림 상태(ACTIVE/TRIGGERED)·최대 4개(같은 통화·방향 1개)는 FX 알림 API 연결 때 반영
+// FX-002 목표 환율 알림 Mock. 서버(GET /fx/rates, /fx/rates/{currency}/history, /fx/alerts)와 같은 모양을 돌려준다.
+// 프리셋·슬라이더 step 은 서버가 주지 않아서 Mock 도 주지 않는다 (src/api/fx.ts 가 계산).
+// 서버 규칙 흉내: 같은 통화·comparator 의 ACTIVE 는 1개(DUPLICATE_REQUEST), rateType 을 빼면 SEND,
+// PHP 는 송금 환율이 없어 SEND 면 VALIDATION_ERROR. 숫자는 전부 Mock 임시값.
 // ---------------------------------------------------------------------------
 
 const ALERT_CURRENCIES = {
-  PHP: { name: '필리핀', unit: 1, scale: 1, step: 0.05 },
-  USD: { name: '미국', unit: 1, scale: 1380 / 24.9, step: 1 },
+  PHP: { name: '필리핀', scale: 1, sourceLabel: 'ECB 기준환율 기반 참고값', hasSendRate: false },
+  USD: { name: '미국', scale: 1380 / 24.9, sourceLabel: '수출입은행 고시 매매기준율', hasSendRate: true },
 } as const;
 
 export type MockAlertCurrency = keyof typeof ALERT_CURRENCIES;
@@ -117,81 +127,109 @@ export const MOCK_ALERT_CURRENCIES = (Object.keys(ALERT_CURRENCIES) as MockAlert
   (code) => ({ code, name: ALERT_CURRENCIES[code].name }),
 );
 
-// 소수 오차 없이 step 단위로 맞추기
-const toStep = (n: number, step: number, mode: 'round' | 'floor' = 'round') =>
-  round2(Math[mode](Math.round((n / step) * 1000) / 1000) * step);
+// 최근 1개월 흐름을 통화별 크기에 맞춰 늘린 임시값
+const alertSeries = (currency: MockAlertCurrency) =>
+  LAST_20.map((v) => round2(v * ALERT_CURRENCIES[currency].scale));
 
-export function mockFxAlertSetup(currency: MockAlertCurrency) {
-  const cfg = ALERT_CURRENCIES[currency];
-  // 최근 1개월 흐름을 통화별 크기에 맞춰 늘린 임시값
-  const series = LAST_20.map((v) => round2(v * cfg.scale));
+// GET /api/v1/fx/rates 중 알림 화면이 쓰는 필드
+export function mockFxAlertRate(currency: MockAlertCurrency): FxRateResponse {
+  const series = alertSeries(currency);
   const current = series[series.length - 1];
   const prev = series[series.length - 2];
-  const low = Math.min(...series);
-  const high = Math.max(...series);
-
-  const presets = [
-    ...[1, 3, 5].map((p) => ({
-      key: `-${p}%`,
-      label: `-${p}%`,
-      value: toStep(current * (1 - p / 100), cfg.step),
-    })),
-    { key: 'low', label: '최저점', value: low },
-  ];
-
   return {
     currency,
-    name: cfg.name,
-    unit: cfg.unit,
+    unit: 1,
     rate: current,
     changeRate: round2(((current - prev) / prev) * 100),
     asOf: AS_OF,
-    sourceLabel: 'ECB 기준환율 기반 참고값',
-    sparkline: series,
-    low,
-    high,
-    slider: {
-      min: toStep(Math.min(low, presets[2].value), cfg.step, 'floor'),
-      max: high,
-      step: cfg.step,
-    },
-    presets,
-    defaultPresetKey: '-3%',
+    sourceLabel: ALERT_CURRENCIES[currency].sourceLabel,
   };
 }
 
-type MockFxAlert = {
-  id: string;
-  currency: MockAlertCurrency;
-  unit: number;
-  target: number;
-  direction: 'below' | 'above';
-  status: 'waiting';
-};
-
-// 앱을 끄기 전까지만 유지되는 임시 목록 (서버 저장 대신)
-let alerts: MockFxAlert[] = [
-  { id: 'alert-1', currency: 'USD', unit: 1, target: 1350, direction: 'below', status: 'waiting' },
-];
-
-export function mockFxAlerts() {
-  return { items: [...alerts], activeCount: alerts.length };
+// GET /api/v1/fx/rates/{currency}/history?period=1M 중 알림 화면이 쓰는 필드
+export function mockFxAlertHistory(currency: MockAlertCurrency): FxRateHistoryResponse {
+  const series = alertSeries(currency);
+  const dates = businessDays(series.length);
+  return {
+    currency,
+    period: '1M',
+    points: series.map((rate, i) => ({ date: dates[i], rate })),
+    min: Math.min(...series),
+    max: Math.max(...series),
+    current: series[series.length - 1],
+    asOf: AS_OF,
+  };
 }
 
-export function mockCreateFxAlert(input: { currency: MockAlertCurrency; target: number }) {
-  const current = mockFxAlertSetup(input.currency).rate;
-  const item: MockFxAlert = {
-    id: `alert-${Date.now()}`,
-    currency: input.currency,
-    unit: ALERT_CURRENCIES[input.currency].unit,
-    target: input.target,
-    direction: input.target <= current ? 'below' : 'above',
-    status: 'waiting',
+// 앱을 끄기 전까지만 유지되는 임시 목록 (서버 저장 대신). 만든 시각 최신순
+let alerts: FxAlertResponse[] = [
+  {
+    alertId: 2,
+    currency: 'USD',
+    rateType: 'BASE',
+    comparator: 'LTE',
+    targetRate: 1350,
+    unitAmount: 1,
+    status: 'ACTIVE',
+    createdAt: '2026-11-12T10:00:00+09:00',
+    triggeredAt: null,
+    triggeredRate: null,
+  },
+  {
+    // LAST_20 의 최저점(2026-10-23, 24.10)에서 도달한 예시
+    alertId: 1,
+    currency: 'PHP',
+    rateType: 'BASE',
+    comparator: 'LTE',
+    targetRate: 24.15,
+    unitAmount: 1,
+    status: 'TRIGGERED',
+    createdAt: '2026-10-20T09:00:00+09:00',
+    triggeredAt: '2026-10-24T00:10:00+09:00',
+    triggeredRate: 24.1,
+  },
+];
+let nextAlertId = 3;
+
+// 지금 시각을 서버처럼 "+09:00" 문자열로
+const nowKst = () => `${new Date(Date.now() + 9 * 60 * 60 * 1000).toISOString().slice(0, 19)}+09:00`;
+
+export function mockFxAlerts(): FxAlertListResponse {
+  return { alerts: alerts.filter((a) => a.status !== 'CANCELLED') };
+}
+
+export function mockCreateFxAlert(req: FxAlertCreateRequest): FxAlertResponse {
+  const rateType = req.rateType ?? 'SEND';
+  const cfg = ALERT_CURRENCIES[req.currency as MockAlertCurrency];
+  if (!cfg) {
+    throw { code: 'FX_RATE_NOT_FOUND', message: 'exchange rate not found' } satisfies ApiError;
+  }
+  if (rateType === 'SEND' && !cfg.hasSendRate) {
+    throw { code: 'VALIDATION_ERROR', message: 'invalid request' } satisfies ApiError;
+  }
+  const duplicate = alerts.some(
+    (a) => a.status === 'ACTIVE' && a.currency === req.currency && a.comparator === req.comparator,
+  );
+  if (duplicate) {
+    throw { code: 'DUPLICATE_REQUEST', message: 'duplicate request' } satisfies ApiError;
+  }
+  const item: FxAlertResponse = {
+    alertId: nextAlertId++,
+    currency: req.currency,
+    rateType,
+    comparator: req.comparator,
+    targetRate: req.targetRate,
+    unitAmount: 1,
+    status: 'ACTIVE',
+    createdAt: nowKst(),
+    triggeredAt: null,
+    triggeredRate: null,
   };
   alerts = [item, ...alerts];
   return item;
 }
 
-export function mockDeleteFxAlert(id: string) {
-  alerts = alerts.filter((a) => a.id !== id);
+// 서버처럼 행을 지우지 않고 CANCELLED 로 바꿔 목록에서 뺀다
+export function mockDeleteFxAlert(alertId: number) {
+  alerts = alerts.map((a) => (a.alertId === alertId ? { ...a, status: 'CANCELLED' } : a));
 }

@@ -315,3 +315,54 @@ export type E74Result = {
 
 // GET /api/v1/visa/e74/assessments/latest
 export type E74AssessmentDetailResponse = { assessmentId: number; createdAt: string; result: E74Result };
+
+// ── FX 목표 환율 알림 (FX-002) ─────────────────────────
+export type FxRateType = 'BASE' | 'SEND'; // BASE 매매기준율 / SEND 송금 보낼 때 환율
+export type FxComparator = 'LTE' | 'GTE'; // LTE 목표 이하가 되면 / GTE 목표 이상이 되면
+export type FxAlertStatus = 'ACTIVE' | 'TRIGGERED' | 'CANCELLED';
+
+// POST /api/v1/fx/alerts 응답, 목록 항목. 환율 값은 unitAmount 외화당 원화
+export type FxAlertResponse = {
+  alertId: number;
+  currency: string;
+  rateType: FxRateType;
+  comparator: FxComparator;
+  targetRate: number;
+  unitAmount: number | null;
+  status: FxAlertStatus;
+  createdAt: string; // "2026-11-17T14:30:00+09:00"
+  triggeredAt: string | null; // TRIGGERED 가 아니면 null
+  triggeredRate: number | null; // TRIGGERED 가 아니면 null
+};
+
+// GET /api/v1/fx/alerts — ACTIVE·TRIGGERED 만, 최신순
+export type FxAlertListResponse = { alerts: FxAlertResponse[] };
+
+// POST /api/v1/fx/alerts 요청. rateType 을 빼면 서버는 SEND 로 처리한다
+export type FxAlertCreateRequest = {
+  currency: string;
+  rateType?: FxRateType | null;
+  comparator: FxComparator;
+  targetRate: number;
+};
+
+// GET /api/v1/fx/rates — 알림 화면이 쓰는 필드만. 나머지는 FX-001 연결 때 추가
+export type FxRateResponse = {
+  currency: string;
+  unit: number;
+  rate: number; // 매매기준율
+  changeRate: number | null; // 전 영업일 대비(%). 없으면 null
+  asOf: string; // "2026-11-17"
+  sourceLabel: string;
+};
+
+// GET /api/v1/fx/rates/{currency}/history — 알림 화면이 쓰는 필드만
+export type FxRateHistoryResponse = {
+  currency: string;
+  period: string;
+  points: { date: string; rate: number }[]; // 날짜 오름차순, 매매기준율
+  min: number;
+  max: number;
+  current: number;
+  asOf: string;
+};
