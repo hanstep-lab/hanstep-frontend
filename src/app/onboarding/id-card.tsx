@@ -1,8 +1,11 @@
-import { View, Text, Pressable, ScrollView, StyleSheet } from 'react-native';
+import { useCallback, useEffect, useRef, useState } from 'react';
+import { View, Text, Pressable, ScrollView, StyleSheet, Linking, Alert, ActivityIndicator } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
-import { router, type Href } from 'expo-router';
+import { router, useFocusEffect, useIsFocused, type Href } from 'expo-router';
+import { CameraView, useCameraPermissions } from 'expo-camera';
 import Header from '../../components/Header';
+import { useOnboardingStore } from '../../store/onboardingStore';
 import { colors, typography, spacing, radius, fonts, shadow } from '../../constants/theme';
 
 function CornerGuide({ pos }: { pos: 'tl' | 'tr' | 'bl' | 'br' }) {
@@ -28,15 +31,75 @@ function CornerGuide({ pos }: { pos: 'tl' | 'tr' | 'bl' | 'br' }) {
 export default function IdCardScreen() {
   const goToConfirm = () => router.push('/onboarding/id-confirm' as Href);
 
+  const [permission, requestPermission] = useCameraPermissions();
+  const hasPermission = permission?.granted === true;
+
+  // 처음 들어왔을 때(아직 한 번도 안 물어봄)만 OS 팝업을 자동으로 띄움
+  useEffect(() => {
+    if (permission?.status === 'undetermined') {
+      requestPermission();
+    }
+  }, [permission?.status, requestPermission]);
+
+  const handlePermissionPress = () => {
+    if (permission?.canAskAgain) {
+      requestPermission();
+    } else {
+      Linking.openSettings(); // 다시 묻기가 막힌 경우 설정 앱으로
+    }
+  };
+
+  const cameraRef = useRef<CameraView>(null);
+  const capturingRef = useRef(false); // 두 번 눌림 즉시 잠금
+  const [isCameraReady, setIsCameraReady] = useState(false);
+  const [isCapturing, setIsCapturing] = useState(false);
+  const setIdCardFrontUri = useOnboardingStore((s) => s.setIdCardFrontUri);
+
+  const canCapture = hasPermission && isCameraReady && !isCapturing;
+
+  const isFocused = useIsFocused();
+  const [torchOn, setTorchOn] = useState(false);
+
+  // 화면이 가려질 때: 플래시 끄고, 카메라 준비 상태 초기화(돌아오면 다시 onCameraReady를 기다림)
+  useFocusEffect(
+    useCallback(() => {
+      return () => {
+        setTorchOn(false);
+        setIsCameraReady(false);
+      };
+    }, []),
+  );
+
+  const handleCapture = async () => {
+    if (!cameraRef.current || capturingRef.current) return;
+    capturingRef.current = true;
+    setIsCapturing(true);
+    try {
+      const photo = await cameraRef.current.takePictureAsync();
+      setIdCardFrontUri(photo.uri);
+      router.push('/onboarding/id-confirm' as Href);
+    } catch (e) {
+      console.warn('[ON-002] 촬영 실패', e);
+      Alert.alert('촬영하지 못했어요', '잠시 후 다시 시도해 주세요.');
+    } finally {
+      capturingRef.current = false;
+      setIsCapturing(false);
+    }
+  };
+
   return (
     <SafeAreaView style={styles.safe} edges={['top', 'bottom']}>
       <Header title="외국인등록증 촬영" showBack />
 
       <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
         <View style={styles.row}>
-          <Pressable style={styles.chip}>
-            <Ionicons name="flash-off" size={16} color={colors.text.strong} />
-            <Text style={styles.chipText}>플래시 꺼짐</Text>
+          <Pressable
+            style={[styles.chip, !hasPermission && styles.chipDisabled]}
+            onPress={() => setTorchOn((on) => !on)}
+            disabled={!hasPermission}
+          >
+            <Ionicons name={torchOn ? 'flash' : 'flash-off'} size={16} color={colors.text.strong} />
+            <Text style={styles.chipText}>{torchOn ? '플래시 켜짐' : '플래시 꺼짐'}</Text>
           </Pressable>
         </View>
 
@@ -56,38 +119,34 @@ export default function IdCardScreen() {
 
         <View style={styles.viewfinderWrap}>
           <View style={styles.viewfinder}>
-            <CornerGuide pos="tl" />
-            <CornerGuide pos="tr" />
-            <CornerGuide pos="bl" />
-            <CornerGuide pos="br" />
-
-            <View style={styles.mockCard}>
-              <View style={styles.mockCardHeader}>
-                <View>
-                  <Text style={styles.mockCountry}>REPUBLIC OF KOREA</Text>
-                  <Text style={styles.mockCardName}>외국인등록증 (ALIEN REGISTRATION CARD)</Text>
-                </View>
+            {hasPermission ? (
+              <>
+                {isFocused && (
+                  <CameraView
+                    ref={cameraRef}
+                    style={StyleSheet.absoluteFill}
+                    facing="back"
+                    enableTorch={torchOn}
+                    onCameraReady={() => setIsCameraReady(true)}
+                  />
+                )}
+                <CornerGuide pos="tl" />
+                <CornerGuide pos="tr" />
+                <CornerGuide pos="bl" />
+                <CornerGuide pos="br" />
+              </>
+            ) : permission ? (
+              <View style={styles.permissionBox}>
+                <Ionicons name="camera-outline" size={28} color={colors.text.inverse} />
+                <Text style={styles.permissionTitle}>카메라 권한이 필요해요</Text>
+                <Text style={styles.permissionDesc}>등록증을 촬영하려면 카메라 접근을 허용해 주세요.</Text>
+                <Pressable style={styles.permissionBtn} onPress={handlePermissionPress}>
+                  <Text style={styles.permissionBtnText}>
+                    {permission.canAskAgain ? '권한 다시 요청하기' : '설정에서 권한 허용하기'}
+                  </Text>
+                </Pressable>
               </View>
-              <View style={styles.mockCardBody}>
-                <View style={styles.mockPhoto}>
-                  <Ionicons name="person-outline" size={20} color={colors.text.sub} />
-                  <Text style={styles.mockPhotoLabel}>사진 영역</Text>
-                </View>
-                <View style={styles.mockFields}>
-                  {[
-                    { label: '등록번호', value: '●●●●●● - ●●●●●●●' },
-                    { label: '체류자격', value: 'E-9 / 비전문취업' },
-                    { label: '발급일자', value: 'YYYY.MM.DD' },
-                  ].map((f) => (
-                    <View key={f.label} style={styles.mockField}>
-                      <Text style={styles.mockFieldLabel}>{f.label}</Text>
-                      <Text style={styles.mockFieldValue}>{f.value}</Text>
-                    </View>
-                  ))}
-                </View>
-              </View>
-              <Text style={styles.mockMrz}>{'KO<<ARC<<950815<<<<<<<<<<'}</Text>
-            </View>
+            ) : null}
           </View>
         </View>
 
@@ -110,11 +169,19 @@ export default function IdCardScreen() {
         </View>
 
         <View style={styles.captureSection}>
-          <Pressable onPress={goToConfirm} style={styles.captureBtn}>
+          <Pressable
+            onPress={handleCapture}
+            disabled={!canCapture}
+            style={[styles.captureBtn, !canCapture && styles.captureDisabled]}
+          >
             <View style={styles.captureOuter}>
               <View style={styles.captureInner}>
                 <View style={styles.captureCenter}>
-                  <Ionicons name="camera" size={24} color={colors.primary} />
+                  {isCapturing ? (
+                    <ActivityIndicator color={colors.primary} />
+                  ) : (
+                    <Ionicons name="camera" size={24} color={colors.primary} />
+                  )}
                 </View>
               </View>
             </View>
@@ -148,6 +215,7 @@ const styles = StyleSheet.create({
     paddingVertical: spacing.xs,
     borderRadius: radius.full,
   },
+  chipDisabled: { opacity: 0.4 },
   chipText: { ...typography.body, fontFamily: fonts.bold, color: colors.text.strong },
 
   infoCard: {
@@ -181,32 +249,22 @@ const styles = StyleSheet.create({
   cornerH: { width: 24, height: 4, backgroundColor: colors.primary, borderRadius: radius.full },
   cornerV: { width: 4, height: 20, backgroundColor: colors.primary, borderRadius: radius.full },
 
-  mockCard: { flex: 1, padding: 12, justifyContent: 'space-between' },
-  mockCardHeader: { flexDirection: 'row', justifyContent: 'space-between' },
-  mockCountry: { fontSize: 10, fontFamily: fonts.bold, color: colors.text.inverse, letterSpacing: 0.5 },
-  mockCardName: { fontSize: 9, fontFamily: fonts.medium, color: colors.onColor.sub },
-  mockCardBody: { flexDirection: 'row', gap: 12, alignItems: 'center' },
-  mockPhoto: {
-    width: 64, height: 80,
-    backgroundColor: colors.idCard.photo,
-    borderRadius: 6,
+  permissionBox: {
+    flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
-    gap: 2,
+    gap: spacing.sm,
+    padding: spacing.lg,
   },
-  mockPhotoLabel: { fontSize: 9, fontFamily: fonts.medium, color: colors.text.sub },
-  mockFields: { flex: 1, gap: 4 },
-  mockField: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    backgroundColor: colors.idCard.field,
-    borderRadius: 4,
-    paddingHorizontal: 8,
-    paddingVertical: 2,
+  permissionTitle: { ...typography.title, color: colors.text.inverse },
+  permissionDesc: { ...typography.badge, color: colors.onColor.sub, textAlign: 'center' },
+  permissionBtn: {
+    backgroundColor: colors.primary,
+    paddingHorizontal: spacing.lg,
+    paddingVertical: spacing.sm,
+    borderRadius: radius.full,
   },
-  mockFieldLabel: { fontSize: 9, fontFamily: fonts.medium, color: colors.text.sub },
-  mockFieldValue: { fontSize: 9, fontFamily: fonts.bold, color: colors.text.inverse },
-  mockMrz: { fontSize: 8, fontFamily: fonts.light, color: colors.idCard.mrz, letterSpacing: 0.9 },
+  permissionBtnText: { ...typography.body, fontFamily: fonts.bold, color: colors.text.inverse },
 
   hintChip: {
     backgroundColor: colors.background,
@@ -230,6 +288,7 @@ const styles = StyleSheet.create({
 
   captureSection: { alignItems: 'center', gap: 14, paddingTop: spacing.sm },
   captureBtn: { width: 80, height: 80 },
+  captureDisabled: { opacity: 0.4 },
   captureOuter: {
     flex: 1,
     padding: 4,

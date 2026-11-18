@@ -2,9 +2,11 @@ import { useState } from 'react';
 import { View, Text, Pressable, ScrollView, StyleSheet } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
+import { Image } from 'expo-image';
 import { router, type Href } from 'expo-router';
 import Header from '../../components/Header';
 import { updateStep } from '../../api/onboarding';
+import { useOnboardingStore } from '../../store/onboardingStore';
 import { getRouteFromStepCode } from '../../constants/onboardingSteps';
 import { colors, typography, spacing, radius, fonts, shadow } from '../../constants/theme';
 
@@ -23,6 +25,7 @@ const MOCK = {
 export default function IdConfirmScreen() {
   const [isNavigating, setIsNavigating] = useState(false);
   const [navError, setNavError] = useState<string | null>(null);
+  const idCardFrontUri = useOnboardingStore((s) => s.idCardFrontUri);
 
   const handleConfirm = async () => {
     setNavError(null);
@@ -69,6 +72,9 @@ export default function IdConfirmScreen() {
         </View>
 
         <View style={styles.ocrBanner}>
+          {idCardFrontUri ? (
+            <Image source={{ uri: idCardFrontUri }} style={StyleSheet.absoluteFill} contentFit="cover" />
+          ) : null}
           <View style={styles.ocrPill}>
             <Text style={styles.ocrPillText}>OCR 자동 인식 완료</Text>
           </View>
@@ -216,6 +222,7 @@ const styles = StyleSheet.create({
     borderRadius: radius.lg,
     alignItems: 'center',
     justifyContent: 'center',
+    overflow: 'hidden',
   },
   ocrPill: {
     backgroundColor: colors.surface,
