@@ -1,4 +1,4 @@
-import { useState, useRef, useCallback, type ComponentRef } from 'react';
+import { useState, useRef, useCallback, useEffect, type ComponentRef } from 'react';
 import {
   View,
   Text,
@@ -18,13 +18,13 @@ import {
   type ChatAction,
   type ChatCardType,
   type SuggestionChip,
-  type MockChatResponse,
-  getMockResponse,
   LANDING_SUGGESTIONS,
   MENU_GROUPS,
   RATE_INFO,
   USER_NAME,
 } from '../../api/mock/chat';
+import { createChatSession, streamChatMessage } from '../../api/chat';
+import type { ApiError } from '../../types/api';
 import { useTransferStore } from '../../store/transferStore';
 
 function openTransfer(amountKRW: number | null) {
@@ -50,6 +50,11 @@ type ChatMessage = {
   role: 'user' | 'ai';
   text: string;
   time: string;
+  // 아래 4개는 AI 말풍선만 쓴다
+  status?: 'streaming' | 'done' | 'error'; // 답하는 중 → 끝 또는 실패
+  statusText?: string;   // 도구 완료 문구 (예: 재무 분석을 확인했어요)
+  errorMessage?: string; // 실패했을 때 보여 줄 문구
+  question?: string;     // [다시 시도] 때 다시 보낼 질문
   card?: ChatCardType;
   suggestions?: SuggestionChip[];
   suggestionsLabel?: string;
@@ -82,43 +87,87 @@ export default function ChatScreen() {
   const [input, setInput] = useState('');
   const [showMenu, setShowMenu] = useState(false);
   const [askedSet, setAskedSet] = useState<Set<string>>(new Set());
+  const [streaming, setStreaming] = useState(false); // 답하는 중이면 보내기 버튼을 막는다
   const scrollRef = useRef<ComponentRef<typeof ScrollView>>(null);
-  const aiCallCount = useRef(0);
+  // ref: 바뀌어도 화면을 다시 그리지 않는 값. 그리기와 상관없는 "기억"에 쓴다
+  const sessionIdRef = useRef<number | null>(null);           // 대화방 id. 첫 질문 때 만들고 새 대화까지 재사용
+  const abortRef = useRef<AbortController | null>(null);     // 지금 답하는 중인 연결. 있으면 답하는 중
+
+  // 말풍선 하나만 고치기. prev(바로 직전 목록)를 받아서 바꿔야 30ms마다 오는 글자가 서로 덮어쓰지 않는다
+  const updateMsg = useCallback((id: string, patch: (m: ChatMessage) => Partial<ChatMessage>) => {
+    setMessages(prev => prev.map(m => (m.id === id ? { ...m, ...patch(m) } : m)));
+  }, []);
+
+  // AI 말풍선(aiId)에 question 의 답을 흘려 넣는다. send 와 [다시 시도]가 같이 쓴다
+  const runStream = useCallback(async (aiId: string, question: string) => {
+    const controller = new AbortController();
+    abortRef.current = controller;
+    setStreaming(true);
+    try {
+      // 대화방은 첫 질문 때만 만든다 (삭제 API 가 없어 질문마다 만들면 서버에 쌓인다)
+      let sessionId = sessionIdRef.current;
+      if (sessionId === null) {
+        sessionId = await createChatSession();
+        if (controller.signal.aborted) return; // 만드는 사이에 새 대화를 눌렀으면 버린다
+        sessionIdRef.current = sessionId;
+      }
+      const result = await streamChatMessage(sessionId, question, {
+        onDelta: t => updateMsg(aiId, m => ({ text: m.text + t })),
+        onStatus: s => updateMsg(aiId, () => ({ statusText: s })),
+        signal: controller.signal,
+      });
+      updateMsg(aiId, () => ({ status: 'done', ...result })); // 카드·추천 버튼은 끝난 뒤에 붙는다
+    } catch (e) {
+      const err = e as ApiError;
+      if (err.code === 'ABORTED') return; // 우리가 끊은 것 (새 대화, 화면 닫힘). 오류로 보여 주지 않는다
+      updateMsg(aiId, () => ({ status: 'error', errorMessage: err.message }));
+    } finally {
+      // 새 대화 뒤 새 질문이 이미 시작됐으면 그 질문의 상태를 건드리지 않는다
+      if (abortRef.current === controller) {
+        abortRef.current = null;
+        setStreaming(false);
+      }
+    }
+  }, [updateMsg]);
 
   const send = useCallback((text: string) => {
     const trimmed = text.trim();
-    if (!trimmed) return;
+    // 빈 질문, 답하는 중에 또 보내기는 무시 (칩·카드 버튼도 이 함수를 거치므로 같이 막힌다)
+    if (!trimmed || abortRef.current) return;
 
-    aiCallCount.current += 1;
-    const raw: MockChatResponse = getMockResponse(trimmed, aiCallCount.current);
-
-    const userMsg: ChatMessage = {
-      id: `u${Date.now()}`,
-      role: 'user',
-      text: trimmed,
-      time: nowTime(),
-    };
-    const aiMsg: ChatMessage = {
-      id: `a${Date.now() + 1}`,
-      role: 'ai',
-      time: nowTime(),
-      text: raw.text,
-      card: raw.card,
-      suggestions: raw.suggestions,
-      suggestionsLabel: raw.suggestionsLabel,
-    };
-
-    setMessages(prev => [...prev, userMsg, aiMsg]);
+    const now = Date.now();
+    const aiId = `a${now}`;
+    // 내 말풍선 + 빈 AI 말풍선을 바로 넣고, 글자는 runStream 이 채운다
+    setMessages(prev => [
+      ...prev,
+      { id: `u${now}`, role: 'user', text: trimmed, time: nowTime() },
+      { id: aiId, role: 'ai', text: '', time: nowTime(), status: 'streaming', question: trimmed },
+    ]);
     setInput('');
     setAskedSet(prev => new Set([...prev, trimmed]));
-    setTimeout(() => scrollRef.current?.scrollToEnd({ animated: true }), 150);
-  }, []);
+    runStream(aiId, trimmed);
+  }, [runStream]);
+
+  // 실패한 말풍선을 비우고 같은 질문을 다시 보낸다 (clientMessageId 는 chat.ts 가 매번 새로 만든다)
+  const retry = useCallback((msg: ChatMessage) => {
+    if (abortRef.current || !msg.question) return;
+    updateMsg(msg.id, () => ({ text: '', status: 'streaming', statusText: undefined, errorMessage: undefined }));
+    runStream(msg.id, msg.question);
+  }, [runStream, updateMsg]);
+
+  // 화면이 사라지면 연결을 끊는다 (return 한 함수는 화면이 없어질 때 실행된다)
+  useEffect(() => () => abortRef.current?.abort(), []);
 
   const clearChat = () => {
+    abortRef.current?.abort(); // 답하는 중이면 끊기
+    abortRef.current = null;
+    setStreaming(false);
+    sessionIdRef.current = null; // 다음 질문 때 새 대화방
     setMessages([]);
     setAskedSet(new Set());
-    aiCallCount.current = 0;
   };
+
+  const canSend = !!input.trim() && !streaming; // 글자가 있고 답하는 중이 아닐 때만 보내기 버튼 켜기
 
   return (
     <SafeAreaView style={styles.safe} edges={['top', 'bottom']}>
@@ -152,6 +201,10 @@ export default function ChatScreen() {
           contentContainerStyle={styles.msgContent}
           showsVerticalScrollIndicator={false}
           keyboardShouldPersistTaps="handled"
+          // 내용 높이가 바뀔 때마다(새 말풍선, 글자 추가) 맨 아래로. 글자가 계속 늘어나서 한 번 내리는 걸로는 부족하다
+          onContentSizeChange={() => {
+            if (messages.length > 0) scrollRef.current?.scrollToEnd({ animated: true });
+          }}
         >
           {messages.length === 0 ? (
             <LandingContent onSend={send} />
@@ -159,7 +212,7 @@ export default function ChatScreen() {
             <>
               <Text style={styles.dateSep}>{getTodayString()}</Text>
               {messages.map(msg => (
-                <MessageItem key={msg.id} msg={msg} onSend={send} askedSet={askedSet} />
+                <MessageItem key={msg.id} msg={msg} onSend={send} onRetry={retry} askedSet={askedSet} />
               ))}
             </>
           )}
@@ -175,20 +228,21 @@ export default function ChatScreen() {
             onChangeText={setInput}
             placeholder="메시지를 입력하세요"
             placeholderTextColor={colors.text.sub}
+            maxLength={2000} // 서버 제한 (CHT-04 content 최대 2000자)
             multiline
             returnKeyType="send"
             blurOnSubmit={false}
             onSubmitEditing={() => send(input)}
           />
           <Pressable
-            style={[styles.sendBtn, !!input.trim() && styles.sendBtnOn]}
+            style={[styles.sendBtn, canSend && styles.sendBtnOn]}
             onPress={() => send(input)}
-            disabled={!input.trim()}
+            disabled={!canSend}
           >
             <Ionicons
               name="arrow-up"
               size={16}
-              color={input.trim() ? colors.text.inverse : colors.text.sub}
+              color={canSend ? colors.text.inverse : colors.text.sub}
             />
           </Pressable>
         </View>
@@ -268,10 +322,12 @@ function SuggestionChipRow({
 function MessageItem({
   msg,
   onSend,
+  onRetry,
   askedSet,
 }: {
   msg: ChatMessage;
   onSend: (t: string) => void;
+  onRetry: (msg: ChatMessage) => void;
   askedSet: Set<string>;
 }) {
   if (msg.role === 'user') {
@@ -287,7 +343,22 @@ function MessageItem({
 
   return (
     <View style={msgStyles.aiWrap}>
-      <Text style={msgStyles.aiText}>{msg.text}</Text>
+      {msg.statusText ? <Text style={msgStyles.statusText}>✓ {msg.statusText}</Text> : null}
+      {msg.text ? (
+        <Text style={msgStyles.aiText}>{msg.text}</Text>
+      ) : msg.status === 'streaming' ? (
+        // 첫 글자가 오기 전까지
+        <Text style={msgStyles.pendingText}>답변을 준비하고 있어요…</Text>
+      ) : null}
+      {msg.status === 'error' && (
+        <View style={msgStyles.errorWrap}>
+          <Text style={msgStyles.errorText}>{msg.errorMessage}</Text>
+          <Pressable style={[msgStyles.sugChip, msgStyles.retryBtn]} onPress={() => onRetry(msg)}>
+            <Ionicons name="refresh" size={12} color={colors.text.strong} style={msgStyles.chipIcon} />
+            <Text style={msgStyles.sugChipText}>다시 시도</Text>
+          </Pressable>
+        </View>
+      )}
       {msg.card === 'remit_confirm' && <RemitConfirmCard onSend={onSend} />}
       {msg.card === 'remit_calc' && <RemitCalcCard />}
       {msg.card === 'rate_info' && <RateInfoCard />}
@@ -578,6 +649,11 @@ const msgStyles = StyleSheet.create({
   time: { ...typography.badge, color: colors.text.sub },
   aiWrap: { gap: spacing.sm, paddingRight: spacing.md },
   aiText: { ...typography.body, color: colors.text.strong, lineHeight: 22 },
+  pendingText: { ...typography.body, color: colors.text.sub },
+  statusText: { ...typography.badge, color: colors.text.sub },
+  errorWrap: { gap: spacing.xs },
+  errorText: { ...typography.badge, color: colors.errorText },
+  retryBtn: { alignSelf: 'flex-start' },
   sugWrap: { gap: spacing.xs, marginTop: spacing.xs },
   sugLabel: { ...typography.badge, color: colors.text.sub },
   sugRow: { flexDirection: 'row', gap: spacing.sm, paddingVertical: 2 },
