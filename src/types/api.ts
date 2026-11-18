@@ -139,3 +139,56 @@ export type TransferResult = {
   recipient: TransferRecipient;
   guide: string; // 예: 처리 완료까지 1-2 영업일이 소요돼요.
 };
+
+// ── 금융상품 추천 (PRD-02, GET /api/v1/finance/products/recommend) ──────────
+// 금리·특징은 상품설명서 원문 값. 근거가 없으면 null
+export type ProductKind = 'SAVINGS' | 'DEPOSIT';
+export type ProductAbstainReason = 'REQUEST_EXCEEDS_SURPLUS' | 'STAY_TOO_SHORT' | 'NO_MATCHING_PRODUCT';
+
+// 금액 범위(원). max 는 원문이 '제한없음'이면 'no limit'
+export type ProductAmountRange = { min: number | null; max: number | 'no limit' | null };
+
+// 계약 기간(개월). 고르는 형은 배열 [6, 12], 범위형은 { min, max }
+export type ProductTermMonths = number[] | { min: number; max: number } | null;
+
+export type ProductRate = { ratePct: number; quote: string; page: number };
+export type ProductBaseRate = ProductRate & { asOf: string | null };
+export type ProductQuote = { quote: string; page: number };
+export type ProductEvidence = ProductQuote & { about: string };
+
+export type ProductRecommendItem = {
+  productId: string;
+  nameKo: string;
+  kind: ProductKind;
+  termMonths: ProductTermMonths;
+  monthlyAmountKrw: ProductAmountRange | null; // 적금만
+  depositAmountKrw: ProductAmountRange | null; // 예금만
+  accrual: 'FLEXIBLE' | 'FIXED' | null;
+  foreignerEligible: 'explicit' | 'inferred' | null;
+  notChecked: string[]; // visa / age / remainingStay / spareMoney
+  stayFits: boolean | null;
+  baseRate: ProductBaseRate | null;
+  maxRate: ProductRate | null; // 우대 조건 충족 시 최고 금리
+  feature: ProductQuote | null;
+  evidence: ProductEvidence[];
+};
+
+export type ProductRecommendResponse = {
+  asOf: string;
+  remainingStayMonths: number | null;
+  rankedBy: string;
+  abstainReason: ProductAbstainReason | null;
+  products: ProductRecommendItem[];
+  excludedSummary: { reason: string; count: number }[];
+  isMock: boolean;
+};
+
+// ── 금융 분석 (FIN-06, GET /api/v1/finance/analyses/latest) ─────────────────
+// 화면에서 쓰는 필드만 옮김. spare 는 음수 가능, 꽉 찬 달이 없으면 null
+export type FinanceAnalysisResponse = {
+  id: number;
+  periodFrom: string;
+  periodTo: string;
+  spare: Money | null;
+  isMock: boolean;
+};

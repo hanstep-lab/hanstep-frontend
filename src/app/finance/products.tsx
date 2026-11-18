@@ -1,42 +1,54 @@
-// FP-001 금융상품 추천 (목돈 만들기 적금). Figma 정리안 560:9 기준.
-// 데이터는 src/api/products.ts 에서만 받고, 여유자금·만기 비교 안내·금리는 서버(Mock) 값을 그대로 보여준다.
+// FP-001 금융상품 추천 (예금·적금). Figma 정리안 560:9 기준.
+// 데이터는 src/api/products.ts 에서만 받고, 여유자금·남은 체류·금리·한도는 서버(Mock) 값을 그대로 보여준다.
 import { useEffect, useState } from 'react';
-import { View, Text, Pressable, StyleSheet, Alert } from 'react-native';
+import { View, Text, Pressable, StyleSheet } from 'react-native';
 import { router, type Href } from 'expo-router';
 import Screen from '../../components/Screen';
 import Button from '../../components/Button';
 import { colors, typography, spacing, radius, fonts, shadow } from '../../constants/theme';
-import { getProductRecommendation, type ProductRecommendation } from '../../api/products';
+import { getProductsScreen, type ProductsScreenData, type ProductView } from '../../api/products';
 import type { ApiError } from '../../types/api';
 
-type Product = ProductRecommendation['products'][number];
-
-function ProductCard({ product }: { product: Product }) {
+function ProductCard({ product }: { product: ProductView }) {
   return (
     <View style={[s.card, s.productCard]}>
       <View style={s.rowBetween}>
         <View style={s.grayPill}>
           <Text style={s.label}>{product.label}</Text>
         </View>
-        <Text style={s.rate}>{product.rateText}</Text>
+        {product.rateText && (
+          <View style={s.rateBlock}>
+            <Text style={s.rate}>{product.rateText}</Text>
+            <Text style={s.label}>{product.rateAsOf}</Text>
+          </View>
+        )}
       </View>
       <Text style={s.productName}>{product.name}</Text>
-      <Text style={s.sub}>{product.desc}</Text>
-      <Text style={s.label}>{product.meta}</Text>
+      {product.desc && <Text style={s.sub}>{product.desc}</Text>}
+      {product.meta && <Text style={s.label}>{product.meta}</Text>}
       <Text style={[s.label, product.noteHighlight && s.noteHighlight]}>{product.note}</Text>
     </View>
   );
 }
 
 export default function ProductsScreen() {
-  const [data, setData] = useState<ProductRecommendation | null>(null);
+  const [data, setData] = useState<ProductsScreenData | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    getProductRecommendation()
+    getProductsScreen()
       .then(setData)
       .catch((e: ApiError) => setError(e.message));
   }, []);
+
+  // 추천 기준 줄: 값이 없는 줄은 숨김 (둘 다 없으면 카드째 숨김)
+  const criteria = data
+    ? [
+        { key: 'spare', title: '월 여유자금', sub: '소득 − 고정지출 − 송금 − 변동지출 평균', value: data.spareText },
+        { key: 'stay', title: '체류 만료까지', sub: '남은 체류 기간', value: data.stayText },
+      ].filter((c) => c.value)
+    : [];
+  const namePrefix = data?.shortName ? `${data.shortName}님` : null;
 
   // CR-001 대안신용 화면이 생기면 /credit 으로 연결
   const goCredit = () => router.push('/credit' as Href);
@@ -47,10 +59,13 @@ export default function ProductsScreen() {
         <View style={s.badge}>
           <Text style={s.badgeText}>금융상품 추천</Text>
         </View>
-        <Text style={s.title}>목돈 만들기 적금 추천</Text>
-        {data && (
+        <Text style={s.title}>
+          {namePrefix ? `${namePrefix}께 딱 맞는\nSOLSOL한 금융상품` : '딱 맞는\nSOLSOL한 금융상품'}
+        </Text>
+        {data && !data.abstainText && (
           <Text style={s.sub}>
-            {data.userName}님의 여유자금과 체류 기간을 기준으로 신한은행 적금 {data.products.length}개를 골랐어요.
+            {namePrefix ? `${namePrefix}의 ` : ''}여유자금과 체류 기간을 기준으로 신한은행 예금·적금{' '}
+            {data.products.length}개를 골랐어요.
           </Text>
         )}
       </View>
@@ -60,36 +75,49 @@ export default function ProductsScreen() {
       ) : (
         <>
           {/* 추천 기준 */}
-          <View style={[s.card, s.criteriaCard]}>
-            <View>
-              <Text style={s.sectionTitle}>{data.userName}님 추천 기준</Text>
-              <Text style={s.sub}>{data.criteriaBasis}</Text>
-            </View>
-            <View style={s.rowList}>
-              {data.criteria.map((c) => (
-                <View key={c.key} style={s.infoRow}>
-                  <View style={s.flex}>
-                    <Text style={s.rowTitle}>{c.title}</Text>
-                    <Text style={s.label}>{c.sub}</Text>
+          {criteria.length > 0 && (
+            <View style={[s.card, s.criteriaCard]}>
+              <View>
+                <Text style={s.sectionTitle}>{namePrefix ? `${namePrefix} 추천 기준` : '추천 기준'}</Text>
+                <Text style={s.sub}>마이데이터 분석 기준</Text>
+              </View>
+              <View style={s.rowList}>
+                {criteria.map((c) => (
+                  <View key={c.key} style={s.infoRow}>
+                    <View style={s.flex}>
+                      <Text style={s.rowTitle}>{c.title}</Text>
+                      <Text style={s.label}>{c.sub}</Text>
+                    </View>
+                    <Text style={s.rowValue}>{c.value}</Text>
                   </View>
-                  <Text style={s.rowValue}>{c.value}</Text>
-                </View>
-              ))}
+                ))}
+              </View>
             </View>
-          </View>
+          )}
 
-          {/* 추천 적금 */}
+          {/* 추천 상품 */}
           <View style={s.section}>
-            <View style={s.rowBetween}>
-              <Text style={s.sectionTitle}>추천 적금 {data.products.length}개</Text>
-              <Text style={s.label}>{data.rateBasis}</Text>
-            </View>
-            <View style={s.productList}>
-              {data.products.map((p) => (
-                <ProductCard key={p.key} product={p} />
-              ))}
-            </View>
-            <Text style={s.label}>{data.disclaimer}</Text>
+            {data.abstainText ? (
+              <View style={[s.card, s.productCard]}>
+                <Text style={s.rowTitle}>{data.abstainText}</Text>
+              </View>
+            ) : (
+              <>
+                <View style={s.rowBetween}>
+                  <Text style={s.sectionTitle}>추천 상품 {data.products.length}개</Text>
+                  <Text style={s.label}>세전 · 상품설명서 기준</Text>
+                </View>
+                <View style={s.productList}>
+                  {data.products.map((p) => (
+                    <ProductCard key={p.key} product={p} />
+                  ))}
+                </View>
+              </>
+            )}
+            <Text style={s.label}>
+              금리는 각 상품설명서의 세전 금리예요. 실제 금리와 가입 조건은 가입할 때 신한 SOL에서 확인해 주세요.
+            </Text>
+            {data.visaNote && <Text style={s.label}>비자 조건은 가입할 때 확인해 주세요</Text>}
           </View>
 
           {/* 대출 안내 */}
@@ -156,6 +184,7 @@ const s = StyleSheet.create({
     paddingHorizontal: spacing.sm,
     paddingVertical: 2,
   },
+  rateBlock: { alignItems: 'flex-end' },
   rate: { ...typography.body, fontFamily: fonts.bold, color: colors.primary },
   productName: { ...typography.title, color: colors.text.strong },
   noteHighlight: { color: colors.primary },
