@@ -1,8 +1,7 @@
 import { useState } from 'react';
-import { View, Text, Pressable, ScrollView, StyleSheet, TextInput } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { View, Text, Pressable, StyleSheet, TextInput } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import Header from '../../components/Header';
+import Screen from '../../components/Screen';
 import Button from '../../components/Button';
 import { useOnboardingStep } from '../../hooks/useOnboardingStep';
 import { colors, typography, spacing, radius, fonts } from '../../constants/theme';
@@ -36,11 +35,21 @@ export default function QuestionsScreen() {
   const toggleRemit = (i: number) =>
     setRemitChecks((prev) => prev.map((v, j) => (j === i ? !v : v)));
 
-  return (
-    <SafeAreaView style={styles.safe} edges={['top', 'bottom']}>
-      <Header title="신한걸음" showBack />
+  const footer = (
+    <>
+      {navError ? <Text style={styles.navError}>{navError}</Text> : null}
+      <Button
+        title={isNavigating ? '처리 중...' : '세부 설정 완료하고 요약 확인하기'}
+        showArrow={!isNavigating}
+        onPress={() => goNext()}
+        disabled={isNavigating}
+      />
+    </>
+  );
 
-      <ScrollView style={styles.scroll} contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
+  // Screen 이 키보드 회피(KeyboardAvoidingView)·스크롤·하단 footer 를 공통으로 처리한다
+  return (
+    <Screen title="신한걸음" footer={footer} contentStyle={styles.content}>
         {/* 단계 진행: 도트+선 방식, 현재 3단계 */}
         <View style={styles.progressRow}>
           <View style={styles.stepLine}>
@@ -207,25 +216,13 @@ export default function QuestionsScreen() {
             거래 내역이 있으면 지출 범위(최소~최대)를 자동으로 계산해 드려요.
           </Text>
         </View>
-      </ScrollView>
-
-      <View style={styles.footer}>
-        {navError ? <Text style={styles.navError}>{navError}</Text> : null}
-        <Button
-          title={isNavigating ? '처리 중...' : '세부 설정 완료하고 요약 확인하기'}
-          showArrow={!isNavigating}
-          onPress={() => goNext()}
-          disabled={isNavigating}
-        />
-      </View>
-    </SafeAreaView>
+    </Screen>
   );
 }
 
 const styles = StyleSheet.create({
-  safe: { flex: 1, backgroundColor: colors.background },
-  scroll: { flex: 1 },
-  content: { paddingHorizontal: spacing.xl, paddingBottom: spacing.xl, gap: spacing.xl },
+  // Screen 기본 여백(사방 xl, 간격 lg)을 덮어씀: 위쪽 여백 없음, 섹션 간격 xl
+  content: { paddingTop: 0, gap: spacing.xl },
 
   progressRow: {
     flexDirection: 'row',
@@ -431,10 +428,5 @@ const styles = StyleSheet.create({
 
   helperText: { ...typography.caption, color: colors.text.sub },
 
-  footer: {
-    paddingHorizontal: spacing.xl,
-    paddingVertical: spacing.md,
-    backgroundColor: colors.background,
-  },
   navError: { ...typography.body, color: colors.errorText, textAlign: 'center', marginBottom: spacing.sm },
 });

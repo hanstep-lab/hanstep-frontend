@@ -3,21 +3,11 @@
 // 네, 맞아요: PATCH fields → POST confirm → 온보딩 단계 완료
 
 import { useEffect, useState, type ReactNode } from 'react';
-import {
-  View,
-  Text,
-  Pressable,
-  ScrollView,
-  StyleSheet,
-  TextInput,
-  ActivityIndicator,
-  KeyboardAvoidingView,
-} from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { View, Text, Pressable, StyleSheet, TextInput, ActivityIndicator } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { Image } from 'expo-image';
 import { router, type Href } from 'expo-router';
-import Header from '../../components/Header';
+import Screen from '../../components/Screen';
 import { updateStep } from '../../api/onboarding';
 import { confirmDocument, updateDocumentFields } from '../../api/document';
 import { useIdDocument } from '../../hooks/useIdDocument';
@@ -300,19 +290,33 @@ export default function IdConfirmScreen() {
   const bannerText =
     phase === 'ready' ? 'OCR 자동 인식 완료' : phase === 'waiting' ? '자동 인식 중...' : '자동 인식 실패';
 
-  return (
-    <SafeAreaView style={styles.safe} edges={['top', 'bottom']}>
-      <Header title="체류 정보 확인" showBack />
+  const footer = (
+    <View style={styles.footerInner}>
+      {navError ? <Text style={styles.navError}>{navError}</Text> : null}
+      <View style={styles.btnRow}>
+        <Pressable
+          style={[styles.btn, styles.btnGray]}
+          onPress={() => router.back()}
+          disabled={isNavigating}
+        >
+          <Ionicons name="refresh-outline" size={16} color={colors.text.strong} />
+          <Text style={styles.btnGrayText}>다시 촬영</Text>
+        </Pressable>
+        <Pressable
+          style={[styles.btn, styles.btnBlue, !canConfirm && { opacity: 0.5 }]}
+          onPress={handleConfirm}
+          disabled={!canConfirm}
+        >
+          <Text style={styles.btnBlueText}>{isNavigating ? '처리 중...' : '네, 맞아요'}</Text>
+          {!isNavigating && <Ionicons name="arrow-forward" size={16} color={colors.text.inverse} />}
+        </Pressable>
+      </View>
+    </View>
+  );
 
-      {/* 키보드가 올라오면 스크롤 영역과 하단 버튼을 키보드 높이만큼 위로 올린다(chat.tsx 와 같은 방식).
-          iOS 는 원래 안 올려 주고, Android 도 edge-to-edge(SDK 54~)라 시스템이 화면을 줄여 주지 않아서 둘 다 padding */}
-      <KeyboardAvoidingView style={styles.flex} behavior="padding">
-      <ScrollView
-        style={styles.scroll}
-        contentContainerStyle={styles.content}
-        showsVerticalScrollIndicator={false}
-        keyboardShouldPersistTaps="handled"
-      >
+  // Screen 이 키보드 회피(KeyboardAvoidingView)·스크롤·하단 footer 를 공통으로 처리한다
+  return (
+    <Screen title="체류 정보 확인" footer={footer} contentStyle={styles.content}>
         <View style={styles.subProgress}>
           <View style={styles.subLeft}>
             <View style={styles.subBadge}>
@@ -358,39 +362,13 @@ export default function IdConfirmScreen() {
             <View style={styles.cardBody}>{body}</View>
           </View>
         </View>
-      </ScrollView>
-
-      <View style={styles.footer}>
-        {navError ? <Text style={styles.navError}>{navError}</Text> : null}
-        <View style={styles.btnRow}>
-          <Pressable
-            style={[styles.btn, styles.btnGray]}
-            onPress={() => router.back()}
-            disabled={isNavigating}
-          >
-            <Ionicons name="refresh-outline" size={16} color={colors.text.strong} />
-            <Text style={styles.btnGrayText}>다시 촬영</Text>
-          </Pressable>
-          <Pressable
-            style={[styles.btn, styles.btnBlue, !canConfirm && { opacity: 0.5 }]}
-            onPress={handleConfirm}
-            disabled={!canConfirm}
-          >
-            <Text style={styles.btnBlueText}>{isNavigating ? '처리 중...' : '네, 맞아요'}</Text>
-            {!isNavigating && <Ionicons name="arrow-forward" size={16} color={colors.text.inverse} />}
-          </Pressable>
-        </View>
-      </View>
-      </KeyboardAvoidingView>
-    </SafeAreaView>
+    </Screen>
   );
 }
 
 const styles = StyleSheet.create({
-  safe: { flex: 1, backgroundColor: colors.background },
-  flex: { flex: 1 },
-  scroll: { flex: 1 },
-  content: { paddingBottom: spacing.xl, gap: spacing.md },
+  // Screen 기본 여백(사방 xl)을 덮어씀: 이 화면은 블록마다 좌우 여백을 따로 준다
+  content: { paddingHorizontal: 0, paddingTop: 0, paddingBottom: spacing.xl, gap: spacing.md },
   px: { paddingHorizontal: spacing.xl },
 
   subProgress: {
@@ -522,12 +500,7 @@ const styles = StyleSheet.create({
   },
   stateBtnText: { ...typography.body, fontFamily: fonts.bold, color: colors.text.inverse },
 
-  footer: {
-    paddingHorizontal: spacing.xl,
-    paddingVertical: spacing.md,
-    gap: spacing.sm,
-    backgroundColor: colors.background,
-  },
+  footerInner: { gap: spacing.sm },
   btnRow: { flexDirection: 'row', gap: spacing.sm },
   btn: {
     flexDirection: 'row',
