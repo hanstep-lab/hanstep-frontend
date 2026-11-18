@@ -1,6 +1,7 @@
 // VS-001 체류자격 전환 로드맵. 내용·구성은 Figma 정리안(550:98), 카드 모양은 로드맵 컴포넌트(522:2) 기준.
 // 데이터는 src/api/visa.ts 에서만 받고, 점수·D-day·신청 가능일은 서버(Mock) 값을 그대로 보여준다.
-import { useEffect, useState } from 'react';
+// 화면은 GET 만 한다. 저장된 로드맵이 없으면(404) 안내와 [로드맵 만들기] 버튼 → POST → GET 다시.
+import { useCallback, useEffect, useState } from 'react';
 import { View, Text, ScrollView, Pressable, StyleSheet, Alert } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
@@ -10,15 +11,14 @@ import Pill from '../../components/Pill';
 import ScoreRow from '../../components/ScoreRow';
 import StepCard, { STEP_NUMBER_SIZE, STEP_NUMBER_TOP } from '../../components/StepCard';
 import { colors, typography, spacing, radius, fonts, shadow } from '../../constants/theme';
-import { getVisaRoadmap, type VisaRoadmap } from '../../api/visa';
-import { fmtDate } from '../../utils/format';
+import { createRoadmap, getVisaScreen, type VisaScreenData, type VisaScreenView } from '../../api/visa';
 import type { ApiError } from '../../types/api';
 
 function preparingAlert() {
   Alert.alert('준비 중', '곧 사용할 수 있어요.');
 }
 
-function StatusCard({ status }: { status: VisaRoadmap['status'] }) {
+function StatusCard({ status }: { status: VisaScreenView['status'] }) {
   return (
     <View style={s.statusCard}>
       <View style={s.statusTop}>
@@ -26,37 +26,42 @@ function StatusCard({ status }: { status: VisaRoadmap['status'] }) {
           <Text style={s.label}>체류 자격 현황</Text>
           <View style={s.currentRow}>
             <Text style={s.currentVisa}>현재: {status.current}</Text>
-            <View style={s.grayPill}>
-              <Text style={s.label}>{status.currentLabel}</Text>
-            </View>
+            {status.currentLabel != null ? (
+              <View style={s.grayPill}>
+                <Text style={s.label}>{status.currentLabel}</Text>
+              </View>
+            ) : null}
           </View>
         </View>
-        <Pill label={status.stayLabel} />
+        {status.stayText != null ? <Pill label={status.stayText} /> : null}
       </View>
 
       <View style={s.targetBox}>
         <View>
           <Text style={s.label}>다음 목표</Text>
           <Text style={s.targetVisa}>
-            {status.target} ({status.targetLabel}) 전환
+            {status.target}
+            {status.targetLabel ? ` (${status.targetLabel})` : ''} 전환
           </Text>
         </View>
-        <View style={s.ddayRow}>
-          <Text style={s.label}>체류 만료({fmtDate(status.expiryDate)})까지</Text>
-          <View style={s.ddayBox}>
-            <Text style={s.ddayText}>D-{status.dday}</Text>
+        {status.expiryText != null && status.ddayText != null ? (
+          <View style={s.ddayRow}>
+            <Text style={s.label}>체류 만료({status.expiryText})까지</Text>
+            <View style={s.ddayBox}>
+              <Text style={s.ddayText}>{status.ddayText}</Text>
+            </View>
           </View>
-        </View>
+        ) : null}
       </View>
 
-      <Text style={[s.label, s.right]}>
-        신청 가능 시점: {fmtDate(status.applyFrom)}부터 ({status.applyNote})
-      </Text>
+      {status.applyText != null ? (
+        <Text style={[s.label, s.right]}>신청 가능 시점: {status.applyText}</Text>
+      ) : null}
     </View>
   );
 }
 
-function ScoreCard({ score }: { score: VisaRoadmap['score'] }) {
+function ScoreCard({ score }: { score: VisaScreenView['score'] }) {
   return (
     <View style={[s.card, s.scoreCard]}>
       <View style={s.rowBetween}>
@@ -66,19 +71,19 @@ function ScoreCard({ score }: { score: VisaRoadmap['score'] }) {
         </View>
         <View style={s.totalCol}>
           <View style={s.totalRow}>
-            <Text style={s.totalNum}>{score.total}</Text>
+            <Text style={s.totalNum}>{score.totalText}</Text>
             <Text style={s.totalUnit}>점</Text>
           </View>
-          <Text style={s.proofText}>{score.withProofText}</Text>
+          {score.proofText != null ? <Text style={s.proofText}>{score.proofText}</Text> : null}
         </View>
       </View>
 
-      <View style={s.rowBetween}>
-        <Text style={s.label}>
-          기본 {score.base}점 + 가점 {score.bonus}점
-        </Text>
-        <Text style={s.label}>{score.thresholdNote}</Text>
-      </View>
+      {score.breakdownText != null || score.thresholdText != null ? (
+        <View style={s.rowBetween}>
+          <Text style={s.label}>{score.breakdownText ?? ''}</Text>
+          <Text style={s.label}>{score.thresholdText ?? ''}</Text>
+        </View>
+      ) : null}
 
       <View style={s.scoreList}>
         <Text style={s.listTitle}>점수 세부 현황</Text>
@@ -97,7 +102,7 @@ function ScoreCard({ score }: { score: VisaRoadmap['score'] }) {
   );
 }
 
-function RoadmapSection({ steps }: { steps: VisaRoadmap['steps'] }) {
+function RoadmapSection({ steps }: { steps: VisaScreenView['steps'] }) {
   // 세로선은 첫 번호 원 가운데에서 마지막 번호 원 가운데까지. 마지막 단계의 위치를 재서 길이를 정한다.
   const [lastTop, setLastTop] = useState(0);
   return (
@@ -111,11 +116,11 @@ function RoadmapSection({ steps }: { steps: VisaRoadmap['steps'] }) {
         {lastTop > 0 && <View style={[s.timelineLine, { height: lastTop }]} />}
         {steps.map((st, i) => (
           <View
-            key={st.step}
+            key={st.key}
             onLayout={i === steps.length - 1 ? (e) => setLastTop(e.nativeEvent.layout.y) : undefined}
           >
             <StepCard
-              number={st.step}
+              number={st.number}
               label={st.label}
               meta={st.meta}
               title={st.title}
@@ -130,7 +135,7 @@ function RoadmapSection({ steps }: { steps: VisaRoadmap['steps'] }) {
   );
 }
 
-function SummaryCard({ summary }: { summary: VisaRoadmap['summary'] }) {
+function SummaryCard({ summary }: { summary: VisaScreenView['summary'] }) {
   return (
     <View style={[s.card, s.summaryCard]}>
       <Text style={s.summaryTitle}>단계를 마치면</Text>
@@ -138,7 +143,7 @@ function SummaryCard({ summary }: { summary: VisaRoadmap['summary'] }) {
         <View key={row.key} style={s.summaryRow}>
           <View style={s.flex}>
             <Text style={s.summaryRowTitle}>{row.title}</Text>
-            <Text style={s.label}>{row.sub}</Text>
+            {row.sub != null ? <Text style={s.label}>{row.sub}</Text> : null}
           </View>
           <Text style={s.summaryScore}>{row.score}</Text>
         </View>
@@ -148,15 +153,48 @@ function SummaryCard({ summary }: { summary: VisaRoadmap['summary'] }) {
   );
 }
 
+// 저장된 로드맵이 없을 때(404). 버튼을 누르면 POST 1번 → 화면 데이터 다시 불러오기
+function EmptyCard({ creating, error, onCreate }: { creating: boolean; error: string | null; onCreate: () => void }) {
+  return (
+    <View style={[s.card, s.emptyCard]}>
+      <Text style={s.sectionTitle}>아직 진단 결과가 없어요</Text>
+      <Text style={s.sub}>저장된 체류·근무·소득 정보로 E-7-4 전환 준비 로드맵을 만들어 드려요.</Text>
+      <Button title={creating ? '로드맵을 만드는 중이에요' : '로드맵 만들기'} onPress={onCreate} disabled={creating} />
+      {error != null ? <Text style={s.errorText}>{error}</Text> : null}
+    </View>
+  );
+}
+
 export default function VisaScreen() {
-  const [data, setData] = useState<VisaRoadmap | null>(null);
+  const [data, setData] = useState<VisaScreenData | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [creating, setCreating] = useState(false);
+  const [createError, setCreateError] = useState<string | null>(null);
+
+  const load = useCallback(
+    () =>
+      getVisaScreen()
+        .then((d) => {
+          setData(d);
+          setError(null);
+        })
+        .catch((e: ApiError) => setError(e.message)),
+    [],
+  );
 
   useEffect(() => {
-    getVisaRoadmap()
-      .then(setData)
-      .catch((e: ApiError) => setError(e.message));
-  }, []);
+    load();
+  }, [load]);
+
+  const onCreate = () => {
+    if (creating) return;
+    setCreating(true);
+    setCreateError(null);
+    createRoadmap()
+      .then(load)
+      .catch((e: ApiError) => setCreateError(e.message))
+      .finally(() => setCreating(false));
+  };
 
   return (
     <SafeAreaView style={s.safe} edges={['top']}>
@@ -189,12 +227,32 @@ export default function VisaScreen() {
 
         {!data ? (
           <Text style={s.stateText}>{error ?? '로드맵을 불러오는 중이에요.'}</Text>
+        ) : data.kind === 'empty' ? (
+          <EmptyCard creating={creating} error={createError ?? error} onCreate={onCreate} />
         ) : (
           <>
-            <StatusCard status={data.status} />
-            <ScoreCard score={data.score} />
-            <RoadmapSection steps={data.steps} />
-            <SummaryCard summary={data.summary} />
+            <StatusCard status={data.view.status} />
+            <View style={s.scoreBlock}>
+              <ScoreCard score={data.view.score} />
+              {data.view.score.penaltyNote != null ? (
+                <Text style={s.note}>{data.view.score.penaltyNote}</Text>
+              ) : null}
+              {data.view.score.warnings.map((w) =>
+                // strong(STAY_EXPIRES_FIRST)은 필수요건과 같은 required 색 상자로 강조
+                w.strong ? (
+                  <View key={w.key} style={s.warnBox}>
+                    <Ionicons name="warning-outline" size={16} color={colors.required.text} />
+                    <Text style={s.warnText}>{w.text}</Text>
+                  </View>
+                ) : (
+                  <Text key={w.key} style={s.note}>
+                    {w.text}
+                  </Text>
+                ),
+              )}
+            </View>
+            <RoadmapSection steps={data.view.steps} />
+            <SummaryCard summary={data.view.summary} />
             <Button title="신한걸음에 물어보기" onPress={() => router.push('/(tabs)/chat' as Href)} />
           </>
         )}
@@ -269,7 +327,19 @@ const s = StyleSheet.create({
   ddayBox: { backgroundColor: colors.background, borderRadius: radius.sm, paddingHorizontal: spacing.sm, paddingVertical: 2 },
   ddayText: { ...typography.title, color: colors.text.strong },
 
-  // 점수
+  // 점수 (카드 + 아래 감점 안내 한 줄)
+  scoreBlock: { gap: spacing.sm },
+  warnBox: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: 6,
+    padding: spacing.md,
+    borderRadius: radius.md,
+    borderWidth: 1,
+    borderColor: colors.required.border,
+    backgroundColor: colors.required.bg,
+  },
+  warnText: { ...typography.badge, flex: 1, lineHeight: 16, fontFamily: fonts.bold, color: colors.required.text },
   scoreCard: { gap: 14 },
   totalCol: { alignItems: 'flex-end', gap: 2 },
   totalRow: { flexDirection: 'row', alignItems: 'baseline', gap: 2 },
@@ -305,4 +375,8 @@ const s = StyleSheet.create({
   summaryRowTitle: { ...typography.body, color: colors.text.strong },
   summaryScore: { ...typography.body, fontFamily: fonts.bold, color: colors.primary },
   note: { ...typography.badge, lineHeight: 16, color: colors.text.sub },
+
+  // 로드맵 없음(404)
+  emptyCard: { gap: spacing.md },
+  errorText: { ...typography.badge, lineHeight: 16, color: colors.errorText },
 });

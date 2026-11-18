@@ -192,3 +192,126 @@ export type FinanceAnalysisResponse = {
   spare: Money | null;
   isMock: boolean;
 };
+
+// ── 온보딩 요약 (GET /api/v1/onboarding/summary) ──
+// 지금은 비자 화면(VS-001)이 쓰는 visa 칸만 둔다. user·goals·commitments·balance 는 ON-006 연결 때 추가.
+export type SummaryVisa = {
+  visaTypeCode: string;
+  visaTypeName: string; // 영문 이름
+  stayExpiresOn: string; // YYYY-MM-DD
+  daysRemaining: number; // 서버 계산값, 지났으면 음수
+  monthsRemaining: number | null;
+};
+export type OnboardingSummaryResponse = { visa: SummaryVisa | null };
+
+// ── 비자 로드맵·E-7-4 사전진단 (VS-001) ──
+// roadmap·result 는 명세에 타입이 없어(AI 응답 원본) 2026-11-18 실제 응답 기준으로 적었다.
+export type VisaItemStatus = 'MET' | 'NOT_MET' | 'NEEDS_EVIDENCE' | 'NOT_APPLICABLE';
+
+export type VisaMissingInput = { field: string; question: string; ruleCodes?: string[] };
+
+export type VisaRoadmapStay = {
+  visaTypeCode: string;
+  stayStartedOn: string | null;
+  stayExpiresOn: string | null;
+  daysToExpiry: number | null; // asOfDate 기준 서버 계산값
+  applicableFrom: string | null;
+};
+
+export type VisaRoadmapScoreItem = {
+  category: string; // BASE_INCOME · BASE_KOREAN · BASE_AGE · BONUS ...
+  ruleCode: string;
+  status: VisaItemStatus;
+  basis: string | null; // DOCUMENT · TOPIK · ARC · null
+  value: Record<string, number | string>;
+  earnedPoints: number;
+  potentialPoints: number;
+  requiredForApplication: boolean;
+};
+
+export type VisaRoadmapStep = {
+  order: number;
+  kind: string; // SUBMIT_EVIDENCE · RAISE_LEVEL · APPLY ...
+  actor: string; // USER · EMPLOYER · GOVERNMENT
+  title: string;
+  required: boolean;
+  ruleCode: string | null;
+  description: string;
+  requiredEvidence: string[];
+  estimatedAdditionalScore: number | null;
+  availableFrom: string | null;
+  targetDate: string | null;
+};
+
+export type VisaRoadmap = {
+  goalVisaCode: string;
+  ruleVersion: string;
+  ruleStatus: string;
+  asOfDate: string;
+  isMock: boolean;
+  warnings: string[];
+  stay: VisaRoadmapStay;
+  score: { confirmed: number; potential: number; required: number | null; items: VisaRoadmapScoreItem[] };
+  steps: VisaRoadmapStep[];
+  projectedScore: { afterRequiredSteps: number; afterAllSteps: number };
+  missingInputs: VisaMissingInput[];
+  text: { source: string; modelId: string | null; promptVersion: string | null; fallbackReason: string | null };
+  assessmentRequestKey: string;
+};
+
+// GET /api/v1/visa/roadmaps/latest
+export type VisaRoadmapDetailResponse = { roadmapId: number; createdAt: string; roadmap: VisaRoadmap };
+// POST /api/v1/visa/roadmaps (201 새로 만듦 / 200 reused)
+export type VisaRoadmapResponse = { roadmapId: number; reused: boolean; roadmap: VisaRoadmap };
+
+export type E74Score = { base: number; bonus: number; penalty: number; total: number; required: number | null };
+
+export type E74Item = {
+  category: string; // BASE_* · BONUS · PENALTY · REQUIREMENT · EXCLUSION
+  ruleCode: string;
+  status: VisaItemStatus;
+  evidence: Record<string, unknown>;
+  earnedPoints: number | null;
+  potentialPoints: number | null;
+  messageCode: string;
+  missingInputs: VisaMissingInput[];
+  reviewNote: string | null;
+};
+
+export type E74Improvement = {
+  kind: string;
+  actor: string;
+  ruleCode: string;
+  blocking: boolean;
+  pointsGain: number | null;
+  description: string;
+  documents: string[];
+  availableFrom: string | null;
+  target: Record<string, unknown>;
+  messageCode: string;
+};
+
+export type E74Result = {
+  status: string;
+  eligibilityConfirmed: boolean;
+  ruleStatus: string;
+  ruleVersion: string;
+  asOfDate: string;
+  score: E74Score;
+  potentialScore: Omit<E74Score, 'required'> & { complete: boolean };
+  scoreGap: { required: number | null; pointsNeeded: number; pointsNeededAfterEvidence: number };
+  planToRequired: { ruleCodes: string[]; pointsAdded: number; reachesRequired: boolean };
+  items: E74Item[];
+  improvements: E74Improvement[];
+  missingInputs: VisaMissingInput[];
+  needsEvidence: string[];
+  reviewNotes: unknown[];
+  isScenario: boolean;
+  scenario: unknown;
+  requestKey: string;
+  scoreRequirementMet: boolean | null;
+  koreanDeferralApplied: boolean;
+};
+
+// GET /api/v1/visa/e74/assessments/latest
+export type E74AssessmentDetailResponse = { assessmentId: number; createdAt: string; result: E74Result };
