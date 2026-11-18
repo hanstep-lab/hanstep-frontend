@@ -1,15 +1,11 @@
 // 환율 API (FX-001, FX-002). 화면은 이 파일만 부르고 Mock 인지 모른다.
 // 앱은 Frankfurter·ECB 를 직접 부르지 않고 항상 우리 백엔드만 부른다.
-// TODO: FX-01, FX-02 명세가 오면 경로·필드를 맞출 것. 지금 경로는 가정값.
-// 타입은 명세 전까지 따로 만들지 않고 Mock 이 돌려주는 모양을 그대로 쓴다.
 
 import { client } from './client';
 import { USE_MOCK, mockDelay } from './config';
 import {
   mockFxRate,
   mockFxHistory,
-  MOCK_FX_PERIODS,
-  type MockFxPeriod,
   mockFxAlertRate,
   mockFxAlertHistory,
   mockFxAlerts,
@@ -25,37 +21,237 @@ import type {
   FxAlertListResponse,
   FxAlertResponse,
   FxComparator,
+  FxDirection,
+  FxPeriod,
+  FxPeriodAverage,
+  FxRateDetailResponse,
+  FxRateHistoryDetailResponse,
   FxRateHistoryResponse,
   FxRateResponse,
   FxRateType,
 } from '../types/api';
 
-export type FxRate = ReturnType<typeof mockFxRate>;
-export type FxHistory = ReturnType<typeof mockFxHistory>;
-export type FxPeriod = MockFxPeriod;
+// ---------------------------------------------------------------------------
+// FX-001 환율 정보
+// - GET /fx/rates?currency=, GET /fx/rates/{currency}/history?period=
+// - Mock 과 서버 모두 서버 응답 모양을 돌려주고, 화면용 문구는 아래 to* 함수에서 만든다
+//   (서버는 통화 이름·구간 이름·요약 문장·평균 설명·안내 문구를 주지 않는다)
+// - 평균·최저·최고·변동률·direction 은 서버(Mock) 값을 그대로 쓴다. 평균 표시 자릿수 반올림만 여기서 한다
+// ---------------------------------------------------------------------------
+export type { FxPeriod };
 
-export const FX_PERIODS = MOCK_FX_PERIODS;
+// 기간 탭(label)과 평균표(tableLabel) 이름. 서버 period 값(1M·3M·6M·1Y)과 같은 key
+const PERIOD_TEXT: Record<FxPeriod, { label: string; tableLabel: string }> = {
+  '1M': { label: '1개월', tableLabel: '1개월' },
+  '3M': { label: '3개월', tableLabel: '3개월(분기)' },
+  '6M': { label: '6개월', tableLabel: '6개월(반기)' },
+  '1Y': { label: '1년', tableLabel: '1년' },
+};
 
-// FX-01: 기준환율, 전일 대비, 기간별 평균 비교
-export async function getFxRate(currency: string): Promise<FxRate> {
-  if (USE_MOCK) {
-    await mockDelay();
-    return mockFxRate(currency);
-  }
-  const res = await client.get<FxRate>('/api/v1/fx/rates', { params: { currency } });
-  return res.data;
+export const FX_PERIODS = (Object.keys(PERIOD_TEXT) as FxPeriod[]).map((key) => ({
+  key,
+  label: PERIOD_TEXT[key].label,
+}));
+
+// 처음 고르는 통화
+export const FX_FIRST_CURRENCY = 'PHP';
+
+// 칩 순서는 FX-002 알림 화면과 같게 PHP, USD. 칩에 넣을 통화는 서버 screenCurrencies 에 있는 것만,
+// 이 목록에 없는 통화는 서버 순서대로 뒤에 붙인다
+const CHIP_ORDER = ['PHP', 'USD'];
+const chipRank = (code: string) => {
+  const i = CHIP_ORDER.indexOf(code);
+  return i === -1 ? CHIP_ORDER.length : i;
+};
+
+// 통화 이름. 없는 통화는 코드만 보여 준다
+const CURRENCY_NAME: Record<string, string> = { PHP: '필리핀', USD: '미국' };
+const QUOTE_NAME = '대한민국 KRW';
+
+// 평균 표시 자릿수. 서버 평균은 소수 4자리라 화면 표시만 그 통화 환율 자릿수에 맞춘다
+// (PHP 는 ECB 참고값이 소수 3자리, USD 는 수출입은행 고시가 소수 2자리). 없는 통화는 2자리
+const AVG_DECIMALS: Record<string, number> = { PHP: 3, USD: 2 };
+
+const INSUFFICIENT_TEXT = '데이터 부족';
+
+const NOTICE_TEXT: Record<string, string> = {
+  REFERENCE_RATE_ONLY: '참고 환율이에요. 실제 송금 환율은 은행·송금 방식에 따라 달라요.',
+};
+const STALE_TEXT = '최신 값이 아닐 수 있어요';
+
+const AVERAGE_NOTE = '구간 평균 = 해당 기간 영업일 일별 고시값 평균';
+const SUMMARY_TAIL = '(과거 평균 비교이며 예측이 아니에요)';
+
+export const FX_LOAD_ERROR = '환율 정보를 불러오지 못했어요. 잠시 후 다시 시도해 주세요.';
+
+// 화면 색·화살표용. UP 빨강 / DOWN 파랑 / FLAT 기본색
+export type FxTrend = 'UP' | 'DOWN' | 'FLAT';
+const DIRECTION_TREND: Record<FxDirection, FxTrend> = { HIGHER: 'UP', LOWER: 'DOWN', SAME: 'FLAT' };
+
+export type FxCurrencyChip = { code: string; name: string };
+
+export type FxPeriodAverageRow = {
+  period: FxPeriod;
+  label: string; // "3개월(분기)"
+  avgText: string; // "21.039" 또는 "데이터 부족"
+  diffRateText: string; // "-0.26%" 또는 "-"
+  trend: FxTrend | null; // 서버 direction. 데이터 부족이면 null
+};
+
+export type FxRate = {
+  currency: string;
+  pairText: string; // "필리핀 PHP / 대한민국 KRW"
+  sourceLabel: string;
+  rate: number;
+  change: number | null; // null 이면 전일 대비 줄을 숨김
+  changeRate: number | null; // null 이면 % 배지를 숨김
+  changeTrend: FxTrend | null;
+  asOf: string;
+  sendRate: number | null;
+  receiveRate: number | null;
+  notices: string[]; // 안내 문구 (참고 환율, 오래된 값)
+  summaryText: string;
+  averageNote: string;
+  periodAverages: FxPeriodAverageRow[];
+  screenCurrencies: FxCurrencyChip[];
+};
+
+export type FxHistory = {
+  currency: string;
+  period: FxPeriod;
+  points: { date: string; rate: number }[];
+  min: number;
+  max: number;
+  current: number;
+  avgText: string; // 반올림한 평균 또는 "데이터 부족"
+};
+
+const currencyName = (code: string) => CURRENCY_NAME[code] ?? '';
+const withName = (code: string) => (currencyName(code) ? `${currencyName(code)} ${code}` : code);
+
+// 표시용 반올림: 서버 평균(소수 4자리)을 통화별 자릿수로 맞춰 "1,336.13" 처럼 만든다.
+// 값 자체를 다시 계산하지 않고 자릿수만 줄인다
+function fmtAvg(avg: number | null, currency: string): string {
+  if (avg === null) return INSUFFICIENT_TEXT;
+  const d = AVG_DECIMALS[currency] ?? 2;
+  const [int, dec] = (Math.round(avg * 10 ** d) / 10 ** d).toFixed(d).split('.');
+  return `${int.replace(/\B(?=(\d{3})+(?!\d))/g, ',')}.${dec}`;
 }
 
-// FX-02: 기간별 차트 점과 최저·평균·최고·현재
+// 평균표 "현재 대비" 표시: 서버 diffRate(소수 2자리)를 자릿수만 2자리로 맞춘다. 0.2 → "+0.20%", -1.1 → "-1.10%".
+// 값은 다시 계산하지 않는다. 0 은 부호 없이 "0.00%", 데이터 부족(null)은 "-"
+function fmtDiffRate(diffRate: number | null): string {
+  if (diffRate === null) return '-';
+  return `${diffRate > 0 ? '+' : ''}${diffRate.toFixed(2)}%`;
+}
+
+// 전일 대비는 서버가 direction 을 주지 않아 change 부호로 정한다 (화면이 아닌 이 계층에서)
+function changeTrend(change: number | null): FxTrend | null {
+  if (change === null) return null;
+  if (change > 0) return 'UP';
+  if (change < 0) return 'DOWN';
+  return 'FLAT';
+}
+
+// 요약 문장: 서버 direction 만 보고 고른다 (숫자 계산 없음). 데이터 부족 구간은 비교에서 뺀다
+function summaryText(averages: FxPeriodAverage[]): string {
+  const labelsOf = (dir: FxDirection) =>
+    averages.filter((a) => a.direction === dir).map((a) => PERIOD_TEXT[a.period].label);
+  const valid = averages.filter((a) => a.direction !== null);
+  const lacking = averages.filter((a) => a.direction === null).map((a) => PERIOD_TEXT[a.period].label);
+  const lackText = lacking.length ? ` ${lacking.join('·')}은 데이터가 부족해 비교에서 뺐어요.` : '';
+
+  if (valid.length === 0) return `기간 평균과 비교할 데이터가 아직 부족해요. ${SUMMARY_TAIL}`;
+
+  // 예) 모두 같으면 "네 구간 평균보다 모두 낮아요", 섞이면 "1개월 평균보다는 높고, 3개월·6개월·1년 평균보다는 낮아요"
+  const groups = [
+    { labels: labelsOf('HIGHER'), cmp: '평균보다', adj: '높', end: '아요' },
+    { labels: labelsOf('LOWER'), cmp: '평균보다', adj: '낮', end: '아요' },
+    { labels: labelsOf('SAME'), cmp: '평균과', adj: '비슷', end: '해요' },
+  ].filter((g) => g.labels.length > 0);
+
+  let body: string;
+  if (groups.length === 1) {
+    const g = groups[0];
+    const target = g.labels.length === FX_PERIODS.length ? '네 구간' : g.labels.join('·');
+    const all = g.labels.length > 1 ? '모두 ' : '';
+    body = `${target} ${g.cmp} ${all}${g.adj}${g.end}.`;
+  } else {
+    const parts = groups.map((g) => `${g.labels.join('·')} ${g.cmp}는 ${g.adj}`);
+    const last = groups[groups.length - 1];
+    body = `${parts.join('고, ')}${last.end}.`;
+  }
+  return `현재 환율은 ${body}${lackText} ${SUMMARY_TAIL}`;
+}
+
+function toFxRate(r: FxRateDetailResponse): FxRate {
+  const notices = r.notices.map((n) => NOTICE_TEXT[n]).filter((t): t is string => Boolean(t));
+  if (r.stale) notices.push(STALE_TEXT);
+  return {
+    currency: r.currency,
+    pairText: `${withName(r.currency)} / ${QUOTE_NAME}`,
+    sourceLabel: r.sourceLabel,
+    rate: r.rate,
+    change: r.change,
+    changeRate: r.changeRate,
+    changeTrend: changeTrend(r.change),
+    asOf: r.asOf,
+    sendRate: r.sendRate,
+    receiveRate: r.receiveRate,
+    notices,
+    summaryText: summaryText(r.periodAverages),
+    averageNote: AVERAGE_NOTE,
+    periodAverages: r.periodAverages.map((a) => ({
+      period: a.period,
+      label: PERIOD_TEXT[a.period]?.tableLabel ?? a.period,
+      avgText: fmtAvg(a.avg, r.currency),
+      diffRateText: fmtDiffRate(a.diffRate),
+      trend: a.direction ? DIRECTION_TREND[a.direction] : null,
+    })),
+    // sort 는 같은 순위끼리 원래(서버) 순서를 지킨다
+    screenCurrencies: [...r.screenCurrencies]
+      .sort((a, b) => chipRank(a) - chipRank(b))
+      .map((code) => ({ code, name: currencyName(code) })),
+  };
+}
+
+function toFxHistory(h: FxRateHistoryDetailResponse, period: FxPeriod): FxHistory {
+  return {
+    currency: h.currency,
+    period,
+    points: h.points,
+    min: h.min,
+    max: h.max,
+    current: h.current,
+    avgText: fmtAvg(h.avg, h.currency),
+  };
+}
+
+// 기준환율, 전일 대비, 기간별 평균 비교, 화면 통화 목록
+export async function getFxRate(currency: string): Promise<FxRate> {
+  let data: FxRateDetailResponse;
+  if (USE_MOCK) {
+    await mockDelay();
+    data = mockFxRate(currency);
+  } else {
+    data = (await client.get<FxRateDetailResponse>('/api/v1/fx/rates', { params: { currency } })).data;
+  }
+  return toFxRate(data);
+}
+
+// 기간별 차트 점과 최저·평균·최고·현재
 export async function getFxHistory(currency: string, period: FxPeriod): Promise<FxHistory> {
+  let data: FxRateHistoryDetailResponse;
   if (USE_MOCK) {
     await mockDelay(250);
-    return mockFxHistory(currency, period);
+    data = mockFxHistory(currency, period);
+  } else {
+    const res = await client.get<FxRateHistoryDetailResponse>(`/api/v1/fx/rates/${currency}/history`, {
+      params: { period },
+    });
+    data = res.data;
   }
-  const res = await client.get<FxHistory>(`/api/v1/fx/rates/${currency}/history`, {
-    params: { period },
-  });
-  return res.data;
+  return toFxHistory(data, period);
 }
 
 // ---------------------------------------------------------------------------
