@@ -1,8 +1,10 @@
-// 대안신용 사전진단 API (CR-001). 화면은 이 파일만 부른다.
-// Mock 없이 서버 값만 받는다. 등급·문구 변환과 계산은 하지 않고 받은 값을 그대로 돌려준다.
-// isMock·mockFields 는 타입에만 두고 화면에는 표시하지 않는다.
+// 대안신용 사전진단 API (CR-001). 화면은 이 파일만 부르고 Mock 인지 모른다.
+// USE_MOCK 이면 mock/altCredit.ts(실제 서버 응답을 옮긴 값), 아니면 서버 값을 받는다. 계산·문구 변환 없이 그대로 돌려준다.
+// isMock·mockFields·disclaimer 는 타입에만 두고 화면에는 표시하지 않는다.
 
 import { client } from './client';
+import { USE_MOCK, mockDelay } from './config';
+import { mockAltAssessment } from './mock/altCredit';
 
 // 진단 결과
 export type AltCreditDecision = 'ELIGIBLE' | 'NOT_ELIGIBLE' | 'CONDITION_NOT_MET';
@@ -48,12 +50,14 @@ export type AltCreditLevel = 'GOOD' | 'FAIR' | 'NEEDS_IMPROVEMENT' | 'NO_RECORD'
 // value 는 화면에 표시하지 않는다
 export type AltCreditFactor = { key: AltCreditFactorKey; level: AltCreditLevel; value: number | null };
 
-// 신한걸음 글로벌론 가입 조건 충족 여부. met 이 null 이면 확인 안 됨
+// 신한걸음 글로벌론 가입 조건 충족 여부. 충족 여부는 met 만 본다. met 이 null 이면 "확인 불가"
 export type AltCreditCheckKey = 'WORK_PERMITTED' | 'SALARY_3M' | 'EXPIRY_OVER_6M';
 export type AltCreditEligibilityCheck = {
   key: AltCreditCheckKey;
   met: boolean | null;
-  value: number | null; // 화면 옆 값은 inputs 를 쓴다 (같은 값)
+  // 키마다 타입이 다르다 (WORK_PERMITTED=boolean, SALARY_3M·EXPIRY_OVER_6M=정수, 없으면 null).
+  // 화면에 쓰지 않는다. 옆 값은 inputs 를 쓴다.
+  value: number | boolean | null;
 };
 
 // 진단에 쓴 입력값. 날짜는 'YYYY-MM-DD' 문자열
@@ -93,7 +97,7 @@ export type AltCreditAssessment = {
   disclaimer: string;
   inputs: AltCreditInputs;
   mockFields: string[];
-  // 추가 요청한 필드. 아직 배포 전이라 없거나 비어 있을 수 있다 (화면은 해당 부분만 숨김)
+  // 추가 필드. 배포됨(11/27까지 이름·값 고정). 혹시 없거나 비어 있으면 화면은 해당 부분만 숨긴다
   scoreBand?: AltCreditScoreBand | null;
   factors?: AltCreditFactor[] | null;
   eligibilityChecks?: AltCreditEligibilityCheck[] | null;
@@ -105,6 +109,10 @@ export type AltCreditErrorCode = 'CONSENT_REQUIRED' | 'INSUFFICIENT_DATA' | 'AI_
 
 // GET /api/v1/credit/alt-assessment
 export async function getAltAssessment(isRefinance = false): Promise<AltCreditAssessment> {
+  if (USE_MOCK) {
+    await mockDelay();
+    return mockAltAssessment();
+  }
   const res = await client.get<AltCreditAssessment>('/api/v1/credit/alt-assessment', {
     params: { isRefinance },
   });

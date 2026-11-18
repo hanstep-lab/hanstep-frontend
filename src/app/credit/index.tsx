@@ -1,7 +1,8 @@
 // CR-001 대안신용 사전진단 (Figma 445:2). 주소 /credit.
-// 데이터는 src/api 에서만 받는다: 대안신용 = altCredit.ts(서버), 이름 = user.ts(getMe), SOL 글로벌론 = credit.ts.
+// 데이터는 src/api 에서만 받는다: 대안신용 = altCredit.ts(서버/Mock), 이름 = user.ts(getMe), SOL 글로벌론 = credit.ts.
 // 점수 구간·등급 판단은 서버가 하고, 화면은 코드를 src/constants/altCredit.ts 표로 문구·색으로만 바꾼다.
-// scoreBand·factors·eligibilityChecks 는 아직 배포 전 필드라, 없거나 비어 있으면 그 부분만 숨긴다.
+// scoreBand·factors·eligibilityChecks 가 혹시 없거나 비어 있으면 그 부분만 숨긴다.
+// 가입 조건 met 이 null 이면 옆 값 대신 "확인 불가"를 보여 준다.
 import { useEffect, useState, type ReactNode } from 'react';
 import { View, Text, StyleSheet, Alert } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
@@ -296,7 +297,7 @@ export default function AltCreditScreen() {
                   key={c.key}
                   title={CHECK_TITLE[c.key]}
                   met={c.met}
-                  value={checkValue(c.key, alt.inputs)}
+                  value={c.met === null ? T.checkUnknown : checkValue(c.key, alt.inputs)}
                 />
               ))}
             </View>

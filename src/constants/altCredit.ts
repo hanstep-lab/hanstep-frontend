@@ -26,6 +26,7 @@ export const ALT_CREDIT_TEXT = {
   limitLabel: '예상 한도',
   termLabel: '대출 기간',
   detailButton: '상품 자세히 보기',
+  checkUnknown: '확인 불가', // 가입 조건 met 이 null 일 때 옆 값 대신
   tipsTitle: '점수를 높이는 방법',
   notice: '신한걸음 사전진단 결과예요. 실제 대출 가능 여부와 금리는 은행 심사에 따라 달라요.',
   loading: '대안신용 사전진단을 불러오는 중이에요.',
