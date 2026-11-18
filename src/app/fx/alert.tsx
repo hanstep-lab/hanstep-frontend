@@ -1,9 +1,8 @@
 // FX-002 목표 환율 알림 설정. 데이터는 src/api/fx.ts 에서만 받는다.
 // 프리셋 값·슬라이더 범위·최저/최고는 서버(Mock) 값을 그대로 쓰고, 화면은 사용자가 고른 목표값만 들고 있는다.
 // 출처는 ECB 기준환율(하루 1번). "실시간", "종가" 표현은 쓰지 않는다.
-// TODO(B): "도달하는 즉시" 문구(ECB 는 하루 1번 갱신), VND 칩, 목표가 현재보다 높을 때 처리, 프리셋 의미, 알림 개수·삭제 확인
 import { useCallback, useEffect, useState } from 'react';
-import { View, Text, Pressable, ScrollView, Switch, StyleSheet, Alert } from 'react-native';
+import { View, Text, Pressable, ScrollView, StyleSheet, Alert } from 'react-native';
 import { Image } from 'expo-image';
 import { Ionicons } from '@expo/vector-icons';
 import Screen from '../../components/Screen';
@@ -28,8 +27,6 @@ import type { ApiError } from '../../types/api';
 const FLAGS: Record<AlertCurrency, number> = {
   PHP: require('../../../assets/flags/ph.svg'),
   USD: require('../../../assets/flags/us.svg'),
-  VND: require('../../../assets/flags/vn.svg'),
-  IDR: require('../../../assets/flags/id.svg'),
 };
 const FLAG_US_32 = require('../../../assets/flags/us32.svg');
 
@@ -49,7 +46,6 @@ export default function FxAlertScreen() {
   const [setupError, setSetupError] = useState<string | null>(null);
   const [target, setTarget] = useState(0);
   const [presetKey, setPresetKey] = useState<string | null>(null);
-  const [push, setPush] = useState(true);
   const [alerts, setAlerts] = useState<FxAlertList | null>(null);
   const [saving, setSaving] = useState(false);
 
@@ -97,7 +93,7 @@ export default function FxAlertScreen() {
     if (!setup) return;
     setSaving(true);
     try {
-      await createFxAlert({ currency, target, push });
+      await createFxAlert({ currency, target });
       loadAlerts();
       Alert.alert('알림을 등록했어요', `${pairText(setup.unit, currency)} = ${fmtRate(target)} KRW ${directionText}일 때 알려드려요.`);
     } catch (e) {
@@ -118,7 +114,6 @@ export default function FxAlertScreen() {
     ]);
   };
 
-  // TODO(B): 목표가 현재보다 높을 때 "이상"으로 받을지 확인. 지금은 비교 결과대로 표시
   const directionText = setup && target > setup.rate ? '이상' : '이하';
   const unitPair = setup ? pairText(setup.unit, currency) : '';
 
@@ -140,7 +135,7 @@ export default function FxAlertScreen() {
         <Text style={s.eyebrow}>환율 알림</Text>
         <Text style={s.title}>목표 환율 알림 설정</Text>
         <Text style={s.desc}>
-          원하는 환율을 설정해 두시면, 해당 환율에 도달하는 즉시 휴대폰 푸시 알림을 보내드려요.
+          원하는 환율을 설정해 두면, 하루 1번 갱신되는 기준환율로 확인해서 도달하면 알림 목록에 표시해 드려요.
         </Text>
       </View>
 
@@ -281,24 +276,6 @@ export default function FxAlertScreen() {
         )}
       </View>
 
-      {/* 알림 방식 */}
-      <View style={[s.card, s.padCard]}>
-        <Text style={s.sectionTitle}>알림 방식 및 옵션</Text>
-        <View style={s.optionRow}>
-          <View>
-            <Text style={s.optionTitle}>스마트폰 앱 푸시 알림</Text>
-            <Text style={s.label}>신한 SOL 앱 알림으로 받기</Text>
-          </View>
-          <Switch
-            value={push}
-            onValueChange={setPush}
-            trackColor={{ true: colors.primary, false: colors.border }}
-            thumbColor={colors.surface}
-            ios_backgroundColor={colors.border}
-          />
-        </View>
-      </View>
-
       {/* 등록된 알림 */}
       <View style={[s.card, s.padCard]}>
         <View style={s.rowBetween}>
@@ -325,7 +302,7 @@ export default function FxAlertScreen() {
                 </View>
                 <Text style={s.alertTarget}>
                   목표: {pairText(item.unit, item.currency)} = {fmtRate(item.target)} KRW
-                  {item.direction === 'above' ? ' 이상' : ''}
+                  {item.direction === 'above' ? ' 이상' : ' 이하'}
                 </Text>
               </View>
             </View>
@@ -435,7 +412,6 @@ const s = StyleSheet.create({
   presetText: { ...typography.badge, color: colors.text.sub, textAlign: 'center' },
   presetTextSelected: { fontFamily: fonts.bold, color: colors.text.strong },
 
-  optionRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingVertical: 6 },
   optionTitle: { ...typography.body, fontFamily: fonts.bold, color: colors.text.strong },
 
   activeCount: { ...typography.badge, fontFamily: fonts.bold, color: colors.primary },

@@ -104,14 +104,12 @@ export const MOCK_FX_PERIODS = (Object.keys(PERIODS) as MockFxPeriod[]).map((key
 // ---------------------------------------------------------------------------
 // FX-002 목표 환율 알림 Mock
 // 프리셋(-1/-3/-5%), 슬라이더 범위, 최저·최고 같은 계산은 서버 역할이라 여기서만 한다.
-// TODO(B): 통화 목록(VND 포함 여부), 슬라이더 기간, 프리셋 의미, 알림 개수 제한·삭제 방식 확인
+// 알림 상태(ACTIVE/TRIGGERED)·최대 4개(같은 통화·방향 1개)는 FX 알림 API 연결 때 반영
 // ---------------------------------------------------------------------------
 
 const ALERT_CURRENCIES = {
   PHP: { name: '필리핀', unit: 1, scale: 1, step: 0.05 },
   USD: { name: '미국', unit: 1, scale: 1380 / 24.9, step: 1 },
-  VND: { name: '베트남', unit: 100, scale: 5.43 / 24.9, step: 0.01 },
-  IDR: { name: '인도네시아', unit: 100, scale: 8.65 / 24.9, step: 0.01 },
 } as const;
 
 export type MockAlertCurrency = keyof typeof ALERT_CURRENCIES;
@@ -168,20 +166,19 @@ type MockFxAlert = {
   unit: number;
   target: number;
   direction: 'below' | 'above';
-  push: boolean;
   status: 'waiting';
 };
 
 // 앱을 끄기 전까지만 유지되는 임시 목록 (서버 저장 대신)
 let alerts: MockFxAlert[] = [
-  { id: 'alert-1', currency: 'USD', unit: 1, target: 1350, direction: 'below', push: true, status: 'waiting' },
+  { id: 'alert-1', currency: 'USD', unit: 1, target: 1350, direction: 'below', status: 'waiting' },
 ];
 
 export function mockFxAlerts() {
   return { items: [...alerts], activeCount: alerts.length };
 }
 
-export function mockCreateFxAlert(input: { currency: MockAlertCurrency; target: number; push: boolean }) {
+export function mockCreateFxAlert(input: { currency: MockAlertCurrency; target: number }) {
   const current = mockFxAlertSetup(input.currency).rate;
   const item: MockFxAlert = {
     id: `alert-${Date.now()}`,
@@ -189,7 +186,6 @@ export function mockCreateFxAlert(input: { currency: MockAlertCurrency; target: 
     unit: ALERT_CURRENCIES[input.currency].unit,
     target: input.target,
     direction: input.target <= current ? 'below' : 'above',
-    push: input.push,
     status: 'waiting',
   };
   alerts = [item, ...alerts];
