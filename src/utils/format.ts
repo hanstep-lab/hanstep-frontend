@@ -9,9 +9,10 @@ export function fmtNumber(n: number): string {
 
 // 환율 표시용. 24.9 → "24.90", 1382.5 → "1,382.50". 반올림이 아니라 소수 둘째 자리 모양만 맞춘다.
 // sign 을 주면 양수 앞에 + 를 붙인다 (전일 대비 등).
-export function fmtRate(n: number, opts?: { sign?: boolean }): string {
+// digits 를 주면 그 자리까지 0을 채운다 (PHP 3자리: 21.1 → "21.100"). 기본 2자리. 자르거나 반올림하지 않는다.
+export function fmtRate(n: number, opts?: { sign?: boolean; digits?: number }): string {
   const [int, dec = ''] = String(Math.abs(n)).split('.');
-  const body = `${int.replace(/\B(?=(\d{3})+(?!\d))/g, ',')}.${dec.padEnd(2, '0')}`;
+  const body = `${int.replace(/\B(?=(\d{3})+(?!\d))/g, ',')}.${dec.padEnd(opts?.digits ?? 2, '0')}`;
   if (n < 0) return `-${body}`;
   return opts?.sign && n > 0 ? `+${body}` : body;
 }

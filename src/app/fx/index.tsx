@@ -1,7 +1,16 @@
 // FX-001 환율 정보. 데이터·문구는 src/api/fx.ts 에서만 받고, 평균·대비·최저/최고·방향은 서버(Mock) 값을 그대로 쓴다.
 // 출처 문구는 서버 sourceLabel 그대로(USD 수출입은행 고시, PHP ECB 참고값, 하루 1번).
-import { useEffect, useState } from 'react';
-import { View, Text, Pressable, ScrollView, StyleSheet } from 'react-native';
+import { useEffect, useRef, useState } from 'react';
+import {
+  View,
+  Text,
+  Pressable,
+  ScrollView,
+  StyleSheet,
+  PanResponder,
+  type LayoutChangeEvent,
+} from 'react-native';
+import Svg, { Line, Circle } from 'react-native-svg';
 import { Image } from 'expo-image';
 import { Ionicons } from '@expo/vector-icons';
 import { router, type Href } from 'expo-router';
@@ -15,6 +24,7 @@ import {
   FX_PERIODS,
   FX_FIRST_CURRENCY,
   FX_LOAD_ERROR,
+  AVG_DECIMALS,
   type FxRate,
   type FxHistory,
   type FxPeriod,
@@ -41,6 +51,105 @@ function trendSoft(t: FxTrend | null) {
   if (t === 'UP') return colors.riseSoft;
   if (t === 'DOWN') return colors.fallSoft;
   return colors.background;
+}
+
+// RateChart와 맞춰야 함: src/components/RateChart.tsx 의 기본 높이(height=144)·PAD_Y·PAD_RIGHT 와 같은 값.
+// RateChart 가 점 좌표를 밖으로 주지 않아서, 안내선·점 위치를 같은 식으로 다시 맞춘다. 저쪽이 바뀌면 여기도 바꿔야 한다.
+const CHART_H = 144;
+const CHART_PAD_Y = 12;
+const CHART_PAD_RIGHT = 10;
+
+type TrendChartProps = {
+  points: FxHistory['points'];
+  min: number;
+  max: number;
+  digits: number; // 통화별 환율 자릿수 (AVG_DECIMALS)
+};
+
+// 환율 추이 차트 + 누르고 끄는 동안 그 지점 날짜·환율 말풍선. 손을 떼면 사라진다.
+// 날짜·환율은 points 값을 그대로 보여 주고, 여기서 하는 계산은 손가락 위치 ↔ 점 순번 변환뿐.
+function TrendChart({ points, min, max, digits }: TrendChartProps) {
+  const [width, setWidth] = useState(0);
+  const [tipW, setTipW] = useState(0);
+  const [active, setActive] = useState<number | null>(null);
+
+  // PanResponder 는 한 번만 만들기 때문에 최신 값은 ref 로 읽는다
+  const latest = useRef({ width, count: points.length });
+  latest.current = { width, count: points.length };
+
+  const pick = (x: number) => {
+    const { width: w, count } = latest.current;
+    const plotW = w - CHART_PAD_RIGHT;
+    if (plotW <= 0 || count < 2) return;
+    const ratio = Math.min(Math.max(x / plotW, 0), 1);
+    setActive(Math.round(ratio * (count - 1)));
+  };
+
+  const responder = useRef(
+    PanResponder.create({
+      onStartShouldSetPanResponder: () => true, // 만지는 순간 바로 잡기
+      onMoveShouldSetPanResponder: () => true,
+      onPanResponderTerminationRequest: () => false, // 끄는 동안 화면 스크롤이 손가락을 가져가지 않게
+      onPanResponderGrant: (e) => pick(e.nativeEvent.locationX),
+      onPanResponderMove: (e) => pick(e.nativeEvent.locationX),
+      onPanResponderRelease: () => setActive(null),
+      onPanResponderTerminate: () => setActive(null),
+    }),
+  ).current;
+
+  const onLayout = (e: LayoutChangeEvent) => setWidth(e.nativeEvent.layout.width);
+  const onTipLayout = (e: LayoutChangeEvent) => setTipW(e.nativeEvent.layout.width);
+
+  const point = active !== null && points.length > 1 ? points[active] : undefined;
+  const plotW = width - CHART_PAD_RIGHT;
+  const range = max - min || 1;
+  const px = point ? (active! / (points.length - 1)) * plotW : 0;
+  const py = point ? CHART_PAD_Y + ((max - point.rate) / range) * (CHART_H - CHART_PAD_Y * 2) : 0;
+  // 말풍선은 손가락을 가운데로 따라가되 차트 너비 밖으로 나가지 않게
+  const tipLeft = Math.min(Math.max(px - tipW / 2, 0), Math.max(width - tipW, 0));
+
+  return (
+    <View onLayout={onLayout}>
+      <RateChart values={points.map((pt) => pt.rate)} min={min} max={max} height={CHART_H} />
+
+      {point && width > 0 && (
+        <Svg width={width} height={CHART_H} style={StyleSheet.absoluteFill} pointerEvents="none">
+          <Line
+            x1={px}
+            x2={px}
+            y1={0}
+            y2={CHART_H}
+            stroke={colors.border}
+            strokeWidth={1}
+            strokeDasharray="4 4"
+          />
+          <Circle cx={px} cy={py} r={9} fill={colors.primarySoft} />
+          <Circle cx={px} cy={py} r={5} fill={colors.primary} />
+        </Svg>
+      )}
+
+      {/* 터치 받는 투명 층. 자식이 없어야 locationX 가 이 층 기준이 된다 */}
+      <View style={StyleSheet.absoluteFill} {...responder.panHandlers} />
+
+      {point ? (
+        <View
+          style={[s.floatBadge, { left: tipLeft, opacity: tipW > 0 ? 1 : 0 }]}
+          onLayout={onTipLayout}
+          pointerEvents="none"
+        >
+          <View style={s.maxDot} />
+          <Text style={s.maxText} numberOfLines={1}>
+            {fmtDate(point.date)} · {fmtRate(point.rate, { digits })} KRW
+          </Text>
+        </View>
+      ) : (
+        <View style={[s.floatBadge, s.maxRight]} pointerEvents="none">
+          <View style={s.maxDot} />
+          <Text style={s.maxText}>최고 {fmtRate(max, { digits })}</Text>
+        </View>
+      )}
+    </View>
+  );
 }
 
 export default function FxScreen() {
@@ -141,6 +250,7 @@ export default function FxScreen() {
   const hasBankRates = rate.sendRate != null && rate.receiveRate != null;
   // 통화를 바꾼 직후 이전 통화 차트가 보이지 않게
   const chart = history && history.currency === rate.currency ? history : null;
+  const digits = chart ? (AVG_DECIMALS[chart.currency] ?? 2) : 2;
 
   return (
     <Screen
@@ -245,25 +355,22 @@ export default function FxScreen() {
 
         {chart ? (
           <>
-            <View>
-              <RateChart
-                values={chart.points.map((pt) => pt.rate)}
-                min={chart.min}
-                max={chart.max}
-              />
-              <View style={s.maxBadge}>
-                <View style={s.maxDot} />
-                <Text style={s.maxText}>최고 {fmtRate(chart.max)}</Text>
-              </View>
-            </View>
+            {/* 통화·기간이 바뀌면 새로 그려서 이전 선택(말풍선)이 남지 않게 */}
+            <TrendChart
+              key={`${chart.currency}-${chart.period}`}
+              points={chart.points}
+              min={chart.min}
+              max={chart.max}
+              digits={digits}
+            />
             <View style={s.row}>
               <Text style={s.statText}>
-                {periodLabel} 최저 {fmtRate(chart.min)}
+                {periodLabel} 최저 {fmtRate(chart.min, { digits })}
               </Text>
               <Text style={s.statText}>
                 {periodLabel} 평균 {chart.avgText}
               </Text>
-              <Text style={[s.statText, s.statCurrent]}>현재 {fmtRate(chart.current)}</Text>
+              <Text style={[s.statText, s.statCurrent]}>현재 {fmtRate(chart.current, { digits })}</Text>
             </View>
           </>
         ) : (
@@ -389,9 +496,9 @@ const s = StyleSheet.create({
   tabSelected: { backgroundColor: colors.surface },
   tabText: { ...typography.badge, color: colors.text.sub },
   tabTextSelected: { fontFamily: fonts.bold, color: colors.primary },
-  maxBadge: {
+  // 차트 위 배지 (최고 배지와 누르는 동안 말풍선이 같은 모양)
+  floatBadge: {
     position: 'absolute',
-    right: 0,
     top: -spacing.sm,
     flexDirection: 'row',
     alignItems: 'center',
@@ -400,6 +507,7 @@ const s = StyleSheet.create({
     borderRadius: radius.full,
     paddingHorizontal: spacing.sm,
   },
+  maxRight: { right: 0 },
   maxDot: { width: 6, height: 6, borderRadius: radius.full, backgroundColor: colors.primary },
   maxText: { ...typography.badge, color: colors.primary },
   statText: { ...typography.badge, color: colors.text.sub },

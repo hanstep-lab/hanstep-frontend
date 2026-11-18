@@ -70,7 +70,7 @@ const QUOTE_NAME = '대한민국 KRW';
 
 // 평균 표시 자릿수. 서버 평균은 소수 4자리라 화면 표시만 그 통화 환율 자릿수에 맞춘다
 // (PHP 는 ECB 참고값이 소수 3자리, USD 는 수출입은행 고시가 소수 2자리). 없는 통화는 2자리
-const AVG_DECIMALS: Record<string, number> = { PHP: 3, USD: 2 };
+export const AVG_DECIMALS: Record<string, number> = { PHP: 3, USD: 2 };
 
 const INSUFFICIENT_TEXT = '데이터 부족';
 
