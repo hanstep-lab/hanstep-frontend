@@ -366,3 +366,45 @@ export type FxRateHistoryResponse = {
   current: number;
   asOf: string;
 };
+
+// ── FX 환율 정보 (FX-001) ──────────────────────────────
+// 같은 GET /fx/rates, /fx/rates/{currency}/history 의 전체 응답.
+// FX-002 는 위의 일부 필드 타입을 그대로 쓰고, FX-001 은 그 타입을 넓혀서 쓴다.
+export type FxPeriod = '1M' | '3M' | '6M' | '1Y';
+export type FxDirection = 'LOWER' | 'HIGHER' | 'SAME'; // 현재가 평균보다 낮음 / 높음 / 비슷(±0.10% 이내)
+export type FxRateSource = 'KOREAEXIM' | 'MARKET_REF' | 'MOCK';
+
+// 기간 평균 비교 1줄. 데이터가 기간보다 짧으면 avg·diff·diffRate·direction 이 null, reason 은 INSUFFICIENT_DATA
+export type FxPeriodAverage = {
+  period: FxPeriod;
+  avg: number | null; // 소수 4자리
+  diff: number | null; // 현재 − 평균
+  diffRate: number | null; // (현재 − 평균) ÷ 평균 × 100, 소수 2자리
+  direction: FxDirection | null;
+  businessDays: number;
+  reason: string | null;
+};
+
+// GET /api/v1/fx/rates 전체
+export type FxRateDetailResponse = FxRateResponse & {
+  sendRate: number | null; // 수출입은행 고시만. PHP 는 null
+  receiveRate: number | null;
+  change: number | null; // 전 영업일 대비(KRW). 없으면 null
+  source: FxRateSource;
+  isMock: boolean;
+  rateAt: string;
+  fetchedAt: string;
+  stale: boolean; // 오래된 값인지
+  notices: string[]; // REFERENCE_RATE_ONLY 등 안내 코드. 문구는 프론트가 만든다
+  periodAverages: FxPeriodAverage[]; // 1M·3M·6M·1Y 순
+  screenCurrencies: string[]; // 이 사용자의 화면 통화 (예: ["USD", "PHP"])
+};
+
+// GET /api/v1/fx/rates/{currency}/history 전체
+export type FxRateHistoryDetailResponse = FxRateHistoryResponse & {
+  avg: number | null; // 데이터가 기간보다 짧으면 null (reason 참고)
+  businessDays: number;
+  reason: string | null;
+  source: FxRateSource;
+  isMock: boolean;
+};
