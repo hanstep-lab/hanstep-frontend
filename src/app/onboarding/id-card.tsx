@@ -7,7 +7,13 @@ import { CameraView, useCameraPermissions } from 'expo-camera';
 import Header from '../../components/Header';
 import { useOnboardingStore } from '../../store/onboardingStore';
 import { resizeForUpload } from '../../utils/image';
+import { uploadIdCard } from '../../api/document';
+import type { ApiError } from '../../types/api';
 import { colors, typography, spacing, radius, fonts, shadow } from '../../constants/theme';
+
+// "직접 정보 입력하기" 버튼. 사진 없이 체류 정보를 저장하는 API(VIS-02 PATCH /visa/profile)가
+// 아직 서버에 없어서 숨겨 둔다. API 가 생기면 true 로 바꾸고 이동 화면을 연결할 것
+const SHOW_MANUAL_ENTRY = false;
 
 function CornerGuide({ pos }: { pos: 'tl' | 'tr' | 'bl' | 'br' }) {
   const isLeft = pos === 'tl' || pos === 'bl';
@@ -55,6 +61,7 @@ export default function IdCardScreen() {
   const [isCameraReady, setIsCameraReady] = useState(false);
   const [isCapturing, setIsCapturing] = useState(false);
   const setIdCardFrontUri = useOnboardingStore((s) => s.setIdCardFrontUri);
+  const setIdDocumentId = useOnboardingStore((s) => s.setIdDocumentId);
 
   const canCapture = hasPermission && isCameraReady && !isCapturing;
 
@@ -75,14 +82,23 @@ export default function IdCardScreen() {
     if (!cameraRef.current || capturingRef.current) return;
     capturingRef.current = true;
     setIsCapturing(true);
+    let uploading = false; // 어느 단계에서 실패했는지 구분해 안내 문구를 다르게
     try {
       const photo = await cameraRef.current.takePictureAsync();
       const resized = await resizeForUpload(photo);
       setIdCardFrontUri(resized.uri);
+
+      uploading = true;
+      const doc = await uploadIdCard(resized.uri); // 저장 + OCR 작업 등록. 결과는 확인 화면에서 기다림
+      setIdDocumentId(doc.documentId);
       router.push('/onboarding/id-confirm' as Href);
     } catch (e) {
-      console.warn('[ON-002] 촬영 실패', e);
-      Alert.alert('촬영하지 못했어요', '잠시 후 다시 시도해 주세요.');
+      console.warn('[ON-002] 촬영·업로드 실패', e);
+      if (uploading) {
+        Alert.alert('사진을 보내지 못했어요', (e as ApiError).message ?? '잠시 후 다시 시도해 주세요.');
+      } else {
+        Alert.alert('촬영하지 못했어요', '잠시 후 다시 시도해 주세요.');
+      }
     } finally {
       capturingRef.current = false;
       setIsCapturing(false);
@@ -189,13 +205,15 @@ export default function IdCardScreen() {
             </View>
           </Pressable>
 
-          <View style={styles.manualWrap}>
-            <Text style={styles.manualHint}>인식이 잘 되지 않나요?</Text>
-            <Pressable style={styles.manualBtn} onPress={goToConfirm}>
-              <Text style={styles.manualBtnText}>직접 정보 입력하기</Text>
-              <Ionicons name="chevron-forward" size={12} color={colors.primary} />
-            </Pressable>
-          </View>
+          {SHOW_MANUAL_ENTRY && (
+            <View style={styles.manualWrap}>
+              <Text style={styles.manualHint}>인식이 잘 되지 않나요?</Text>
+              <Pressable style={styles.manualBtn} onPress={goToConfirm}>
+                <Text style={styles.manualBtnText}>직접 정보 입력하기</Text>
+                <Ionicons name="chevron-forward" size={12} color={colors.primary} />
+              </Pressable>
+            </View>
+          )}
         </View>
       </ScrollView>
     </SafeAreaView>
