@@ -2,9 +2,11 @@
 
 import { client } from './client';
 import { USE_MOCK, mockDelay } from './config';
+import { mockOnboardingSummary } from './mock/onboarding';
 import type {
   OnboardingProfileResponse,
   OnboardingResponse,
+  OnboardingSummaryResponse,
   ResidencePurpose,
   StepCode,
   StepUpdateRequest,
@@ -47,6 +49,16 @@ export async function saveProfile(
   const res = await client.put<OnboardingProfileResponse>('/api/v1/onboarding/profile', {
     residencePurpose,
   });
+  return res.data;
+}
+
+// GET /api/v1/onboarding/summary — 지금은 비자 화면(VS-001)이 visa 칸(현재 비자·만료일·D-day)만 쓴다.
+export async function getOnboardingSummary(): Promise<OnboardingSummaryResponse> {
+  if (USE_MOCK) {
+    await mockDelay();
+    return mockOnboardingSummary();
+  }
+  const res = await client.get<OnboardingSummaryResponse>('/api/v1/onboarding/summary');
   return res.data;
 }
 
