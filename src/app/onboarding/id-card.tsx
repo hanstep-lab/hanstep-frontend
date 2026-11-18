@@ -6,6 +6,7 @@ import { router, useFocusEffect, useIsFocused, type Href } from 'expo-router';
 import { CameraView, useCameraPermissions } from 'expo-camera';
 import Header from '../../components/Header';
 import { useOnboardingStore } from '../../store/onboardingStore';
+import { resizeForUpload } from '../../utils/image';
 import { colors, typography, spacing, radius, fonts, shadow } from '../../constants/theme';
 
 function CornerGuide({ pos }: { pos: 'tl' | 'tr' | 'bl' | 'br' }) {
@@ -76,7 +77,8 @@ export default function IdCardScreen() {
     setIsCapturing(true);
     try {
       const photo = await cameraRef.current.takePictureAsync();
-      setIdCardFrontUri(photo.uri);
+      const resized = await resizeForUpload(photo);
+      setIdCardFrontUri(resized.uri);
       router.push('/onboarding/id-confirm' as Href);
     } catch (e) {
       console.warn('[ON-002] 촬영 실패', e);
