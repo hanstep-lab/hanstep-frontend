@@ -1,4 +1,4 @@
-// 온보딩 OpenAPI 명세(docs/api/onboarding-openapi.json) 기반 타입.
+// 백엔드 OpenAPI 명세(docs/api/openapi.json, Swagger /v3/api-docs 저장본) 기반 타입.
 // 서버 응답/요청 모양을 그대로 옮긴 것이라, 화면·API 파일 모두 여기서 import 한다.
 
 // ── 공통 ───────────────────────────────────────────────
@@ -408,3 +408,52 @@ export type FxRateHistoryDetailResponse = FxRateHistoryResponse & {
   source: FxRateSource;
   isMock: boolean;
 };
+
+// ── 외국인등록증 문서·OCR (DOC-01~04, /api/v1/documents) ─────────────────────
+// 흐름: 업로드(UPLOADED) → OCR 결과(PENDING_CONFIRMATION) → 확정(CONFIRMED). 실패하면 FAILED
+export type DocumentStatus = 'UPLOADED' | 'PENDING_CONFIRMATION' | 'CONFIRMED' | 'FAILED';
+
+// 항목 키. stayExpiry 는 앞면에 없어 사용자가 입력, registrationNo 는 마스킹값(수정 불가)
+export type DocumentFieldKey =
+  | 'nameEn'
+  | 'nationality' // ISO 3166-1 alpha-3 (예: PHL)
+  | 'birthDate' // YYYY-MM-DD
+  | 'visaType' // 예: E-9
+  | 'stayExpiry' // YYYY-MM-DD
+  | 'registrationNo';
+
+export type DocumentField = {
+  fieldKey: DocumentFieldKey;
+  value: string | null; // 못 읽었거나 확정 후면 null
+  confidence: number | null; // 0~1
+  needsReview: boolean; // 신뢰도 0.8 미만·못 읽음 → true
+  status: 'EXTRACTED' | 'MISSING' | 'CONFIRMED' | 'CORRECTED';
+  isMasked: boolean;
+};
+
+export type DocumentOcrJob = {
+  jobId: number;
+  status: 'PENDING' | 'QUEUED' | 'PROCESSING' | 'COMPLETED' | 'FAILED';
+  publishStatus: 'NOT_PUBLISHED' | 'PUBLISHED' | 'PUBLISH_FAILED';
+  errorCode: string | null;
+  retryable: boolean; // true 면 POST /ocr-retry 가능 (서버도 1분마다 자동 재시도)
+};
+
+export type DocumentResponse = {
+  documentId: number;
+  documentType: 'ARC' | 'DRIVER_LICENSE' | 'CERTIFICATE' | 'INSURANCE_PDF' | 'OTHER';
+  side: 'FRONT' | 'BACK' | 'SINGLE';
+  status: DocumentStatus;
+  failureCode: string | null;
+  ocrJob: DocumentOcrJob | null;
+  fields: DocumentField[]; // OCR 결과 전에는 빈 배열
+  uploadedAt: string;
+  confirmedAt: string | null;
+};
+
+// DOC-03 수정 요청. 보낸 항목만 바뀐다(registrationNo 제외)
+export type DocumentFieldUpdateItem = {
+  fieldKey: Exclude<DocumentFieldKey, 'registrationNo'>;
+  value: string;
+};
+export type DocumentFieldsUpdateRequest = { fields: DocumentFieldUpdateItem[] };

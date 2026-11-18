@@ -7,15 +7,23 @@ import type { Language, ResidencePurpose } from '../types/api';
 type OnboardingState = {
   language: Language | null;
   purpose: ResidencePurpose | null;
+  idCardFrontUri: string | null; // 촬영한 등록증 앞면 사진의 로컬 경로
+  idDocumentId: number | null; // 업로드한 등록증 문서 id (OCR 결과 조회·확정용)
   setLanguage: (language: Language) => void;
   setPurpose: (purpose: ResidencePurpose) => void;
+  setIdCardFrontUri: (uri: string | null) => void;
+  setIdDocumentId: (id: number | null) => void;
   reset: () => void;
 };
 
 export const useOnboardingStore = create<OnboardingState>((set) => ({
   language: null,
   purpose: null,
+  idCardFrontUri: null,
+  idDocumentId: null,
   setLanguage: (language) => set({ language }),
   setPurpose: (purpose) => set({ purpose }),
-  reset: () => set({ language: null, purpose: null }),
+  setIdCardFrontUri: (idCardFrontUri) => set({ idCardFrontUri }),
+  setIdDocumentId: (idDocumentId) => set({ idDocumentId }),
+  reset: () => set({ language: null, purpose: null, idCardFrontUri: null, idDocumentId: null }),
 }));
