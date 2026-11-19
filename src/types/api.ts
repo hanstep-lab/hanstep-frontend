@@ -193,8 +193,163 @@ export type FinanceAnalysisResponse = {
   isMock: boolean;
 };
 
-// ── 온보딩 요약 (GET /api/v1/onboarding/summary) ──
-// 지금은 비자 화면(VS-001)이 쓰는 visa 칸만 둔다. user·goals·commitments·balance 는 ON-006 연결 때 추가.
+// ── 금융 목표 (GOL-01·02, /api/v1/goals) — ON-004 ─────────────────────────
+// 목표 종류: 목돈 마련 · 가족 송금 · 생활비 관리 · 신용 쌓기 · 장기 정착
+export type GoalType = 'LUMP_SUM' | 'REMITTANCE' | 'LIVING_COST' | 'CREDIT' | 'SETTLEMENT';
+
+export type GoalResponse = {
+  id: number;
+  goalType: GoalType;
+  targetAmount: Money | null; // LUMP_SUM 만 입력, 나머지는 null
+  targetDate: string | null; // YYYY-MM-DD
+  status: 'ACTIVE' | 'ACHIEVED' | 'CANCELLED'; // 목록 조회는 ACTIVE 만
+  monthlyRequired: Money | null; // 서버 계산값(월 필요 저축액). 금액·목표일이 없거나 지났으면 null
+};
+export type GoalListResponse = { goals: GoalResponse[] }; // 선택 안 했으면 빈 배열
+
+// 전체 교체 저장. 요청에 없는 기존 목표는 CANCELLED. goalType 중복 불가
+export type GoalSaveItem = {
+  goalType: GoalType;
+  targetAmount?: Money | null; // LUMP_SUM 만. amount > 0
+  targetDate?: string | null; // YYYY-MM-DD
+};
+export type GoalSaveRequest = { goals: GoalSaveItem[] };
+
+// ── 필수 확보액 (CMT-01~03, /api/v1/commitments) — ON-005 ────────────────
+export type CommitmentType =
+  | 'REMITTANCE'
+  | 'RENT'
+  | 'UTILITY'
+  | 'TELECOM'
+  | 'MANDATORY_SAVING'
+  | 'LIVING_MINIMUM'
+  | 'VARIABLE_EXPENSE'
+  | 'OTHER';
+export type CommitmentSource = 'USER' | 'DETECTED_CONFIRMED'; // 직접 입력 · 송금 이력(CMT-03)에서 골라 확인
+
+export type CommitmentResponse = {
+  id: number;
+  commitmentType: CommitmentType; // 같은 유형 여러 행 가능
+  label: string | null; // 사용자 표시명 (예: 월세)
+  amount: Money; // 월 금액
+  source: CommitmentSource;
+  detectedFromTxnId: number | null; // DETECTED_CONFIRMED 일 때 근거 거래 ID
+};
+
+// 유형별 합계(서버 계산값). MANDATORY_SAVING 은 deductibleTotal 에 포함하지 않음
+export type CommitmentTotals = {
+  fixedLiving: Money; // RENT·UTILITY·TELECOM·LIVING_MINIMUM·OTHER
+  remittance: Money;
+  variableExpense: Money;
+  mandatorySaving: Money;
+  deductibleTotal: Money; // 여유자금 계산 때 빼는 합계
+};
+export type CommitmentListResponse = { items: CommitmentResponse[]; totals: CommitmentTotals };
+
+// 전체 교체 저장. 요청에 없는 기존 항목은 비활성. 송금 이력에서 고른 항목은 DETECTED_CONFIRMED + detectedFromTxnId
+export type CommitmentSaveItem = {
+  commitmentType: CommitmentType;
+  label?: string | null;
+  amount: Money;
+  source?: CommitmentSource | null; // 기본 USER
+  detectedFromTxnId?: number | null; // CMT-03 의 lastTransactionId
+};
+export type CommitmentSaveRequest = { items: CommitmentSaveItem[] };
+
+// CMT-03 송금 이력 Top 3 ('이전 송금 이력을 분석했어요'). 마이데이터 미연결이면 빈 배열
+export type RemittanceCandidate = {
+  rank: number; // 1~3, 월평균 금액 큰 순
+  counterpartyName: string;
+  counterpartyBank: string | null;
+  recipientId: number | null; // 등록된 받는 분과 매칭 안 되면 null
+  avgMonthlyAmount: Money;
+  monthsSent: number;
+  lastSentOn: string; // YYYY-MM-DD
+  lastTransactionId: number; // 저장 시 detectedFromTxnId 로 보냄
+  sameNameAsUser: boolean; // '본인 명의 계좌' 표시용 (관계 추정 아님)
+};
+export type RemittanceCandidateListResponse = {
+  candidates: RemittanceCandidate[];
+  analyzedMonths: number;
+  isMock: boolean;
+};
+
+// ── 마이데이터 (MYD-01~03) — ON-003A·B ────────────────────────────────────
+export type InstitutionType = 'BANK' | 'CARD' | 'TELECOM' | 'BILLER' | 'PUBLIC' | 'OTHER';
+export type InstitutionResponse = {
+  id: number; // MYD-02 institutionIds 로 보냄
+  institutionCode: string; // 예: SHINHAN_BANK
+  name: string; // 영문 (예: Shinhan Bank (Mock))
+  nameKo: string | null; // 화면 표시명 (예: 신한은행)
+  institutionType: InstitutionType;
+  isMock: boolean; // MVP 는 모두 Mock 기관
+};
+export type InstitutionListResponse = { institutions: InstitutionResponse[] };
+
+// 불러올 정보. 명세에 enum 이 없어 예시값만 적어 둠: ACCOUNT_BALANCE · TRANSACTIONS · CARD_USAGE
+export type MydataScope = string;
+
+// ON-003B '확인하고 연결'. 고른 기관 연결 + Mock 계좌·거래 적재
+export type ConnectionCreateRequest = {
+  institutionIds: number[];
+  scopes: MydataScope[];
+  lookbackMonths?: number | null; // 1~60, 생략하면 12
+};
+export type ConnectionResponse = {
+  id: number;
+  institutionId: number;
+  institutionCode: string;
+  institutionName: string; // 화면 표시명
+  status: 'PENDING' | 'CONNECTED' | 'EXPIRED' | 'REVOKED' | 'ERROR';
+  scopes: MydataScope[];
+  lookbackMonths: number;
+  lastSyncedAt: string | null;
+  accountCount: number;
+  transactionCount: number;
+  isMock: boolean;
+};
+// MYD-02 응답도 같은 형식
+export type ConnectionListResponse = { connected: boolean; connections: ConnectionResponse[] };
+
+// ── 동의 (CNS-01·02, /api/v1/consents) — ON-003A ──────────────────────────
+export type ConsentType =
+  | 'TERMS'
+  | 'PRIVACY'
+  | 'ID_DOCUMENT'
+  | 'MYDATA'
+  | 'MYDATA_TERMS'
+  | 'AI_CHAT'
+  | 'CREDIT_EVALUATION'
+  | 'MARKETING';
+export type ConsentResponse = {
+  id: number;
+  consentType: ConsentType;
+  policyVersion: string; // 예: mydata-2026-11
+  status: 'GRANTED' | 'REVOKED';
+  grantedAt: string;
+  revokedAt: string | null;
+  expiresAt: string | null;
+};
+export type ConsentListResponse = { consents: ConsentResponse[] }; // 한 번도 동의 안 한 종류는 없음
+
+// 마이데이터 연결(ON-003A)에서는 MYDATA·MYDATA_TERMS 가 모두 granted=true 여야 함
+export type ConsentSaveItem = {
+  consentType: ConsentType;
+  policyVersion: string; // 화면에 보여 준 약관 버전
+  granted: boolean; // true=동의, false=철회
+};
+export type ConsentSaveRequest = { consents: ConsentSaveItem[] };
+
+// ── 온보딩 최종 확인 (ONB-04, GET /api/v1/onboarding/summary) — ON-006, VS-001 ──
+// 잔여일·합계·여유자금은 모두 서버 계산값 (화면에서 계산하지 않음)
+export type SummaryUser = {
+  id: number;
+  displayName: string; // 영문
+  preferredLanguage: Language;
+  nationalityCode: string | null; // ISO 3166-1 alpha-3
+};
+
+// 등록증을 아직 확정하지 않았으면 visa 전체가 null
 export type SummaryVisa = {
   visaTypeCode: string;
   visaTypeName: string; // 영문 이름
@@ -202,7 +357,25 @@ export type SummaryVisa = {
   daysRemaining: number; // 서버 계산값, 지났으면 음수
   monthsRemaining: number | null;
 };
-export type OnboardingSummaryResponse = { visa: SummaryVisa | null };
+
+// 월 수지 요약. spare 는 음수 가능
+export type SummaryBalance = {
+  avgMonthlyIncome: Money;
+  fixedLiving: Money;
+  remittance: Money;
+  variableExpense: Money;
+  variableExpenseSource: 'TRANSACTIONS' | 'USER_INPUT';
+  spare: Money;
+  isMock: boolean;
+};
+
+export type OnboardingSummaryResponse = {
+  user: SummaryUser;
+  visa: SummaryVisa | null;
+  goals: GoalResponse[]; // ACTIVE 목표
+  commitments: CommitmentListResponse;
+  balance: SummaryBalance | null; // 금융 분석 전이면 null
+};
 
 // ── 비자 로드맵·E-7-4 사전진단 (VS-001) ──
 // roadmap·result 는 명세에 타입이 없어(AI 응답 원본) 2026-11-18 실제 응답 기준으로 적었다.
