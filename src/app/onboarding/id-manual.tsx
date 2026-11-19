@@ -10,7 +10,8 @@ import Screen from '../../components/Screen';
 import Button from '../../components/Button';
 import { saveVisaProfile } from '../../api/visa';
 import { getOnboarding } from '../../api/onboarding';
-import { getRouteFromStepCode } from '../../constants/onboardingSteps';
+import { TOTAL_STAGES, getRouteFromStepCode, stageOf } from '../../constants/onboardingSteps';
+import OnboardingProgress from '../../components/OnboardingProgress';
 import { colors, typography, spacing, radius, shadow } from '../../constants/theme';
 import { errorText } from '../../utils/errorText';
 import {
@@ -109,6 +110,8 @@ export default function IdManualScreen() {
 
   return (
     <Screen title="사진 없이 직접 입력할게요" footer={footer}>
+      {/* 촬영·확인을 대신하는 화면이라 세부 위치는 '등록증 확인' */}
+      <OnboardingProgress current={stageOf('ID_DOCUMENT')} total={TOTAL_STAGES} sub="등록증 확인" />
       <Text style={styles.subtitle}>외국인등록증에 적힌 내용을 그대로 입력해 주세요.</Text>
 
       <View style={styles.card}>

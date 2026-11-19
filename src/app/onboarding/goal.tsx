@@ -8,13 +8,14 @@ import { Ionicons } from '@expo/vector-icons';
 import Header from '../../components/Header';
 import Button from '../../components/Button';
 import { useOnboardingStep } from '../../hooks/useOnboardingStep';
+import OnboardingProgress from '../../components/OnboardingProgress';
 import { getGoals, saveGoals } from '../../api/goals';
-import { colors, typography, spacing, radius, fonts } from '../../constants/theme';
+import { colors, typography, spacing, radius } from '../../constants/theme';
 import { GOALS } from '../../constants/goals';
 import type { GoalResponse, GoalType } from '../../types/api';
 
 export default function GoalScreen() {
-  const { goNext, isNavigating, navError } = useOnboardingStep();
+  const { goNext, isNavigating, navError, stage, totalStages } = useOnboardingStep();
   const [selected, setSelected] = useState<Set<GoalType>>(new Set());
   // 서버에 저장돼 있던 목표. 다시 저장할 때 목표 금액·시점(ON-005 에서 입력)을 지우지 않으려고 들고 있음
   const [savedGoals, setSavedGoals] = useState<GoalResponse[]>([]);
@@ -70,14 +71,8 @@ export default function GoalScreen() {
       <Header title="신한걸음" showBack />
 
       <ScrollView style={styles.scroll} contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
-        <View style={styles.progressRow}>
-          <View style={styles.dots}>
-            <View style={[styles.dot, styles.dotOff]} />
-            <View style={[styles.dot, styles.dotOn]} />
-            <View style={[styles.dot, styles.dotOff]} />
-            <View style={[styles.dot, styles.dotOff]} />
-          </View>
-          <Text style={styles.stepText}>2 / 4 단계</Text>
+        <View style={styles.progressWrap}>
+          <OnboardingProgress current={stage} total={totalStages} />
         </View>
 
         <View style={styles.titleArea}>
@@ -158,17 +153,7 @@ const styles = StyleSheet.create({
   scroll: { flex: 1 },
   content: { paddingHorizontal: spacing.xl, paddingBottom: spacing.xl, gap: spacing.xl },
 
-  progressRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingTop: spacing.md,
-  },
-  dots: { flexDirection: 'row', alignItems: 'center', gap: 6 },
-  dot: { height: 10, borderRadius: radius.full },
-  dotOn:  { width: 24, backgroundColor: colors.primary },
-  dotOff: { width: 10, backgroundColor: colors.border },
-  stepText: { ...typography.badge, fontFamily: fonts.bold, color: colors.primary },
+  progressWrap: { paddingTop: spacing.md },
 
   titleArea: { gap: 6 },
   title: { ...typography.h2, color: colors.text.strong },

@@ -8,6 +8,7 @@ import { Ionicons } from '@expo/vector-icons';
 import Header from '../../components/Header';
 import Button from '../../components/Button';
 import { useOnboardingStep } from '../../hooks/useOnboardingStep';
+import OnboardingProgress from '../../components/OnboardingProgress';
 import {
   getInstitutionViews,
   connectInstitutions,
@@ -31,7 +32,7 @@ const CONSENTS = [
 ];
 
 export default function MydataScreen() {
-  const { goNext, skip, isNavigating, navError } = useOnboardingStep();
+  const { goNext, skip, isNavigating, navError, stage, totalStages } = useOnboardingStep();
   const [checks, setChecks] = useState([false, false, false]);
   const [showModal, setShowModal] = useState(false);
   const [institutions, setInstitutions] = useState<InstitutionView[] | null>(null);
@@ -77,15 +78,8 @@ export default function MydataScreen() {
       <Header title="신한걸음" showBack />
 
       <ScrollView style={styles.scroll} contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
-        {/* 단계 진행 도트 */}
-        <View style={styles.progressRow}>
-          <View style={styles.dots}>
-            <View style={[styles.dot, styles.dotOff]} />
-            <View style={[styles.dot, styles.dotOn]} />
-            <View style={[styles.dot, styles.dotOff]} />
-            <View style={[styles.dot, styles.dotOff]} />
-          </View>
-          <Text style={styles.stepText}>단계 2 / 2</Text>
+        <View style={styles.progressWrap}>
+          <OnboardingProgress current={stage} total={totalStages} sub="마이데이터 연결" />
         </View>
 
         {/* 배지 + 제목 */}
@@ -233,17 +227,7 @@ const styles = StyleSheet.create({
   scroll: { flex: 1 },
   content: { paddingHorizontal: spacing.xl, paddingBottom: spacing.xl, gap: spacing.xl },
 
-  progressRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingTop: spacing.md,
-  },
-  dots: { flexDirection: 'row', alignItems: 'center', gap: 6 },
-  dot: { height: 10, borderRadius: radius.full },
-  dotOn:  { width: 24, backgroundColor: colors.primary },
-  dotOff: { width: 10, backgroundColor: colors.border },
-  stepText: { ...typography.badge, fontFamily: fonts.bold, color: colors.primary },
+  progressWrap: { paddingTop: spacing.md },
 
   titleArea: { gap: 6 },
   badge: {

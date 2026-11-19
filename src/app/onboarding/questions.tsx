@@ -8,6 +8,7 @@ import { Ionicons } from '@expo/vector-icons';
 import Screen from '../../components/Screen';
 import Button from '../../components/Button';
 import { useOnboardingStep } from '../../hooks/useOnboardingStep';
+import OnboardingProgress from '../../components/OnboardingProgress';
 import { getGoals, saveGoals } from '../../api/goals';
 import { getCommitments, getRemittanceCandidates, saveCommitments } from '../../api/commitments';
 import { getOnboardingSummary } from '../../api/onboarding';
@@ -77,7 +78,7 @@ function initials(displayName: string): string {
 }
 
 export default function QuestionsScreen() {
-  const { goNext, isNavigating, navError } = useOnboardingStep();
+  const { goNext, isNavigating, navError, stage, totalStages } = useOnboardingStep();
 
   // 서버에서 불러온 값
   const [goals, setGoals] = useState<GoalResponse[]>([]);
@@ -282,22 +283,8 @@ export default function QuestionsScreen() {
   return (
     <Screen title="신한걸음" footer={footer} contentStyle={styles.content}>
         {/* 단계 진행: 도트+선 방식, 현재 3단계 */}
-        <View style={styles.progressRow}>
-          <View style={styles.stepLine}>
-            <View style={[styles.stepDot, styles.stepDone]} />
-            <View style={[styles.stepConn, styles.connDone]} />
-            <View style={[styles.stepDot, styles.stepDone]} />
-            <View style={[styles.stepConn, styles.connDone]} />
-            <View style={styles.stepCurrent}>
-              <View style={styles.stepCurrentInner} />
-            </View>
-            <View style={[styles.stepConn, styles.connOff]} />
-            <View style={[styles.stepDot, styles.stepOff]} />
-          </View>
-          <View style={styles.stepLabelPill}>
-            <Text style={styles.stepLabelNum}>3</Text>
-            <Text style={styles.stepLabelTotal}> / 4 단계</Text>
-          </View>
+        <View style={styles.progressWrap}>
+          <OnboardingProgress current={stage} total={totalStages} />
         </View>
 
         <View style={styles.titleArea}>
@@ -531,43 +518,7 @@ const styles = StyleSheet.create({
   // Screen 기본 여백(사방 xl, 간격 lg)을 덮어씀: 위쪽 여백 없음, 섹션 간격 xl
   content: { paddingTop: 0, gap: spacing.xl },
 
-  progressRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingTop: spacing.md,
-  },
-  stepLine: { flexDirection: 'row', alignItems: 'center', gap: 4 },
-  stepDot: { width: 10, height: 10, borderRadius: radius.full },
-  stepDone: { backgroundColor: colors.primary },
-  stepOff:  { backgroundColor: colors.border },
-  stepConn: { width: 20, height: 2 },
-  connDone: { backgroundColor: colors.primary },
-  connOff:  { backgroundColor: colors.border },
-  stepCurrent: {
-    width: 12,
-    height: 12,
-    borderRadius: radius.full,
-    backgroundColor: colors.primary,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  stepCurrentInner: {
-    width: 6,
-    height: 6,
-    borderRadius: radius.full,
-    backgroundColor: colors.surface,
-  },
-  stepLabelPill: {
-    flexDirection: 'row',
-    alignItems: 'baseline',
-    backgroundColor: colors.background,
-    borderRadius: radius.full,
-    paddingHorizontal: 10,
-    paddingVertical: 4,
-  },
-  stepLabelNum: { ...typography.badge, fontFamily: fonts.bold, color: colors.primary },
-  stepLabelTotal: { ...typography.badge, color: colors.text.sub },
+  progressWrap: { paddingTop: spacing.md },
 
   titleArea: { gap: 6 },
   title: { ...typography.h2, color: colors.text.strong },

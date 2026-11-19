@@ -12,7 +12,8 @@ import { updateStep } from '../../api/onboarding';
 import { confirmDocument, updateDocumentFields } from '../../api/document';
 import { useIdDocument } from '../../hooks/useIdDocument';
 import { useOnboardingStore } from '../../store/onboardingStore';
-import { getRouteFromStepCode } from '../../constants/onboardingSteps';
+import { TOTAL_STAGES, getRouteFromStepCode, stageOf } from '../../constants/onboardingSteps';
+import OnboardingProgress from '../../components/OnboardingProgress';
 import { colors, typography, spacing, radius, fonts, shadow } from '../../constants/theme';
 import { errorText } from '../../utils/errorText';
 import {
@@ -346,20 +347,14 @@ export default function IdConfirmScreen() {
   // Screen 이 키보드 회피(KeyboardAvoidingView)·스크롤·하단 footer 를 공통으로 처리한다
   return (
     <Screen title="체류 정보 확인" footer={footer} contentStyle={styles.content}>
-        <View style={styles.subProgress}>
-          <View style={styles.subLeft}>
-            <View style={styles.subBadge}>
-              <Text style={styles.subBadgeText}>등록증 정보 확인</Text>
-            </View>
-            <Text style={styles.subStepText}>단계 1 / 2</Text>
-          </View>
-          <View style={styles.subDots}>
-            <View style={[styles.dot, styles.dotOn]} />
-            <View style={[styles.dot, styles.dotOff]} />
-          </View>
+        <View style={styles.progressWrap}>
+          <OnboardingProgress current={stageOf('ID_DOCUMENT')} total={TOTAL_STAGES} sub="등록증 확인" />
         </View>
 
         <View style={styles.titleArea}>
+          <View style={styles.subBadge}>
+            <Text style={styles.subBadgeText}>등록증 정보 확인</Text>
+          </View>
           <Text style={styles.title}>인식된 정보가 맞나요?</Text>
           <Text style={styles.subtitle}>
             {'외국인등록증에서 추출한 정보입니다.\n실제 정보와 일치하는지 꼼꼼히 확인해 주세요.'}
@@ -402,26 +397,15 @@ const styles = StyleSheet.create({
   content: { paddingHorizontal: 0, paddingTop: 0, paddingBottom: spacing.xl, gap: spacing.md },
   px: { paddingHorizontal: spacing.xl },
 
-  subProgress: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingHorizontal: spacing.xl,
-    paddingVertical: spacing.sm,
-  },
-  subLeft: { flexDirection: 'row', alignItems: 'center', gap: spacing.xs },
+  progressWrap: { paddingHorizontal: spacing.xl, paddingTop: spacing.md },
   subBadge: {
+    alignSelf: 'flex-start',
     backgroundColor: colors.primary,
     paddingHorizontal: spacing.sm,
     paddingVertical: 2,
     borderRadius: radius.full,
   },
   subBadgeText: { ...typography.badge, fontFamily: fonts.bold, color: colors.text.inverse },
-  subStepText: { ...typography.badge, color: colors.text.sub },
-  subDots: { flexDirection: 'row', alignItems: 'center', gap: spacing.xs },
-  dot: { height: 6, borderRadius: radius.full },
-  dotOn: { width: 24, backgroundColor: colors.primary },
-  dotOff: { width: 10, backgroundColor: colors.border },
 
   titleArea: { paddingHorizontal: spacing.xl, gap: 6 },
   title: { ...typography.h2, color: colors.text.strong },

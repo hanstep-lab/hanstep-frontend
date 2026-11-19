@@ -10,6 +10,7 @@ import { router } from 'expo-router';
 import Header from '../../components/Header';
 import Button from '../../components/Button';
 import { useOnboardingStep } from '../../hooks/useOnboardingStep';
+import OnboardingProgress from '../../components/OnboardingProgress';
 import { getOnboardingSummary } from '../../api/onboarding';
 import { colors, typography, spacing, radius, fonts } from '../../constants/theme';
 import { languageName } from '../../constants/languages';
@@ -76,7 +77,7 @@ function buildGoalRows(s: OnboardingSummaryResponse): GoalRow[] {
 }
 
 export default function ConfirmScreen() {
-  const { goNext, isNavigating, navError } = useOnboardingStep();
+  const { goNext, isNavigating, navError, stage, totalStages } = useOnboardingStep();
   const [summary, setSummary] = useState<OnboardingSummaryResponse | null>(null);
   const [loadError, setLoadError] = useState<string | null>(null);
 
@@ -100,20 +101,8 @@ export default function ConfirmScreen() {
 
       <ScrollView style={styles.scroll} contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
 
-        {/* 단계 진행: 4/4 완료 바 */}
-        <View style={styles.progressSection}>
-          <View style={styles.progressTop}>
-            <View style={styles.progressLeft}>
-              <View style={styles.lastBadge}>
-                <Text style={styles.lastBadgeText}>마지막 단계</Text>
-              </View>
-              <Text style={styles.stepCounter}>4 / 4 단계</Text>
-            </View>
-            <Text style={styles.completeText}>100% 완료</Text>
-          </View>
-          <View style={styles.barRow}>
-            {[0, 1, 2, 3].map((i) => <View key={i} style={styles.barSegment} />)}
-          </View>
+        <View style={styles.progressWrap}>
+          <OnboardingProgress current={stage} total={totalStages} />
         </View>
 
         <View style={styles.titleArea}>
@@ -287,20 +276,7 @@ const styles = StyleSheet.create({
   scroll: { flex: 1 },
   content: { paddingHorizontal: spacing.xl, paddingBottom: spacing.xl, gap: spacing.lg },
 
-  progressSection: { paddingTop: spacing.lg, gap: spacing.sm },
-  progressTop: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
-  progressLeft: { flexDirection: 'row', alignItems: 'center', gap: 6 },
-  lastBadge: {
-    backgroundColor: colors.primary,
-    paddingHorizontal: spacing.sm,
-    paddingVertical: 2,
-    borderRadius: radius.full,
-  },
-  lastBadgeText: { ...typography.badge, fontFamily: fonts.medium, color: colors.text.inverse },
-  stepCounter: { ...typography.badge, fontFamily: fonts.bold, color: colors.text.sub },
-  completeText: { ...typography.badge, fontFamily: fonts.bold, color: colors.primary },
-  barRow: { flexDirection: 'row', gap: 6, height: 6 },
-  barSegment: { flex: 1, backgroundColor: colors.primary, borderRadius: radius.full },
+  progressWrap: { paddingTop: spacing.md },
 
   titleArea: { gap: 6 },
   title: { ...typography.h2, color: colors.text.strong },
