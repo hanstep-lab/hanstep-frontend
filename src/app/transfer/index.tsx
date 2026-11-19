@@ -2,7 +2,7 @@
 import { useEffect, useState } from 'react';
 import { View, Text, TextInput, Pressable, StyleSheet, Alert } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { router, type Href } from 'expo-router';
+import { router, useLocalSearchParams, type Href } from 'expo-router';
 import Screen from '../../components/Screen';
 import Button from '../../components/Button';
 import { colors, typography, spacing, radius, fonts, shadow } from '../../constants/theme';
@@ -15,12 +15,25 @@ function preparingAlert() {
   Alert.alert('준비 중', '곧 사용할 수 있어요.');
 }
 
+// 주소의 amount(원). 숫자만 1~9자리(입력칸과 같은 한도)이고 0보다 클 때만 쓴다. 아니면 null
+function parseAmountParam(v: string | undefined): number | null {
+  if (!v || !/^\d{1,9}$/.test(v)) return null;
+  const n = Number(v);
+  return n > 0 ? n : null;
+}
+
 export default function TransferScreen() {
   const { initialAmountKRW, setResult } = useTransferStore();
+  // 채팅 송금 카드(CHT-04 REMITTANCE_CONFIRM)는 서버 transferPath(/transfer?recipientId=1&amount=500000)로 이 화면을 연다.
+  // 예전에는 store 의 initialAmountKRW 만 읽어서 주소의 금액이 무시되고 0원으로 시작했다. 그래서 주소의 amount 를 먼저 읽는다.
+  // Expo Router 문서(URL parameters): 이 화면의 쿼리는 useLocalSearchParams 로 읽고, 값은 문자열로 온다.
+  // recipientId 는 아직 쓰지 않는다. 송금 화면의 받는 분이 한 명뿐이고(GET /transfers/context) id 필드가 없다.
+  const params = useLocalSearchParams<{ amount?: string; recipientId?: string }>();
+  const amountFromPath = parseAmountParam(params.amount);
 
   const [ctx, setCtx] = useState<TransferContext | null>(null);
   const [ctxError, setCtxError] = useState<string | null>(null);
-  const [amount, setAmount] = useState<number>(initialAmountKRW ?? 0);
+  const [amount, setAmount] = useState<number>(amountFromPath ?? initialAmountKRW ?? 0);
   const [quote, setQuote] = useState<TransferQuote | null>(null);
   const [quoteError, setQuoteError] = useState<string | null>(null);
   const [quoteLoading, setQuoteLoading] = useState(false);

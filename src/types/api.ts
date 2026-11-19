@@ -633,3 +633,75 @@ export type DocumentFieldUpdateItem = {
   value: string;
 };
 export type DocumentFieldsUpdateRequest = { fields: DocumentFieldUpdateItem[] };
+
+// ── AI 채팅 카드 (CHT-04 chat.done.blocks, ChatMessage.blocks) ─────────────────
+// 도구가 성공했을 때 서버 코드가 만드는 카드 배열. 없으면 null. 모르는 type 은 앱이 버린다.
+// 형식은 Swagger 채팅 스트림 200 예시(송금·환율·E-7-4 카드)와 blocks 설명을 따른다.
+
+// quote_remittance → 송금 확인 카드. 받는 분 필드 이름이 송금 API(TransferRecipient)와 다르다
+export type ChatRemittanceRecipient = {
+  recipientId: number;
+  nameEn: string;
+  relationship: string; // 예: MOTHER. 전체 값 목록은 Swagger 에 없음
+  bankName: string;
+  accountLast4: string;
+  countryCode: string;
+  currency: string;
+};
+export type ChatRemittanceConfirmBlock = {
+  type: 'REMITTANCE_CONFIRM';
+  recipient: ChatRemittanceRecipient;
+  sendAmount: Money;
+  receiveAmount: Money;
+  appliedRate: AppliedRate & { isMock: boolean };
+  transferPath: string; // 예: /transfer?recipientId=1&amount=500000
+};
+
+// fx_rate_summary → 환율 요약 카드 (프롬프트 v4.4부터). 통화 항목은 FX-001 GET /fx/rates 필드와 같다
+export type ChatFxSummaryCurrency = Pick<
+  FxRateDetailResponse,
+  | 'currency'
+  | 'unit'
+  | 'rate'
+  | 'sendRate'
+  | 'receiveRate'
+  | 'change'
+  | 'changeRate'
+  | 'source'
+  | 'asOf'
+  | 'fetchedAt'
+  | 'isMock'
+  | 'stale'
+> & {
+  periodAverages: Omit<FxPeriodAverage, 'reason'>[]; // 카드에는 reason 이 없다. 지금 화면에서는 안 쓴다
+};
+export type ChatFxSummaryBlock = {
+  type: 'FX_SUMMARY_CARD';
+  currencies: ChatFxSummaryCurrency[];
+  unavailableCurrencies: unknown[]; // 항목 모양이 Swagger 에 없음. 화면에서 안 쓴다
+};
+
+// calculate_e74_score → E-7-4 모의 사전진단 카드. 판정은 status 를 그대로 쓴다 (앱에서 점수 비교 금지)
+export type ChatE74ScoreBlock = {
+  type: 'E74_SCORE_CARD';
+  assessmentId: number;
+  status: string; // ELIGIBLE·INELIGIBLE·NEEDS_EVIDENCE·NEEDS_REVIEW 등
+  total: number;
+  potentialTotal: number;
+  required: number;
+  ruleVersion: string;
+  ruleStatus: string; // DRAFT·APPROVED. 화면에 쓰지 않는다
+  isScenario: boolean;
+};
+
+// calculate_e74_score → 판정에 더 필요한 입력. question 은 받은 그대로 보여 준다
+export type ChatMissingInputsBlock = {
+  type: 'MISSING_INPUTS';
+  fields: { field: string; question: string }[];
+};
+
+export type ChatBlock =
+  | ChatRemittanceConfirmBlock
+  | ChatFxSummaryBlock
+  | ChatE74ScoreBlock
+  | ChatMissingInputsBlock;

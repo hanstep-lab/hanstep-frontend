@@ -1,11 +1,10 @@
 // Mock 챗봇 응답 데이터. 실제 AI API 연결 시 이 파일만 교체.
 import type { ComponentProps } from 'react';
 import type { Ionicons } from '@expo/vector-icons';
+import type { ChatBlock } from '../../types/api';
 import { DEMO_USER } from './demoUser';
 
 export const USER_NAME = DEMO_USER.firstName;
-
-export type ChatCardType = 'remit_confirm' | 'remit_calc' | 'rate_info' | 'visa_roadmap';
 
 export type SuggestionChip = {
   label: string;
@@ -18,7 +17,7 @@ export type ChatAction = 'visa_tab' | 'fx' | 'fx_alert' | 'products' | 'transfer
 
 export type MockChatResponse = {
   text: string;
-  card?: ChatCardType;
+  blocks?: ChatBlock[]; // 실서버 chat.done.blocks 와 같은 모양
   suggestions?: SuggestionChip[];
   suggestionsLabel?: string;
 };
@@ -70,19 +69,113 @@ export const MENU_GROUPS: { section: string; items: MenuItem[] }[] = [
   },
 ];
 
-const MOCK: Record<string, MockChatResponse> = {
-  remitConfirm: {
-    text: '"엄마"는 필리핀에 계신 어머니로 이해했어요. 필리핀으로 해외송금하고, 5만 원은 내 통장에서 빠져나가는 금액(KRW) 기준이 맞을까요?',
-    card: 'remit_confirm',
-    suggestions: [
-      { label: '엄마 계좌번호 확인해줘' },
-      { label: '이번 달 이 금액 보내도 괜찮아?' },
-    ],
-    suggestionsLabel: '추천 질문',
+// ── Mock 카드(blocks). 실서버 chat.done.blocks 와 같은 모양 ──────────────────
+// 값은 Swagger 채팅 스트림 200 예시(송금·환율 카드)와 실서버 메시지 64번(E-7-4·입력 필요)을 그대로 옮겼다.
+// 송금 카드 환율(1 PHP = 20.984)은 송금 화면 Mock(mock/transfer.ts, 24.90)과 다르다. 이번 PR 에서는 그대로 둔다.
+
+// quote_remittance (Swagger "송금 카드" 예시)
+const MOCK_REMITTANCE_BLOCK: ChatBlock = {
+  type: 'REMITTANCE_CONFIRM',
+  recipient: {
+    recipientId: 1,
+    nameEn: 'LORNA REYES',
+    relationship: 'MOTHER',
+    bankName: 'BDO',
+    accountLast4: '5566',
+    countryCode: 'PH',
+    currency: 'PHP',
   },
+  sendAmount: { amount: 500000, currency: 'KRW' },
+  receiveAmount: { amount: 23521, currency: 'PHP' },
+  appliedRate: {
+    currency: 'PHP',
+    unit: 1,
+    rate: 20.984,
+    asOf: '2026-11-17',
+    sourceLabel: 'ECB 기준환율 기반 참고값',
+    isMock: false,
+  },
+  transferPath: '/transfer?recipientId=1&amount=500000',
+};
+
+// fx_rate_summary (Swagger "환율 카드(프롬프트 v4.4부터)" 예시). USD 는 isMock·stale, PHP 는 송금 환율 없음
+const MOCK_FX_SUMMARY_BLOCK: ChatBlock = {
+  type: 'FX_SUMMARY_CARD',
+  currencies: [
+    {
+      currency: 'USD',
+      unit: 1,
+      rate: 1406.51,
+      sendRate: 1420.5751,
+      receiveRate: 1392.4449,
+      change: -1.08,
+      changeRate: -0.08,
+      source: 'KOREAEXIM',
+      asOf: '2026-11-06',
+      fetchedAt: '2026-11-06T11:05:00+09:00',
+      periodAverages: [
+        { period: '1M', avg: 1407.7735, diff: -1.2635, diffRate: -0.09, direction: 'SAME', businessDays: 23 },
+        { period: '3M', avg: 1429.6566, diff: -23.1466, diffRate: -1.62, direction: 'LOWER', businessDays: 62 },
+        { period: '6M', avg: 1419.9966, diff: -13.4866, diffRate: -0.95, direction: 'LOWER', businessDays: 126 },
+        { period: '1Y', avg: 1418.8393, diff: -12.3293, diffRate: -0.87, direction: 'LOWER', businessDays: 246 },
+      ],
+      isMock: true,
+      stale: true,
+    },
+    {
+      currency: 'PHP',
+      unit: 1,
+      rate: 20.984,
+      sendRate: null,
+      receiveRate: null,
+      change: 0.112,
+      changeRate: 0.54,
+      source: 'MARKET_REF',
+      asOf: '2026-11-17',
+      fetchedAt: '2026-11-18T14:13:52+09:00',
+      periodAverages: [
+        { period: '1M', avg: 21.0393, diff: -0.0553, diffRate: -0.26, direction: 'LOWER', businessDays: 22 },
+        { period: '3M', avg: 21.5431, diff: -0.5591, diffRate: -2.6, direction: 'LOWER', businessDays: 67 },
+        { period: '6M', avg: 22.9364, diff: -1.9524, diffRate: -8.51, direction: 'LOWER', businessDays: 132 },
+        { period: '1Y', avg: 23.8157, diff: -2.8317, diffRate: -11.89, direction: 'LOWER', businessDays: 255 },
+      ],
+      isMock: false,
+      stale: false,
+    },
+  ],
+  unavailableCurrencies: [],
+};
+
+// calculate_e74_score (실서버 메시지 64번). 비자 탭 Mock(235점, INELIGIBLE)과 같은 값
+const MOCK_E74_BLOCKS: ChatBlock[] = [
+  {
+    type: 'E74_SCORE_CARD',
+    assessmentId: 3,
+    status: 'INELIGIBLE',
+    total: 235,
+    potentialTotal: 285,
+    required: 200,
+    ruleVersion: 'E74-2026-v1',
+    ruleStatus: 'APPROVED',
+    isScenario: false,
+  },
+  {
+    type: 'MISSING_INPUTS',
+    fields: [
+      { field: 'legalDeclaration.finesUnder1mCount', question: '최근 10년 안에 벌금 100만원 미만의 형을 받은 횟수' },
+      { field: 'legalDeclaration.taxStayRestrictionCount', question: '최근 10년 안에 세금 체납 때문에 체류허가가 제한된 횟수' },
+      { field: 'legalDeclaration.immigrationViolationCount', question: '최근 10년 안에 출입국관리법 위반으로 처분(과태료 포함)을 받은 횟수' },
+      { field: 'legalDeclaration.hasFine1mOrMore', question: '최근 10년 안에 벌금 100만원 이상의 형을 받은 적이 있는지' },
+      { field: 'legalDeclaration.hasCurrentTaxArrears', question: '지금 내지 않은 세금(체납)이 있는지' },
+      { field: 'legalDeclaration.hasOverstay3mOrMore', question: '최근 10년 안에 3개월 이상 불법체류한 적이 있는지' },
+    ],
+  },
+];
+
+const MOCK: Record<string, MockChatResponse> = {
   remitCalc: {
-    text: '어머니 BDO 계좌로 50만 원을 보내면\n약 20,080 PHP를 받아요.',
-    card: 'remit_calc',
+    text: '어머니 BDO 계좌로 50만 원을 보내면\n약 23,521 PHP를 받아요.',
+    blocks: [MOCK_REMITTANCE_BLOCK],
     suggestions: [
       { label: '이번 달 송금해도 여유자금 괜찮아?' },
       { label: '환율이 더 좋아지면 알려줘', icon: 'alarm-outline', action: 'fx_alert' },
@@ -90,12 +183,9 @@ const MOCK: Record<string, MockChatResponse> = {
     suggestionsLabel: '연관 질문',
   },
   rateInfo: {
-    text: '오늘의 주요 통화 기준환율이에요.\nECB 기준환율 기반 참고값이라 실제 송금할 때 적용되는 환율과는 달라요.',
-    card: 'rate_info',
-    suggestions: [
-      { label: '환율 알림 받기', icon: 'alarm-outline', action: 'fx_alert' },
-      { label: '필리핀에 50만 원 보내면 얼마 받아요?' },
-    ],
+    text: '주요 통화 환율이에요.\n송금할 때는 은행 송금 환율이 적용돼요.',
+    blocks: [MOCK_FX_SUMMARY_BLOCK],
+    suggestions: [{ label: '필리핀에 50만 원 보내면 얼마 받아요?' }],
   },
   budget: {
     text: '이번 달 여유자금 기준으로 최대 680,000원을 저축할 수 있어요.\n\n월 수입 2,350,000원 − 고정 지출 520,000원 − 송금 700,000원 − 변동 지출 450,000원 = 여유자금 680,000원이에요.',
@@ -106,27 +196,14 @@ const MOCK: Record<string, MockChatResponse> = {
     suggestionsLabel: '연관 질문',
   },
   visaRoadmap: {
-    text: `E-9 비자에서 장기 체류로 가는 가장 현실적인 방법은 E-7-4(숙련기능인력) 비자예요.\n\n현재 근무 기간, 소득, 한국어 점수를 합산해 신청해요. 비자 탭에서 ${USER_NAME}님의 예상 점수를 확인할 수 있어요.`,
-    card: 'visa_roadmap',
+    text: `E-9 비자에서 장기 체류로 가는 가장 현실적인 방법은 E-7-4(숙련기능인력) 비자예요.\n\n현재 근무 기간, 소득, 한국어 점수를 합산해요. ${USER_NAME}님의 모의 사전진단 결과를 아래에서 확인해 보세요.`,
+    blocks: MOCK_E74_BLOCKS,
     suggestions: [
       { label: '현재 점수 얼마나 돼?' },
       { label: '지금 비자 연장도 가능해?' },
     ],
     suggestionsLabel: '연관 질문',
   },
-};
-
-// AI-004 환율 조회 카드. ECB 에는 은행 송금 환율(보낼 때/받을 때)이 없어서 기준환율만 보여 준다.
-// PHP 값은 FX-001 Mock(src/api/mock/fx.ts)과 맞춤: 24.90원, 전일 24.99원 대비 -0.09 (-0.36%).
-// USD 는 숫자 임시값. 방향(up/down)에 따라 화면이 상승 빨강·하락 파랑으로 칠한다.
-export const RATE_INFO = {
-  title: '오늘 기준환율',
-  asOfText: '2026.11.13 기준',
-  rows: [
-    { currency: 'PHP', symbol: '₱', name: '필리핀 PHP', unitText: '1 PHP', rateText: '24.90 원', changeText: '▼ 0.09 (-0.36%)', direction: 'down' },
-    { currency: 'USD', symbol: '$', name: '미국 USD', unitText: '1 USD', rateText: '1,382.50 원', changeText: '▲ 3.20 (+0.23%)', direction: 'up' },
-  ] as const,
-  note: 'ECB 기준환율 기반 참고값 · 하루 1번 갱신. 송금할 때는 은행 송금 환율이 적용돼요.',
 };
 
 function getVisaDdayResponse(): MockChatResponse {
@@ -151,8 +228,6 @@ export function getMockResponse(input: string, callCount: number): MockChatRespo
   const t = input.trim();
   const lower = t.toLowerCase();
 
-  if (t === '네, 맞아요') return MOCK.remitCalc;
-
   if (lower.includes('얼마 받아') || lower.includes('보내면 얼마') || lower.includes('필리핀에')) {
     return MOCK.remitCalc;
   }
@@ -163,7 +238,7 @@ export function getMockResponse(input: string, callCount: number): MockChatRespo
     (lower.includes('엄마') && (lower.includes('송금') || lower.includes('보내'))) ||
     (lower.includes('송금') && lower.includes('5만'))
   ) {
-    return MOCK.remitConfirm;
+    return MOCK.remitCalc; // 의도 확인 칩(remit_confirm)은 없앴다. 서버처럼 바로 송금 카드
   }
   if (lower.includes('환율')) return MOCK.rateInfo;
   if (lower.includes('저축') || lower.includes('얼마까지') || lower.includes('여유자금')) {
