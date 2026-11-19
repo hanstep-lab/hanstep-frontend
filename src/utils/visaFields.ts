@@ -19,6 +19,10 @@ export const EMPTY_VISA_PROFILE: VisaProfileValues = {
 };
 
 // 칸별 오류 문구 (앱 검사·서버 400 모두 이 문구. 서버 reason 은 영문 코드일 수 있어 쓰지 않는다)
+// 서버 400 의 체류자격 오류. 형식·분류는 앱 검사(VISA_RE)를 이미 통과했으므로, 서버가 막았다면
+// 실제 있는 자격이지만 서버에 등록되지 않은(신한걸음 미지원) 경우다. 예: D-8 기업투자
+export const VISA_UNSUPPORTED_TEXT = '신한걸음에서 아직 지원하지 않는 체류자격이에요. 등록증의 체류자격을 다시 확인해 주세요.';
+
 export const VISA_FIELD_ERROR: Record<VisaProfileFieldKey, string> = {
   nationality: '영문 3자리 국가 코드로 입력해 주세요. (예: PHL)',
   birthDate: '생년월일을 숫자 8자리로 정확히 입력해 주세요. (예: 19950312)',
@@ -103,7 +107,7 @@ export function visaFieldErrorsFromApi(e: unknown): VisaProfileErrors | null {
   fields.forEach((f) => {
     const idx = f.field.match(/^fields\[(\d+)\]/);
     const key = idx ? VISA_PROFILE_KEYS[Number(idx[1])] : VISA_PROFILE_KEYS.find((k) => f.field.includes(k));
-    if (key) errors[key] = VISA_FIELD_ERROR[key];
+    if (key) errors[key] = key === 'visaType' ? VISA_UNSUPPORTED_TEXT : VISA_FIELD_ERROR[key];
   });
   return Object.keys(errors).length > 0 ? errors : null;
 }
