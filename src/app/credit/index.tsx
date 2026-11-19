@@ -2,6 +2,7 @@
 // 데이터는 src/api 에서만 받는다: 대안신용 = altCredit.ts(서버/Mock), 이름 = user.ts(getMe), SOL 글로벌론 = credit.ts.
 // 점수 구간·등급 판단은 서버가 하고, 화면은 코드를 src/constants/altCredit.ts 표로 문구·색으로만 바꾼다.
 // scoreBand·factors·eligibilityChecks 가 혹시 없거나 비어 있으면 그 부분만 숨긴다.
+// SOL 글로벌론(credit.ts)만 실패하면 SOL 카드만 숨기고 나머지는 그대로 보여 준다.
 // 가입 조건 met 이 null 이면 옆 값 대신 "확인 불가"를 보여 준다.
 import { useEffect, useState, type ReactNode } from 'react';
 import { View, Text, StyleSheet, Alert } from 'react-native';
@@ -41,7 +42,7 @@ import { getGlobalLoan, type GlobalLoan } from '../../api/credit';
 import { fmtNumber } from '../../utils/format';
 import type { ApiError } from '../../types/api';
 
-type Loaded = { alt: AltCreditAssessment; name: string; loan: GlobalLoan };
+type Loaded = { alt: AltCreditAssessment; name: string; loan: GlobalLoan | null };
 
 const preparing = () => Alert.alert('준비 중', '곧 사용할 수 있어요.');
 
@@ -140,7 +141,7 @@ export default function AltCreditScreen() {
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    Promise.all([getAltAssessment(), getMe(), getGlobalLoan()])
+    Promise.all([getAltAssessment(), getMe(), getGlobalLoan().catch(() => null)])
       .then(([alt, me, loan]) => setData({ alt, name: me.shortName || me.displayName, loan }))
       .catch((e: ApiError) => setError(errorText(e?.code)));
   }, []);
@@ -171,10 +172,10 @@ export default function AltCreditScreen() {
     return c ? [c] : [];
   });
 
-  // SOL 글로벌론 (항상 Mock 데이터)
-  const solLimit = loan.terms.rows.find((r) => r.key === 'limit');
-  const solTerm = loan.terms.rows.find((r) => r.key === 'term');
-  const solConditions = loan.eligibility.conditions;
+  // SOL 글로벌론 (서버/Mock). 불러오지 못했으면 카드만 숨긴다
+  const solLimit = loan?.terms.rows.find((r) => r.key === 'limit');
+  const solTerm = loan?.terms.rows.find((r) => r.key === 'term');
+  const solConditions = loan?.eligibility.conditions ?? [];
   const solMet = solConditions.length > 0 && solConditions.every((c) => c.met);
 
   // 점수를 높이는 방법: 정한 순서에서 보통·보완 필요 항목을 앞에서부터 최대 2개, 없으면 기본 카드
@@ -251,24 +252,26 @@ export default function AltCreditScreen() {
           <Text style={s.caption}>{T.productsDesc}</Text>
         </View>
 
-        <LoanCard
-          tag={T.solGlobalTag}
-          name={loan.name}
-          badge={<EligibilityBadge met={solMet} />}
-          onDetail={() => router.push('/credit/loan' as Href)}
-        >
-          {(solLimit || solTerm) && (
-            <View style={s.terms}>
-              {solLimit && <TermRow label={solLimit.label} value={solLimit.value} />}
-              {solTerm && <TermRow label={solTerm.label} value={solTerm.value} />}
+        {loan && (
+          <LoanCard
+            tag={T.solGlobalTag}
+            name={loan.name}
+            badge={<EligibilityBadge met={solMet} />}
+            onDetail={() => router.push('/credit/loan' as Href)}
+          >
+            {(solLimit || solTerm) && (
+              <View style={s.terms}>
+                {solLimit && <TermRow label={solLimit.label} value={solLimit.value} />}
+                {solTerm && <TermRow label={solTerm.label} value={solTerm.value} />}
+              </View>
+            )}
+            <View style={s.checks}>
+              {solConditions.map((c) => (
+                <CheckRow key={c.key} title={c.title} met={c.met} />
+              ))}
             </View>
-          )}
-          <View style={s.checks}>
-            {solConditions.map((c) => (
-              <CheckRow key={c.key} title={c.title} met={c.met} />
-            ))}
-          </View>
-        </LoanCard>
+          </LoanCard>
+        )}
 
         <LoanCard
           tag={T.hanstepLoanTag}
