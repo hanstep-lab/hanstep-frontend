@@ -46,6 +46,7 @@ const ACTION_ROUTES: Record<Exclude<ChatAction, 'transfer'>, Href> = {
   fx: '/fx' as Href,
   fx_alert: '/fx/alert' as Href,
   products: '/finance/products' as Href,
+  credit: '/credit' as Href,
 };
 
 function runAction(action: ChatAction) {
@@ -395,7 +396,7 @@ function MessageItem({
 }
 
 function MenuSheet({ visible, onClose }: { visible: boolean; onClose: () => void }) {
-  // action 이 없는 메뉴(대안신용 CR-001, 설정)는 아직 "준비 중"
+  // action 이 없는 메뉴(설정)는 아직 "준비 중"
   const handleItem = (action?: ChatAction) => {
     if (!action) return preparingAlert();
     onClose();
