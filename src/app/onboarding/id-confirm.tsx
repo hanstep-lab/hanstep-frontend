@@ -19,6 +19,8 @@ import { errorText } from '../../utils/errorText';
 import {
   VISA_PROFILE_KEYS,
   VISA_UNSUPPORTED_TEXT,
+  isSupportedVisaType,
+  normalizeVisaType,
   formatDateInput,
   normalizeVisaProfile,
   validateVisaProfile,
@@ -133,12 +135,18 @@ export default function IdConfirmScreen() {
     EDITABLE_KEYS.forEach((k) => {
       init[k] = doc.fields.find((f) => f.fieldKey === k)?.value ?? '';
     });
+    // 칩 코드와 맞추려고 OCR 체류자격을 미리 정리 ("E9" → "E-9"). 목록 밖 값(예: D-8)은 그대로 두고 미지원 안내
+    init.visaType = normalizeVisaType(init.visaType);
     setValues(init);
   }, [phase, doc, values]);
 
   const fieldOf = (key: string) => doc?.fields.find((f) => f.fieldKey === key);
   const setValue = (key: EditableKey) => (text: string) =>
     setValues((v) => (v ? { ...v, [key]: text } : v));
+
+  // 체류자격이 지원 목록 밖(예: OCR 이 D-8 로 읽음). 입력 중에도 정리해서 비교("e9" → "E-9")
+  const visaNow = values ? normalizeVisaType(values.visaType) : '';
+  const visaUnsupported = visaNow !== '' && !isSupportedVisaType(visaNow);
 
   const isConfirmed = doc?.status === 'CONFIRMED';
   const needsReviewCount = doc?.fields.filter((f) => f.needsReview).length ?? 0;
@@ -261,6 +269,8 @@ export default function IdConfirmScreen() {
             placeholder="E-9"
             autoCapitalize="characters"
           />
+          {/* 서버 등록 5개(E-9·E-7-4·H-2·D-2·F-2) 밖의 값이면 저장 전에 바로 안내 (예: OCR 이 D-8 로 읽음) */}
+          {visaUnsupported ? <Text style={styles.visaNotice}>{VISA_UNSUPPORTED_TEXT}</Text> : null}
         </View>
 
         <View style={styles.divider} />
@@ -481,6 +491,7 @@ const styles = StyleSheet.create({
   inputWarn: { borderBottomColor: colors.errorText },
   reviewText: { ...typography.badge, fontFamily: fonts.bold, color: colors.errorText },
   hintText: { ...typography.badge, color: colors.text.sub },
+  visaNotice: { ...typography.badge, color: colors.errorText, marginTop: spacing.xs },
 
   expiryBox: {
     backgroundColor: colors.background,

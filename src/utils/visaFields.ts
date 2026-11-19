@@ -1,5 +1,4 @@
-// 체류 정보 직접 입력(PUT /api/v1/visa/profile) 칸 4개의 정리·검사.
-// id-confirm.tsx와 중복, 추후 정리 (isValidDate·formatDateInput·normalize·validate·fieldErrorText 와 같은 규칙)
+// 체류 정보 칸 4개의 정리·검사. 직접 입력(PUT /api/v1/visa/profile)과 등록증 확인(DOC-03·04)이 함께 쓴다.
 // 서버도 같은 검사를 하지만(400) 미리 막아서 칸 아래에 바로 안내한다.
 
 import type { ApiError, VisaProfileFieldKey } from '../types/api';
@@ -18,22 +17,25 @@ export const EMPTY_VISA_PROFILE: VisaProfileValues = {
   stayExpiry: '',
 };
 
-// 칸별 오류 문구 (앱 검사·서버 400 모두 이 문구. 서버 reason 은 영문 코드일 수 있어 쓰지 않는다)
-// 서버 400 의 체류자격 오류. 형식·분류는 앱 검사(VISA_RE)를 이미 통과했으므로, 서버가 막았다면
-// 실제 있는 자격이지만 서버에 등록되지 않은(신한걸음 미지원) 경우다. 예: D-8 기업투자
-export const VISA_UNSUPPORTED_TEXT = '신한걸음에서 아직 지원하지 않는 체류자격이에요. 등록증의 체류자격을 다시 확인해 주세요.';
+// 서버에 등록된 체류자격 (2026-11-19 태건님 확인, 목록 API 없음 → 앱에 고정).
+// 서비스 경로가 E-9 → E-7-4 라 다른 자격은 점수·로드맵이 동작하지 않아 서버 목록을 늘리지 않는다.
+// 입력은 글자 그대로(OCR 값·직접 입력), 검사만 이 목록 기준. 실제 있는 자격이어도 여기 없으면(예: D-8 기업투자) 미지원 안내
+export const SUPPORTED_VISA_TYPES: readonly string[] = ['E-9', 'E-7-4', 'H-2', 'D-2', 'F-2'];
 
+export const isSupportedVisaType = (code: string) => SUPPORTED_VISA_TYPES.includes(code);
+
+// 지원 목록 밖 체류자격 (앱 검사·서버 400 unknown visa type 공통). 문구는 태건님 제안
+export const VISA_UNSUPPORTED_TEXT = '현재 지원하지 않는 체류자격이에요. (E-9 근로자 대상 서비스)';
+
+// 칸별 오류 문구 (앱 검사·서버 400 모두 이 문구. 서버 reason 은 영문 코드일 수 있어 쓰지 않는다)
 export const VISA_FIELD_ERROR: Record<VisaProfileFieldKey, string> = {
   nationality: '영문 3자리 국가 코드로 입력해 주세요. (예: PHL)',
   birthDate: '생년월일을 숫자 8자리로 정확히 입력해 주세요. (예: 19950312)',
-  visaType: '없는 체류자격이에요. 등록증에 적힌 대로 입력해 주세요. (예: E-9, E-7-4)',
+  visaType: '체류자격을 입력해 주세요. (예: E-9)',
   stayExpiry: '체류 만료일을 숫자 8자리로 정확히 입력해 주세요. (예: 20271004)',
 };
 
 const DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
-// 체류자격: 출입국관리법 시행령의 큰 분류(A-1 ~ H-2, 36개)만 허용 + 세부 코드(-숫자 1~2자리) 선택.
-// 예: E-9, E-7-4, F-2-99 통과 / K-9, B-8, E-11 차단. 세부 코드가 실제 있는지는 서버가 본다(등록된 체류자격만 허용)
-const VISA_RE = /^(A-[1-3]|B-[12]|C-[134]|D-([1-9]|10)|E-([1-9]|10)|F-[1-6]|G-1|H-[12])(-\d{1,2})?$/;
 
 // 형식은 맞지만 값이 안 되는 경우의 칸별 문구 (앱 검사만)
 const VISA_FIELD_INVALID = {
@@ -68,14 +70,18 @@ export function formatDateInput(text: string): string {
 
 // 보내기 전 값 정리. 공백·소문자를 서버 형식에 맞춘다
 export function normalizeVisaProfile(v: VisaProfileValues): VisaProfileValues {
-  const visa = v.visaType.toUpperCase().replace(/\s+/g, '');
   return {
     nationality: v.nationality.trim().toUpperCase(),
     birthDate: v.birthDate.trim(),
-    // "E9" → "E-9" (하이픈을 빠뜨린 경우)
-    visaType: /^[A-Z]\d/.test(visa) ? `${visa[0]}-${visa.slice(1)}` : visa,
+    visaType: normalizeVisaType(v.visaType),
     stayExpiry: v.stayExpiry.trim(),
   };
+}
+
+// 체류자격 글자 정리. OCR 값이 칩 코드와 맞도록 공백·소문자 제거, "E9" → "E-9" (하이픈을 빠뜨린 경우)
+export function normalizeVisaType(text: string): string {
+  const visa = text.toUpperCase().replace(/\s+/g, '');
+  return /^[A-Z]\d/.test(visa) ? `${visa[0]}-${visa.slice(1)}` : visa;
 }
 
 // 칸별 검사. 틀린 칸만 문구가 들어간다 (빈 객체면 통과)
@@ -89,7 +95,8 @@ export function validateVisaProfile(v: VisaProfileValues): VisaProfileErrors {
   if (!isValidDate(v.birthDate)) errors.birthDate = VISA_FIELD_ERROR.birthDate;
   else if (v.birthDate > today) errors.birthDate = VISA_FIELD_INVALID.birthDate; // 서버 규칙(미래 불가)과 같게
 
-  if (!VISA_RE.test(v.visaType)) errors.visaType = VISA_FIELD_ERROR.visaType;
+  if (v.visaType === '') errors.visaType = VISA_FIELD_ERROR.visaType;
+  else if (!isSupportedVisaType(v.visaType)) errors.visaType = VISA_UNSUPPORTED_TEXT;
 
   if (!isValidDate(v.stayExpiry)) errors.stayExpiry = VISA_FIELD_ERROR.stayExpiry;
   // 만료일이 지났으면 체류 기간이 끝난 등록증. 서버는 아직 허용하지만 앱에서 먼저 막는다(오늘은 허용)
