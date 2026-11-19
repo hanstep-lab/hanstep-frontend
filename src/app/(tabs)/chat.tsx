@@ -16,22 +16,28 @@ import { router, type Href } from 'expo-router';
 import { colors, typography, spacing, radius, fonts } from '../../constants/theme';
 import {
   type ChatAction,
-  type ChatCardType,
   type SuggestionChip,
   LANDING_SUGGESTIONS,
   MENU_GROUPS,
-  RATE_INFO,
   USER_NAME,
 } from '../../api/mock/chat';
 import { createChatSession, streamChatMessage } from '../../api/chat';
 import { getFxAlerts } from '../../api/fx';
 import { hasUnseenIds } from '../../utils/fxAlertStorage';
-import type { ApiError } from '../../types/api';
+import type { ApiError, ChatBlock } from '../../types/api';
 import { useTransferStore } from '../../store/transferStore';
+import ChatBlocks from '../../features/chat/blocks/ChatBlocks';
 
 function openTransfer(amountKRW: number | null) {
   useTransferStore.getState().setInitialAmount(amountKRW);
   router.push('/transfer' as Href);
+}
+
+// 송금 카드(REMITTANCE_CONFIRM)의 transferPath(예: /transfer?recipientId=1&amount=500000)로 이동.
+// 금액은 송금 화면이 주소의 amount 로 읽는다. store 에 남은 예전 금액이 섞이지 않게 비운다
+function openTransferPath(path: string) {
+  useTransferStore.getState().setInitialAmount(null);
+  router.push(path as Href);
 }
 
 // 칩·메뉴 action → 화면 주소. 송금은 금액을 같이 넘겨야 해서 openTransfer 로 따로 연다.
@@ -54,10 +60,10 @@ type ChatMessage = {
   time: string;
   // 아래 4개는 AI 말풍선만 쓴다
   status?: 'streaming' | 'done' | 'error'; // 답하는 중 → 끝 또는 실패
-  statusText?: string;   // 도구 완료 문구 (예: 재무 분석을 확인했어요)
+  statusTexts?: string[]; // 도구 완료 문구. 한 답변에 도구가 여러 번 돌 수 있어 줄마다 쌓는다
   errorMessage?: string; // 실패했을 때 보여 줄 문구
   question?: string;     // [다시 시도] 때 다시 보낼 질문
-  card?: ChatCardType;
+  blocks?: ChatBlock[]; // 카드 (chat.done.blocks). 끝난 뒤에 붙는다
   suggestions?: SuggestionChip[];
   suggestionsLabel?: string;
 };
@@ -115,7 +121,9 @@ export default function ChatScreen() {
       }
       const result = await streamChatMessage(sessionId, question, {
         onDelta: t => updateMsg(aiId, m => ({ text: m.text + t })),
-        onStatus: s => updateMsg(aiId, () => ({ statusText: s })),
+        // 같은 문구는 한 번만 (같은 도구가 두 번 돌아도 한 줄)
+        onStatus: s =>
+          updateMsg(aiId, m => (m.statusTexts?.includes(s) ? {} : { statusTexts: [...(m.statusTexts ?? []), s] })),
         signal: controller.signal,
       });
       updateMsg(aiId, () => ({ status: 'done', ...result })); // 카드·추천 버튼은 끝난 뒤에 붙는다
@@ -153,7 +161,13 @@ export default function ChatScreen() {
   // 실패한 말풍선을 비우고 같은 질문을 다시 보낸다 (clientMessageId 는 chat.ts 가 매번 새로 만든다)
   const retry = useCallback((msg: ChatMessage) => {
     if (abortRef.current || !msg.question) return;
-    updateMsg(msg.id, () => ({ text: '', status: 'streaming', statusText: undefined, errorMessage: undefined }));
+    updateMsg(msg.id, () => ({
+      text: '',
+      status: 'streaming',
+      statusTexts: undefined,
+      errorMessage: undefined,
+      blocks: undefined,
+    }));
     runStream(msg.id, msg.question);
   }, [runStream, updateMsg]);
 
@@ -345,7 +359,11 @@ function MessageItem({
 
   return (
     <View style={msgStyles.aiWrap}>
-      {msg.statusText ? <Text style={msgStyles.statusText}>✓ {msg.statusText}</Text> : null}
+      {msg.statusTexts?.map(s => (
+        <Text key={s} style={msgStyles.statusText}>
+          ✓ {s}
+        </Text>
+      ))}
       {msg.text ? (
         <Text style={msgStyles.aiText}>{msg.text}</Text>
       ) : msg.status === 'streaming' ? (
@@ -361,10 +379,9 @@ function MessageItem({
           </Pressable>
         </View>
       )}
-      {msg.card === 'remit_confirm' && <RemitConfirmCard onSend={onSend} />}
-      {msg.card === 'remit_calc' && <RemitCalcCard />}
-      {msg.card === 'rate_info' && <RateInfoCard />}
-      {msg.card === 'visa_roadmap' && <VisaRoadmapCard />}
+      {msg.blocks && msg.blocks.length > 0 && (
+        <ChatBlocks blocks={msg.blocks} onAction={runAction} onOpenTransferPath={openTransferPath} />
+      )}
       {msg.suggestions && msg.suggestions.length > 0 && (
         <SuggestionChipRow
           chips={msg.suggestions}
@@ -373,134 +390,6 @@ function MessageItem({
           askedSet={askedSet}
         />
       )}
-    </View>
-  );
-}
-
-function RemitConfirmCard({ onSend }: { onSend: (t: string) => void }) {
-  const OPTIONS = ['네, 맞아요', 'PHP 기준이에요', '어머니는 한국에 계세요'];
-  return (
-    <View style={cardStyles.wrap}>
-      <View style={cardStyles.quickRow}>
-        {OPTIONS.map((opt, i) => (
-          <Pressable
-            key={opt}
-            style={[cardStyles.chip, i === 0 && cardStyles.chipPrimary]}
-            onPress={() => onSend(opt)}
-          >
-            <Text style={[cardStyles.chipText, i === 0 && cardStyles.chipTextPrimary]}>
-              {opt}
-            </Text>
-          </Pressable>
-        ))}
-      </View>
-      <Pressable style={cardStyles.remitRow} onPress={() => openTransfer(50_000)}>
-        <View style={cardStyles.remitLeft}>
-          <View style={cardStyles.remitIcon}>
-            <Ionicons name="swap-horizontal-outline" size={18} color={colors.primary} />
-          </View>
-          <View style={{ flex: 1 }}>
-            <Text style={cardStyles.remitTitle}>해외송금 ↗</Text>
-            <Text style={cardStyles.remitDesc}>받는 분: 어머니 · BDO (필리핀)</Text>
-            <Text style={cardStyles.remitDesc}>출금 50,000 KRW → 수취 약 2,008 PHP</Text>
-          </View>
-        </View>
-        <Ionicons name="chevron-forward" size={16} color={colors.text.sub} />
-      </Pressable>
-    </View>
-  );
-}
-
-function RemitCalcCard() {
-  return (
-    <View style={calcStyles.wrap}>
-      <View style={calcStyles.card}>
-        <View style={calcStyles.cardHead}>
-          <Text style={calcStyles.cardTitle}>예상 수취 금액 계산</Text>
-          <View style={calcStyles.badge}>
-            <Text style={calcStyles.badgeText}>ECB 기준환율 기반 참고값</Text>
-          </View>
-        </View>
-        <View style={calcStyles.row}>
-          <Text style={calcStyles.rowLabel}>송금 금액</Text>
-          <Text style={calcStyles.rowVal}>500,000 KRW</Text>
-        </View>
-        <View style={calcStyles.row}>
-          <Text style={calcStyles.rowLabel}>적용 환율</Text>
-          <Text style={calcStyles.rowVal}>1 PHP = 24.90 KRW</Text>
-        </View>
-        <View style={calcStyles.divider} />
-        <View style={calcStyles.row}>
-          <Text style={calcStyles.rowLabel}>현지 수취 예상</Text>
-          <Text style={calcStyles.total}>약 20,080 PHP</Text>
-        </View>
-      </View>
-      <Pressable style={calcStyles.btn} onPress={() => openTransfer(500_000)}>
-        <Text style={calcStyles.btnText}>송금하기 →</Text>
-      </Pressable>
-      <Pressable onPress={() => runAction('fx_alert')}>
-        <Text style={calcStyles.link}>목표 환율 알림 설정 ↗</Text>
-      </Pressable>
-    </View>
-  );
-}
-
-// AI-004. Figma 는 3열 표(매매기준율/보낼 때/받을 때)지만 ECB 에는 송금 환율이 없어서 기준환율 행만 보여 준다.
-function RateInfoCard() {
-  return (
-    <View style={rateStyles.wrap}>
-      <View style={rateStyles.card}>
-        <View style={rateStyles.cardTop}>
-          <View style={rateStyles.dotLabel}>
-            <View style={rateStyles.dot} />
-            <Text style={rateStyles.cardTitle}>{RATE_INFO.title}</Text>
-          </View>
-          <Text style={rateStyles.cardDate}>{RATE_INFO.asOfText}</Text>
-        </View>
-        {RATE_INFO.rows.map((r, i) => (
-          <View key={r.currency} style={rateStyles.rowGroup}>
-            {i > 0 && <View style={rateStyles.divider} />}
-            <View style={rateStyles.rateRow}>
-              <View style={rateStyles.flagBox}>
-                <Text style={rateStyles.flag}>{r.symbol}</Text>
-              </View>
-              <View style={rateStyles.flex}>
-                <Text style={rateStyles.rateName}>{r.name}</Text>
-                <Text style={rateStyles.rateDesc}>{r.unitText} 기준환율</Text>
-              </View>
-              <View style={rateStyles.rateRight}>
-                <Text style={rateStyles.rateVal}>{r.rateText}</Text>
-                <Text
-                  style={[rateStyles.rateChange, { color: r.direction === 'up' ? colors.rise : colors.fall }]}
-                >
-                  {r.changeText}
-                </Text>
-              </View>
-            </View>
-          </View>
-        ))}
-        <View style={rateStyles.divider} />
-        <Text style={rateStyles.note}>{RATE_INFO.note}</Text>
-      </View>
-      <Pressable onPress={() => runAction('fx')}>
-        <Text style={rateStyles.link}>환율 상세 보기 ↗</Text>
-      </Pressable>
-      <Pressable style={rateStyles.btn} onPress={() => openTransfer(null)}>
-        <Text style={rateStyles.btnText}>▶ 이 환율로 바로 송금하기</Text>
-      </Pressable>
-    </View>
-  );
-}
-
-function VisaRoadmapCard() {
-  return (
-    <View style={calcStyles.wrap}>
-      <Pressable
-        style={calcStyles.btn}
-        onPress={() => runAction('visa_tab')}
-      >
-        <Text style={calcStyles.btnText}>비자 탭에서 내 점수 확인하기 →</Text>
-      </Pressable>
     </View>
   );
 }
@@ -692,117 +581,6 @@ const msgStyles = StyleSheet.create({
   },
   chipIcon: { marginRight: 4 },
   sugChipText: { ...typography.badge, color: colors.text.strong },
-});
-
-const cardStyles = StyleSheet.create({
-  wrap: { gap: spacing.sm, marginTop: spacing.sm },
-  quickRow: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm },
-  chip: {
-    paddingHorizontal: spacing.md,
-    paddingVertical: spacing.sm,
-    borderRadius: radius.full,
-    borderWidth: 1,
-    borderColor: colors.border,
-    backgroundColor: colors.surface,
-  },
-  chipPrimary: { backgroundColor: colors.primary, borderColor: colors.primary },
-  chipText: { ...typography.body, color: colors.text.strong },
-  chipTextPrimary: { color: colors.text.inverse },
-  remitRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: colors.background,
-    borderRadius: radius.lg,
-    padding: spacing.md,
-    gap: spacing.sm,
-  },
-  remitLeft: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, flex: 1 },
-  remitIcon: {
-    width: 36,
-    height: 36,
-    borderRadius: radius.full,
-    backgroundColor: colors.primarySoft,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  remitTitle: { ...typography.body, fontFamily: fonts.bold, color: colors.text.strong },
-  remitDesc: { ...typography.badge, color: colors.text.sub },
-});
-
-const calcStyles = StyleSheet.create({
-  wrap: { gap: spacing.sm, marginTop: spacing.sm },
-  card: {
-    backgroundColor: colors.background,
-    borderRadius: radius.lg,
-    padding: spacing.lg,
-    gap: spacing.sm,
-  },
-  cardHead: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
-  cardTitle: { ...typography.body, fontFamily: fonts.bold, color: colors.text.strong },
-  badge: {
-    backgroundColor: colors.border,
-    borderRadius: radius.full,
-    paddingHorizontal: spacing.sm,
-    paddingVertical: 2,
-  },
-  badgeText: { ...typography.badge, color: colors.text.sub },
-  row: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
-  rowLabel: { ...typography.body, color: colors.text.sub },
-  rowVal: { ...typography.body, color: colors.text.strong },
-  divider: { height: StyleSheet.hairlineWidth, backgroundColor: colors.border, marginVertical: 2 },
-  total: { ...typography.subtitle, fontFamily: fonts.bold, color: colors.primary },
-  btn: {
-    backgroundColor: colors.primary,
-    borderRadius: radius.lg,
-    height: 48,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  btnText: { ...typography.button, color: colors.text.inverse },
-  link: { ...typography.body, color: colors.primary, textAlign: 'center' },
-});
-
-const rateStyles = StyleSheet.create({
-  wrap: { gap: spacing.sm, marginTop: spacing.sm },
-  card: {
-    backgroundColor: colors.background,
-    borderRadius: radius.lg,
-    padding: spacing.lg,
-    gap: spacing.md,
-  },
-  cardTop: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
-  dotLabel: { flexDirection: 'row', alignItems: 'center', gap: spacing.xs },
-  dot: { width: 8, height: 8, borderRadius: 4, backgroundColor: colors.primary },
-  cardTitle: { ...typography.body, fontFamily: fonts.bold, color: colors.text.strong },
-  cardDate: { ...typography.badge, color: colors.text.sub },
-  flex: { flex: 1 },
-  rowGroup: { gap: spacing.md },
-  rateRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
-  rateRight: { alignItems: 'flex-end' },
-  flagBox: {
-    width: 32,
-    height: 32,
-    borderRadius: radius.full,
-    backgroundColor: colors.surface,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  flag: { ...typography.h3, color: colors.text.strong },
-  rateName: { ...typography.body, fontFamily: fonts.bold, color: colors.text.strong },
-  rateDesc: { ...typography.badge, color: colors.text.sub },
-  rateVal: { ...typography.subtitle, fontFamily: fonts.bold, color: colors.text.strong },
-  rateChange: { ...typography.badge },
-  divider: { height: StyleSheet.hairlineWidth, backgroundColor: colors.border },
-  note: { ...typography.badge, color: colors.text.sub },
-  link: { ...typography.body, color: colors.primary },
-  btn: {
-    backgroundColor: colors.primary,
-    borderRadius: radius.lg,
-    height: 48,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  btnText: { ...typography.button, color: colors.text.inverse },
 });
 
 const menuStyles = StyleSheet.create({

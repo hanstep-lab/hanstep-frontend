@@ -5,17 +5,17 @@
 
 import { fetch } from 'expo/fetch';
 import { randomUUID } from 'expo-crypto';
-import type { ApiError } from '../types/api';
+import type { ApiError, ChatBlock } from '../types/api';
 import { useAuthStore } from '../store/authStore';
 import { client } from './client';
 import { API_URL, USE_MOCK, mockDelay } from './config';
 import { createSseParser } from './sse';
-import { getMockResponse, type ChatCardType, type SuggestionChip } from './mock/chat';
+import { getMockResponse, type SuggestionChip } from './mock/chat';
 
 // 답변이 끝났을 때 돌려주는 덧붙임(카드·추천 버튼).
-// 실서버는 chat.done 의 blocks 모양이 아직 정해지지 않아 빈 값. Mock 은 기존 카드·버튼을 채운다.
+// 카드(blocks)는 실서버 chat.done 과 Mock 이 같은 모양이다. 추천 버튼은 Mock 에만 있다.
 export type ChatStreamResult = {
-  card?: ChatCardType;
+  blocks?: ChatBlock[];
   suggestions?: SuggestionChip[];
   suggestionsLabel?: string;
 };
@@ -23,7 +23,7 @@ export type ChatStreamResult = {
 // 답변 도중 화면에 알려 줄 것들
 export type ChatStreamHandlers = {
   onDelta: (text: string) => void;   // chat.delta: 답 글자 조각. 화면은 이어 붙인다
-  onStatus?: (text: string) => void; // chat.tool_call: "재무 분석을 확인했어요" 같은 완료 문구 (도구가 끝난 뒤에 온다)
+  onStatus?: (text: string) => void; // chat.tool_call: "재무 분석을 확인했어요" 같은 완료 문구 (도구가 끝난 뒤에 온다. 한 답변에 여러 번 올 수 있다)
   signal?: AbortSignal;              // 화면을 떠나거나 새 대화를 누르면 끊기
 };
 
@@ -68,7 +68,29 @@ export async function streamChatMessage(
 // TODO(CHT-04): 태건님께 toolName 전체 목록을 받으면 채운다. 표에 없는 이름은 문구 없이 넘어간다
 const TOOL_LABELS: Record<string, string> = {
   get_financial_analysis: '재무 분석을 확인했어요',
+  get_remittance_recipients: '받는 분 정보를 확인했어요',
+  quote_remittance: '송금 금액을 계산했어요',
+  fx_rate_summary: '환율을 확인했어요',
+  calculate_e74_score: 'E-7-4 점수를 계산했어요',
 };
+
+// 화면이 그릴 줄 아는 카드 type. 이 밖의 type 은 버린다 (Swagger: 모르는 type 은 무시)
+const KNOWN_BLOCK_TYPES: ReadonlySet<string> = new Set<ChatBlock['type']>([
+  'REMITTANCE_CONFIRM',
+  'FX_SUMMARY_CARD',
+  'E74_SCORE_CARD',
+  'MISSING_INPUTS',
+]);
+
+// chat.done 의 blocks → 카드 배열. null·배열 아님은 빈 배열, 아는 type 만 남긴다.
+// 값은 서버가 만든 그대로 쓰고 다시 계산하지 않는다
+export function parseBlocks(raw: unknown): ChatBlock[] {
+  if (!Array.isArray(raw)) return [];
+  return raw.filter(
+    (b): b is ChatBlock =>
+      !!b && typeof b === 'object' && KNOWN_BLOCK_TYPES.has(String((b as { type?: unknown }).type)),
+  );
+}
 
 async function realStream(
   sessionId: number,
@@ -101,6 +123,7 @@ async function realStream(
 
   // ③ 조각 읽기 → 파서 → 이벤트 처리
   let done = false;
+  let blocks: ChatBlock[] = [];
   let failed: ApiError | null = null;
   const parse = createSseParser(({ event, data }) => {
     const d = parseJson(data);
@@ -115,7 +138,8 @@ async function realStream(
         break;
       }
       case 'chat.done':
-        done = true; // blocks 는 모양이 정해지면 결과에 담는다 (TODO(CHT-04))
+        done = true;
+        blocks = parseBlocks(d.blocks); // 카드는 도구가 성공했을 때만 온다. 없으면 null
         break;
       case 'chat.error':
         failed = { code: String(d.code ?? 'INTERNAL_ERROR'), message: String(d.message ?? '답변을 만들지 못했어요.') };
@@ -138,7 +162,7 @@ async function realStream(
 
   // ④ 끝 판단. 연결이 닫힌 것만으로는 성공이 아니다 (서버가 죽어도 닫힌다)
   if (failed) throw failed;
-  if (done) return {};
+  if (done) return { blocks };
   throw { code: 'STREAM_INTERRUPTED', message: '답변이 중간에 끊겼어요.' } satisfies ApiError;
 }
 
@@ -191,7 +215,7 @@ async function mockStream(
     await wait(MOCK_CHUNK_MS, signal);
   }
 
-  return { card: res.card, suggestions: res.suggestions, suggestionsLabel: res.suggestionsLabel };
+  return { blocks: res.blocks, suggestions: res.suggestions, suggestionsLabel: res.suggestionsLabel };
 }
 
 // ms 만큼 기다린다. 기다리는 중에 signal 이 끊기면 바로 ABORTED 에러

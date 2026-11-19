@@ -77,7 +77,7 @@ const INSUFFICIENT_TEXT = '데이터 부족';
 const NOTICE_TEXT: Record<string, string> = {
   REFERENCE_RATE_ONLY: '참고 환율이에요. 실제 송금 환율은 은행·송금 방식에 따라 달라요.',
 };
-const STALE_TEXT = '최신 값이 아닐 수 있어요';
+export const FX_STALE_TEXT = '최신 값이 아닐 수 있어요';
 
 const AVERAGE_NOTE = '구간 평균 = 해당 기간 영업일 일별 고시값 평균';
 const SUMMARY_TAIL = '(과거 평균 비교이며 예측이 아니에요)';
@@ -129,13 +129,19 @@ export type FxHistory = {
 const currencyName = (code: string) => CURRENCY_NAME[code] ?? '';
 const withName = (code: string) => (currencyName(code) ? `${currencyName(code)} ${code}` : code);
 
-// 표시용 반올림: 서버 평균(소수 4자리)을 통화별 자릿수로 맞춰 "1,336.13" 처럼 만든다.
-// 값 자체를 다시 계산하지 않고 자릿수만 줄인다
+// 표시용 반올림: 서버 환율·평균(소수 4자리까지)을 통화별 자릿수(AVG_DECIMALS)로 맞춰 "1,420.58" 처럼 만든다.
+// 값 자체를 다시 계산하지 않고 자릿수만 줄인다. 채팅 환율 카드(FX_SUMMARY_CARD)의 기준환율·송금 환율도 이 함수로 보여 준다
+export function fmtFxRateByCurrency(n: number, currency: string): string {
+  const d = AVG_DECIMALS[currency] ?? 2;
+  const abs = Math.round(Math.abs(n) * 10 ** d) / 10 ** d; // 음수는 절댓값으로 반올림하고 부호만 붙인다
+  const [int, dec] = abs.toFixed(d).split('.');
+  const body = `${int.replace(/\B(?=(\d{3})+(?!\d))/g, ',')}.${dec}`;
+  return n < 0 && abs !== 0 ? `-${body}` : body;
+}
+
 function fmtAvg(avg: number | null, currency: string): string {
   if (avg === null) return INSUFFICIENT_TEXT;
-  const d = AVG_DECIMALS[currency] ?? 2;
-  const [int, dec] = (Math.round(avg * 10 ** d) / 10 ** d).toFixed(d).split('.');
-  return `${int.replace(/\B(?=(\d{3})+(?!\d))/g, ',')}.${dec}`;
+  return fmtFxRateByCurrency(avg, currency);
 }
 
 // 평균표 "현재 대비" 표시: 서버 diffRate(소수 2자리)를 자릿수만 2자리로 맞춘다. 0.2 → "+0.20%", -1.1 → "-1.10%".
@@ -145,8 +151,8 @@ function fmtDiffRate(diffRate: number | null): string {
   return `${diffRate > 0 ? '+' : ''}${diffRate.toFixed(2)}%`;
 }
 
-// 전일 대비는 서버가 direction 을 주지 않아 change 부호로 정한다 (화면이 아닌 이 계층에서)
-function changeTrend(change: number | null): FxTrend | null {
+// 전일 대비는 서버가 direction 을 주지 않아 change 부호로 정한다 (화면이 아닌 이 계층에서). 채팅 환율 카드도 같이 쓴다
+export function changeTrend(change: number | null): FxTrend | null {
   if (change === null) return null;
   if (change > 0) return 'UP';
   if (change < 0) return 'DOWN';
@@ -186,7 +192,7 @@ function summaryText(averages: FxPeriodAverage[]): string {
 
 function toFxRate(r: FxRateDetailResponse): FxRate {
   const notices = r.notices.map((n) => NOTICE_TEXT[n]).filter((t): t is string => Boolean(t));
-  if (r.stale) notices.push(STALE_TEXT);
+  if (r.stale) notices.push(FX_STALE_TEXT);
   return {
     currency: r.currency,
     pairText: `${withName(r.currency)} / ${QUOTE_NAME}`,
