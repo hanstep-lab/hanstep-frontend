@@ -22,6 +22,7 @@ import type {
   SummaryUser,
   SummaryVisa,
 } from '../../types/api';
+import { errorText } from '../../utils/errorText';
 
 const MAN = 10_000;
 
@@ -182,7 +183,7 @@ export default function QuestionsScreen() {
 
         setLoaded(true);
       })
-      .catch((e) => setLoadError(e?.message ?? '입력하신 정보를 불러오지 못했어요.'));
+      .catch((e) => setLoadError(errorText(e, '입력하신 정보를 불러오지 못했어요.')));
   }, []);
 
   useEffect(() => {

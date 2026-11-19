@@ -7,7 +7,8 @@
 
 import { useCallback, useEffect, useState } from 'react';
 import { getDocument, retryOcr } from '../api/document';
-import type { ApiError, DocumentResponse } from '../types/api';
+import type { DocumentResponse } from '../types/api';
+import { errorText } from '../utils/errorText';
 
 const INTERVAL_MS = 2000;
 const MAX_TRIES = 30; // 2초 × 30 = 약 1분
@@ -54,7 +55,7 @@ export function useIdDocument(documentId: number | null) {
         }
       } catch (e) {
         if (cancelled) return;
-        setError((e as ApiError).message ?? '등록증 정보를 불러오지 못했어요.');
+        setError(errorText(e, '등록증 정보를 불러오지 못했어요.'));
         setPhase('failed');
         return;
       }

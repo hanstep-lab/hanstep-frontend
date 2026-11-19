@@ -16,6 +16,7 @@ import { languageName } from '../../constants/languages';
 import { goalLabel } from '../../constants/goals';
 import { fmtNumber, fmtWon } from '../../utils/format';
 import type { CommitmentType, OnboardingSummaryResponse } from '../../types/api';
+import { errorText } from '../../utils/errorText';
 
 // 고정 생활비로 묶이는 항목 (서버 totals.fixedLiving 과 같은 기준)
 const FIXED_TYPES: CommitmentType[] = ['RENT', 'UTILITY', 'TELECOM', 'LIVING_MINIMUM', 'OTHER'];
@@ -83,7 +84,7 @@ export default function ConfirmScreen() {
     setLoadError(null);
     getOnboardingSummary()
       .then(setSummary)
-      .catch((e) => setLoadError(e?.message ?? '입력하신 정보를 불러오지 못했어요.'));
+      .catch((e) => setLoadError(errorText(e, '입력하신 정보를 불러오지 못했어요.')));
   }, []);
 
   useEffect(() => {
