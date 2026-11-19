@@ -1,25 +1,53 @@
-import { useState } from 'react';
+// ON-004 금융 목표 선택. 들어올 때 저장된 목표(GOL-01)를 불러와 체크해 두고,
+// 다음: PUT /goals(GOL-02, 전체 교체) → POST /steps/GOALS
+
+import { useEffect, useState } from 'react';
 import { View, Text, Pressable, ScrollView, StyleSheet } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import Header from '../../components/Header';
 import Button from '../../components/Button';
 import { useOnboardingStep } from '../../hooks/useOnboardingStep';
+import { getGoals, saveGoals } from '../../api/goals';
 import { colors, typography, spacing, radius, fonts } from '../../constants/theme';
-
-const GOALS = [
-  { key: 'SAVE',   label: '목돈 마련',      desc: '목표 금액을 체계적으로 모으고 싶어요',      tag: null },
-  { key: 'REMIT',  label: '본국 송금',      desc: '가족에게 안전하고 신속하게 돈을 보내요',    tag: null },
-  { key: 'BUDGET', label: '생활비 관리',    desc: '불필요한 지출을 스마트하게 줄이고 싶어요',   tag: null },
-  { key: 'CREDIT', label: '신용 관리',      desc: '한국에서 안전하게 신용 점수를 쌓고 싶어요',  tag: null },
-  { key: 'SETTLE', label: '장기 정착 준비', desc: '전월세 보증금 및 영주·장기 비자 준비',       tag: '비자·대출' },
-];
+import { GOALS } from '../../constants/goals';
+import type { GoalResponse, GoalType } from '../../types/api';
 
 export default function GoalScreen() {
   const { goNext, isNavigating, navError } = useOnboardingStep();
-  const [selected, setSelected] = useState<Set<string>>(new Set());
+  const [selected, setSelected] = useState<Set<GoalType>>(new Set());
+  // 서버에 저장돼 있던 목표. 다시 저장할 때 목표 금액·시점(ON-005 에서 입력)을 지우지 않으려고 들고 있음
+  const [savedGoals, setSavedGoals] = useState<GoalResponse[]>([]);
 
-  const toggle = (key: string) => {
+  // 처음 들어올 때 저장된 목표를 체크해 둔다. 실패하면 빈 선택으로 시작(화면은 계속 쓸 수 있게)
+  useEffect(() => {
+    let cancelled = false;
+    getGoals()
+      .then((res) => {
+        if (cancelled) return;
+        setSavedGoals(res.goals);
+        setSelected(new Set(res.goals.map((g) => g.goalType)));
+      })
+      .catch(() => {});
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  // 고른 목표 전체를 저장(전체 교체). 이미 있던 목표는 금액·시점을 그대로 다시 보낸다
+  const save = async () => {
+    const goals = GOALS.filter((g) => selected.has(g.key)).map((g) => {
+      const prev = savedGoals.find((s) => s.goalType === g.key);
+      return {
+        goalType: g.key,
+        targetAmount: prev?.targetAmount ?? null,
+        targetDate: prev?.targetDate ?? null,
+      };
+    });
+    await saveGoals({ goals });
+  };
+
+  const toggle = (key: GoalType) => {
     setSelected((prev) => {
       const next = new Set(prev);
       if (next.has(key)) next.delete(key);
@@ -107,7 +135,7 @@ export default function GoalScreen() {
                 : '목표를 선택해 주세요'
           }
           showArrow={!isNavigating && count > 0}
-          onPress={() => goNext()}
+          onPress={() => goNext(save)}
           disabled={count === 0 || isNavigating}
         />
       </View>

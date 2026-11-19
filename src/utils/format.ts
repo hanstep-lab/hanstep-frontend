@@ -1,5 +1,22 @@
 // 표시 형식만 바꾸는 함수 모음. 값을 계산하지 않는다.
 
+const MAN = 10_000;
+const EOK = 100_000_000;
+
+// 1억 미만 금액 표시: 30만 원 / 15,000원
+function fmtUnderEok(n: number): string {
+  if (n >= MAN && n % MAN === 0) return `${fmtNumber(n / MAN)}만 원`;
+  return `${fmtNumber(n)}원`;
+}
+
+// 원 단위 금액 표시: 1억 원 / 1억 5,000만 원 / 30만 원 / 15,000원
+export function fmtWon(n: number): string {
+  if (n < EOK) return fmtUnderEok(n);
+  const eok = Math.floor(n / EOK);
+  const rest = n % EOK;
+  return rest === 0 ? `${fmtNumber(eok)}억 원` : `${fmtNumber(eok)}억 ${fmtUnderEok(rest)}`;
+}
+
 // 1234567 → "1,234,567", 1382.5 → "1,382.5" (소수 자리는 받은 그대로 둔다)
 export function fmtNumber(n: number): string {
   const [int, dec] = String(n).split('.');

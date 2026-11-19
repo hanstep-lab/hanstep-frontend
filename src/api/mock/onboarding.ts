@@ -2,6 +2,7 @@
 // 2026-11-19 서버 응답(demo-e9-ph-reyes)을 그대로 옮겼다. daysRemaining·합계·spare 는 서버 계산값이라 고정값으로 둔다.
 // 화면은 이 파일을 직접 import 하지 않고 src/api/onboarding.ts 를 거친다.
 import type { OnboardingSummaryResponse } from '../../types/api';
+import { mockGetGoals } from './goals';
 
 const krw = (amount: number) => ({ amount, currency: 'KRW' });
 
@@ -20,16 +21,8 @@ export function mockOnboardingSummary(): OnboardingSummaryResponse {
       daysRemaining: 319,
       monthsRemaining: 10,
     },
-    goals: [
-      {
-        id: 1,
-        goalType: 'LUMP_SUM',
-        targetAmount: krw(6000000),
-        targetDate: '2027-09-30',
-        status: 'ACTIVE',
-        monthlyRequired: krw(600000),
-      },
-    ],
+    // ON-004 에서 저장한 목표가 요약에도 보이도록 목표 Mock 의 현재 값을 그대로 쓴다
+    goals: mockGetGoals().goals,
     commitments: {
       items: [
         { id: 1, commitmentType: 'LIVING_MINIMUM', label: '고정생활비', amount: krw(520000), source: 'USER', detectedFromTxnId: null },

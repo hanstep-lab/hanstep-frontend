@@ -15,15 +15,11 @@ import { useOnboardingStore } from '../../store/onboardingStore';
 import { changeLanguage } from '../../api/user';
 import { saveProfile } from '../../api/onboarding';
 import { colors, typography, spacing, radius, fonts, shadow } from '../../constants/theme';
+import { LANGUAGES } from '../../constants/languages';
 import type { Language, ResidencePurpose } from '../../types/api';
 
 // ── 데이터 ──────────────────────────────────────────────────────────────
-const LANGUAGES: { code: Language; name: string; sub: string; flag: string }[] = [
-  { code: 'ko', name: '한국어',      sub: 'Korean',     flag: '🇰🇷' },
-  { code: 'vi', name: 'Tiếng Việt', sub: 'Vietnamese', flag: '🇻🇳' },
-  { code: 'en', name: 'English',    sub: 'English',    flag: '🇺🇸' },
-  { code: 'zh', name: '中文',        sub: 'Chinese',    flag: '🇨🇳' },
-];
+// 언어 목록은 constants/languages.ts (최종 확인 화면 언어 칩과 공유)
 
 const PURPOSES: { code: ResidencePurpose; label: string; sub: string }[] = [
   { code: 'WORK',   label: '취업 및 비즈니스',     sub: 'E-9, E-7, D-8 등 전문·비전문 취업' },
