@@ -9,9 +9,11 @@ import { useCallback, useEffect, useState } from 'react';
 import { getDocument, retryOcr } from '../api/document';
 import type { DocumentResponse } from '../types/api';
 import { errorText } from '../utils/errorText';
+import { ocrTimeMark } from '../utils/ocrTiming';
 
 const INTERVAL_MS = 2000;
-const MAX_TRIES = 30; // 2초 × 30 = 약 1분
+// 2초 × 60 = 약 2분. 2026-11-19 실서버 측정: OCR 처리만 약 60초(조회 27회째 도착)라 1분 한도는 너무 빠듯함
+const MAX_TRIES = 60;
 
 type Phase = 'waiting' | 'ready' | 'failed' | 'timeout';
 
@@ -28,6 +30,7 @@ export function useIdDocument(documentId: number | null) {
     let timer: ReturnType<typeof setTimeout> | undefined;
     let tries = 0;
     let retried = false;
+    let lastState = ''; // 시간 로그: 서버 상태가 바뀔 때만 찍는다
 
     setPhase('waiting');
     setError(null);
@@ -35,32 +38,45 @@ export function useIdDocument(documentId: number | null) {
     const poll = async () => {
       tries += 1;
       try {
+        const reqAt = Date.now();
         let res = await getDocument(documentId);
+        const reqMs = Date.now() - reqAt;
 
         // 작업이 큐에 못 들어간 채 남아 있으면 한 번 다시 보내 본다(서버도 1분마다 자동 재시도)
         if (res.status === 'UPLOADED' && res.ocrJob?.retryable && !retried) {
           retried = true;
+          ocrTimeMark('OCR 재요청 (큐 미등록)');
           res = await retryOcr(documentId).catch(() => res);
         }
         if (cancelled) return;
         setDoc(res);
 
+        const state = `${res.status}/${res.ocrJob?.status ?? '-'}`;
+        if (state !== lastState) {
+          ocrTimeMark(`조회 ${tries}회째 상태 ${state} (요청 ${reqMs}ms)`);
+          lastState = state;
+        }
+
         if (res.status === 'PENDING_CONFIRMATION' || res.status === 'CONFIRMED') {
+          ocrTimeMark('결과 표시');
           setPhase('ready');
           return;
         }
         if (res.status === 'FAILED') {
+          ocrTimeMark(`실패 ${res.failureCode ?? res.ocrJob?.errorCode ?? ''}`);
           setPhase('failed');
           return;
         }
       } catch (e) {
         if (cancelled) return;
+        ocrTimeMark('조회 오류');
         setError(errorText(e, '등록증 정보를 불러오지 못했어요.'));
         setPhase('failed');
         return;
       }
 
       if (tries >= MAX_TRIES) {
+        ocrTimeMark(`시간 초과 (조회 ${tries}회)`);
         setPhase('timeout');
         return;
       }

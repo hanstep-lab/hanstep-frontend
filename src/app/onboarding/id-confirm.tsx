@@ -208,7 +208,9 @@ export default function IdConfirmScreen() {
     body = (
       <View style={styles.stateBox}>
         <ActivityIndicator color={colors.primary} />
-        <Text style={styles.stateText}>등록증 정보를 읽고 있어요. 잠시만 기다려 주세요.</Text>
+        <Text style={styles.stateText}>
+          {'등록증 정보를 읽고 있어요.\n최대 1분 정도 걸릴 수 있어요.'}
+        </Text>
       </View>
     );
   } else if (phase === 'timeout') {
