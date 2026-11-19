@@ -71,9 +71,10 @@ export const MENU_GROUPS: { section: string; items: MenuItem[] }[] = [
 
 // ── Mock 카드(blocks). 실서버 chat.done.blocks 와 같은 모양 ──────────────────
 // 값은 Swagger 채팅 스트림 200 예시(송금·환율 카드)와 실서버 메시지 64번(E-7-4·입력 필요)을 그대로 옮겼다.
-// 송금 카드 환율(1 PHP = 20.984)은 송금 화면 Mock(mock/transfer.ts, 24.90)과 다르다. 이번 PR 에서는 그대로 둔다.
+// 송금 카드 숫자(환율·수취 금액·쏠편한 수수료·출금 총액)는 송금 화면 Mock(mock/transfer.ts)의 500,000원 견적과 같다.
+// 카드 버튼으로 송금 화면에 가도 숫자가 바뀌지 않게 하려는 것. mock/transfer.ts 값이 바뀌면 여기도 맞춘다.
 
-// quote_remittance (Swagger "송금 카드" 예시)
+// quote_remittance (Swagger "송금 카드" 예시 모양, 값은 mock/transfer.ts mockQuote(500000) 쏠편한)
 const MOCK_REMITTANCE_BLOCK: ChatBlock = {
   type: 'REMITTANCE_CONFIRM',
   recipient: {
@@ -86,16 +87,28 @@ const MOCK_REMITTANCE_BLOCK: ChatBlock = {
     currency: 'PHP',
   },
   sendAmount: { amount: 500000, currency: 'KRW' },
-  receiveAmount: { amount: 23521, currency: 'PHP' },
+  receiveAmount: { amount: 23587, currency: 'PHP' },
   appliedRate: {
     currency: 'PHP',
     unit: 1,
-    rate: 20.984,
-    asOf: '2026-11-17',
+    rate: 20.926,
+    asOf: '2026-11-18',
     sourceLabel: 'ECB 기준환율 기반 참고값',
     isMock: false,
   },
   transferPath: '/transfer?recipientId=1&amount=500000',
+  fees: {
+    product: 'SOL_EASY',
+    sendFeeKrw: 0,
+    telegraphicFeeKrw: 5000,
+    feeUsd: null,
+    fxMarginKrw: 1413,
+    totalWithdrawKrw: 499998,
+    preferentialPct: 70,
+    usdAppliedRate: 1334.91,
+    notices: ['INTERMEDIARY_FEE_MAY_APPLY', 'LOCAL_PAYOUT_RATE_DIFFERS', 'FOREIGN_EXCHANGE_BANK_DESIGNATION_REQUIRED'],
+  },
+  rateSources: { usd: 'KOREAEXIM', php: 'frankfurter-ecb' },
 };
 
 // fx_rate_summary (Swagger "환율 카드(프롬프트 v4.4부터)" 예시). USD 는 isMock·stale, PHP 는 송금 환율 없음
