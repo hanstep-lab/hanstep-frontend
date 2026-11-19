@@ -10,6 +10,7 @@ import { resizeForUpload } from '../../utils/image';
 import { uploadIdCard } from '../../api/document';
 import { colors, typography, spacing, radius, fonts, shadow } from '../../constants/theme';
 import { errorText } from '../../utils/errorText';
+import { ocrTimeMark, ocrTimeStart } from '../../utils/ocrTiming';
 
 // "직접 정보 입력하기" 버튼. 사진 없이 체류 정보를 저장하는 화면(id-manual, PUT /visa/profile)으로 간다
 const SHOW_MANUAL_ENTRY = true;
@@ -83,12 +84,16 @@ export default function IdCardScreen() {
     setIsCapturing(true);
     let uploading = false; // 어느 단계에서 실패했는지 구분해 안내 문구를 다르게
     try {
+      ocrTimeStart('촬영 버튼');
       const photo = await cameraRef.current.takePictureAsync();
+      ocrTimeMark(`촬영 ${photo.width}x${photo.height}`);
       const resized = await resizeForUpload(photo);
+      ocrTimeMark(`리사이즈 ${resized.width}x${resized.height}`);
       setIdCardFrontUri(resized.uri);
 
       uploading = true;
       const doc = await uploadIdCard(resized.uri); // 저장 + OCR 작업 등록. 결과는 확인 화면에서 기다림
+      ocrTimeMark(`업로드 응답 ${doc.status}/${doc.ocrJob?.status ?? '-'}`);
       setIdDocumentId(doc.documentId);
       router.push('/onboarding/id-confirm' as Href);
     } catch (e) {
