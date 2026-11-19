@@ -170,7 +170,7 @@ export default function IdConfirmScreen() {
   const goNextStep = async () => {
     const res = await updateStep('ID_DOCUMENT');
     if (res.onboardingCompleted || !res.currentStep) {
-      router.replace('/home');
+      router.replace('/chat');
     } else {
       router.push(getRouteFromStepCode(res.currentStep) as Href);
     }

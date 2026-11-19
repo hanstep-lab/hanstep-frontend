@@ -1,0 +1,16 @@
+<svg preserveAspectRatio="none" overflow="visible" style="display: block;" width="55.76" height="55.76" viewBox="0 0 55.76 55.76" fill="none" xmlns="http://www.w3.org/2000/svg">
+<g id="coin/dollar" filter="url(#filter0_d_0_17)">
+<circle cx="27.88" cy="25.42" r="21.73" fill="#C99A5E" stroke-width="2.46" stroke="#E3BC86"/>
+</g>
+<defs>
+<filter id="filter0_d_0_17" x="0" y="0" width="55.76" height="55.76" filterUnits="userSpaceOnUse" color-interpolation-filters="sRGB">
+<feFlood flood-opacity="0" result="BackgroundImageFix"/>
+<feColorMatrix in="SourceAlpha" type="matrix" values="0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 127 0" result="hardAlpha"/>
+<feOffset dy="2.46"/>
+<feGaussianBlur stdDeviation="2.46"/>
+<feColorMatrix type="matrix" values="0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0.22 0"/>
+<feBlend mode="normal" in2="BackgroundImageFix" result="effect1_dropShadow_0_17"/>
+<feBlend mode="normal" in="SourceGraphic" in2="effect1_dropShadow_0_17" result="shape"/>
+</filter>
+</defs>
+</svg>

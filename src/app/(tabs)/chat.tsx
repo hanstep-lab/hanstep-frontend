@@ -565,7 +565,13 @@ function MenuSheet({ visible, onClose }: { visible: boolean; onClose: () => void
                 ))}
               </View>
             ))}
-            <Pressable style={menuStyles.solRow} onPress={onClose}>
+            <Pressable
+              style={menuStyles.solRow}
+              onPress={() => {
+                onClose();
+                router.replace('/'); // SOL Global 홈(SG-000)으로
+              }}
+            >
               <Text style={menuStyles.solText}>SOL Global로 돌아가기</Text>
             </Pressable>
           </ScrollView>

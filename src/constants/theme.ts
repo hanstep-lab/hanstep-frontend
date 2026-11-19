@@ -47,6 +47,23 @@ export const colors = {
     fillStrong: 'rgba(255, 255, 255, 0.3)', // 토글 트랙
   },
 
+  // SOL Global 홈 재현 (SG-000, Figma 683:14). 실제 SOL 앱 화면 색이라 신한걸음 색과 따로 둠
+  solHome: {
+    bg: '#F7F8FA',
+    title: '#1A1F27',        // "SOL Global", 카드 제목
+    sub: '#8A929E',          // 카드 설명
+    banner: '#3E4C61',       // 배너 배경
+    bannerSub: 'rgba(255, 255, 255, 0.9)',
+    pager: 'rgba(31, 41, 55, 0.75)',
+    cardBorder: '#ECEEF2',
+    tabBorder: '#EEF0F3',
+    tabOn: '#1E2A3A',
+    tabOff: '#9AA1AC',
+    aiButton: '#AFCBFF',     // Figma 는 #CFE1FF → #8FB6FF 그라데이션. 추가 패키지 없이 중간색으로
+    coinWon: '#6B7280',
+    coinDollar: '#7A4E1E',
+  },
+
   // 외국인등록증 일러스트 (ON-002, ON-003)
   idCard: {
     bg: '#2A313C',
