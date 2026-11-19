@@ -742,6 +742,18 @@ export type ChatRemittanceRecipient = {
   countryCode: string;
   currency: string;
 };
+// 송금 카드 수수료 (chat_blocks_v1 3.3). 금액은 서버 값 그대로 쓰고 앱에서 더하거나 빼지 않는다
+export type ChatRemittanceFees = {
+  product: string; // 화면에 쓰지 않는다
+  sendFeeKrw: number | null;
+  telegraphicFeeKrw: number | null;
+  feeUsd: number | null;
+  fxMarginKrw: number | null; // 환율에 이미 포함된 참고값. 화면에 금액을 쓰지 않고 출금 총액에 더하지 않는다
+  totalWithdrawKrw: number | null;
+  preferentialPct: number | null; // 화면에 쓰지 않는다
+  usdAppliedRate: number | null; // 화면에 쓰지 않는다
+  notices: string[]; // 화면에 쓰지 않는다
+};
 export type ChatRemittanceConfirmBlock = {
   type: 'REMITTANCE_CONFIRM';
   recipient: ChatRemittanceRecipient;
@@ -749,6 +761,8 @@ export type ChatRemittanceConfirmBlock = {
   receiveAmount: Money;
   appliedRate: AppliedRate & { isMock: boolean };
   transferPath: string; // 예: /transfer?recipientId=1&amount=500000
+  fees?: ChatRemittanceFees | null; // 2026-11-19 16시 이전 대화에는 없다
+  rateSources?: Record<string, string> | null; // 예: { usd: 'KOREAEXIM', php: 'frankfurter-ecb' }. 화면에 쓰지 않는다
 };
 
 // fx_rate_summary → 환율 요약 카드 (프롬프트 v4.4부터). 통화 항목은 FX-001 GET /fx/rates 필드와 같다
