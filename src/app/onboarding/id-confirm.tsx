@@ -17,6 +17,7 @@ import { colors, typography, spacing, radius, fonts, shadow } from '../../consta
 import { errorText } from '../../utils/errorText';
 import {
   VISA_PROFILE_KEYS,
+  VISA_UNSUPPORTED_TEXT,
   formatDateInput,
   normalizeVisaProfile,
   validateVisaProfile,
@@ -63,15 +64,20 @@ function validate(v: Values): string | null {
 function fieldErrorText(e: unknown, sent: EditableKey[]): string | null {
   const fields = (e as ApiError | null)?.fields;
   if (!fields || fields.length === 0) return null;
-  const labels = fields
-    .map((f) => {
-      const idx = f.field.match(/^fields\[(\d+)\]/);
-      const key = idx ? sent[Number(idx[1])] : EDITABLE_KEYS.find((k) => f.field.includes(k));
-      return key ? FIELD_LABEL[key] : null;
-    })
-    .filter((l): l is string => l != null);
-  if (labels.length === 0) return null;
-  return `${[...new Set(labels)].join(', ')} 값을 다시 확인해 주세요.`;
+  const keys = [
+    ...new Set(
+      fields
+        .map((f) => {
+          const idx = f.field.match(/^fields\[(\d+)\]/);
+          return idx ? sent[Number(idx[1])] : EDITABLE_KEYS.find((k) => f.field.includes(k));
+        })
+        .filter((k): k is EditableKey => k != null),
+    ),
+  ];
+  if (keys.length === 0) return null;
+  // 체류자격만 막혔으면 앱 검사는 통과한 값 → 서버 미지원 자격 (예: D-8)
+  if (keys.length === 1 && keys[0] === 'visaType') return VISA_UNSUPPORTED_TEXT;
+  return `${keys.map((k) => FIELD_LABEL[k]).join(', ')} 값을 다시 확인해 주세요.`;
 }
 
 // 값 한 줄. OCR 은 어느 칸이든 틀릴 수 있으므로 모든 칸을 입력칸으로 둔다.
