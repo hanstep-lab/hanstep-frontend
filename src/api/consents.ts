@@ -5,11 +5,12 @@ import { client } from './client';
 import { USE_MOCK, mockDelay } from './config';
 import type { ConsentListResponse, ConsentSaveItem, ConsentSaveRequest } from '../types/api';
 
-// Mock: 실서버 GET /api/v1/consents 응답 그대로 (2026-11-19 10:10 KST, 데모 계정 Reyes)
+// Mock: 폰에서 동의 저장(POST)한 직후 실서버 GET /api/v1/consents 응답 그대로 (2026-11-19 11:05 KST, 데모 계정 Reyes).
+// 백엔드는 보낸 policyVersion 을 그대로 저장하고, POST 에는 보낸 종류의 최신 상태만 돌려준다
 const MOCK_CONSENTS: ConsentListResponse = {
   consents: [
-    { id: 1, consentType: 'MYDATA', policyVersion: 'mydata-2026-11', status: 'GRANTED', grantedAt: '2026-11-16T14:56:06+09:00', revokedAt: null, expiresAt: null },
-    { id: 2, consentType: 'MYDATA_TERMS', policyVersion: 'mydata-2026-11', status: 'GRANTED', grantedAt: '2026-11-16T14:56:06+09:00', revokedAt: null, expiresAt: null },
+    { id: 4, consentType: 'MYDATA', policyVersion: 'mydata-2026-11', status: 'GRANTED', grantedAt: '2026-11-19T11:02:41+09:00', revokedAt: null, expiresAt: null },
+    { id: 5, consentType: 'MYDATA_TERMS', policyVersion: 'mydata-terms-2026-11', status: 'GRANTED', grantedAt: '2026-11-19T11:02:41+09:00', revokedAt: null, expiresAt: null },
     { id: 3, consentType: 'CREDIT_EVALUATION', policyVersion: 'mydata-2026-11', status: 'GRANTED', grantedAt: '2026-11-17T17:02:15+09:00', revokedAt: null, expiresAt: null },
   ],
 };

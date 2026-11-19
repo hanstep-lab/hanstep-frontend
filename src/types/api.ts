@@ -286,8 +286,8 @@ export type InstitutionResponse = {
 };
 export type InstitutionListResponse = { institutions: InstitutionResponse[] };
 
-// 불러올 정보. 명세에 enum 이 없어 예시값만 적어 둠: ACCOUNT_BALANCE · TRANSACTIONS · CARD_USAGE
-export type MydataScope = string;
+// 불러올 정보 (명세 enum: 계좌 잔액 · 거래내역 · 카드 이용내역 · 대출)
+export type MydataScope = 'ACCOUNT_BALANCE' | 'TRANSACTIONS' | 'CARD_USAGE' | 'LOANS';
 
 // ON-003B '확인하고 연결'. 고른 기관 연결 + Mock 계좌·거래 적재
 export type ConnectionCreateRequest = {

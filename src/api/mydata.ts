@@ -20,7 +20,7 @@ const CONNECT_TIMEOUT_MS = 30_000;
 // 조회 기간(개월). 명세 기본값과 같고, 연결 모달의 '조회 기간'도 이 값을 쓴다
 export const LOOKBACK_MONTHS = 12;
 
-// Mock: 실서버 응답 그대로 (2026-11-19 10:10 KST, 데모 계정 Reyes)
+// Mock: 실서버 GET /api/v1/mydata/institutions 응답 그대로 (2026-11-19 10:10 KST, 데모 계정 Reyes)
 const MOCK_INSTITUTIONS: InstitutionListResponse = {
   institutions: [
     { id: 1, institutionCode: 'SHINHAN_BANK', name: 'Shinhan Bank (Mock)', nameKo: '신한은행', institutionType: 'BANK', isMock: true },
@@ -28,6 +28,8 @@ const MOCK_INSTITUTIONS: InstitutionListResponse = {
   ],
 };
 
+// Mock: 폰에서 연결(POST)한 직후 실서버 GET /api/v1/mydata/connections 응답 그대로 (2026-11-19 11:05 KST).
+// 백엔드는 POST 에도 같은 연결 상태 전체를 돌려줘서 POST·GET Mock 이 같다
 const MOCK_CONNECTIONS: ConnectionListResponse = {
   connected: true,
   connections: [
@@ -39,7 +41,7 @@ const MOCK_CONNECTIONS: ConnectionListResponse = {
       status: 'CONNECTED',
       scopes: ['ACCOUNT_BALANCE', 'TRANSACTIONS', 'CARD_USAGE'],
       lookbackMonths: 12,
-      lastSyncedAt: '2026-11-16T14:56:07.485+09:00',
+      lastSyncedAt: '2026-11-19T11:02:41.6+09:00',
       accountCount: 1,
       transactionCount: 96,
       isMock: true,
@@ -52,7 +54,7 @@ const MOCK_CONNECTIONS: ConnectionListResponse = {
       status: 'CONNECTED',
       scopes: ['ACCOUNT_BALANCE', 'TRANSACTIONS', 'CARD_USAGE'],
       lookbackMonths: 12,
-      lastSyncedAt: '2026-11-16T14:56:07.485+09:00',
+      lastSyncedAt: '2026-11-19T11:02:41.6+09:00',
       accountCount: 1,
       transactionCount: 245,
       isMock: true,
@@ -123,13 +125,13 @@ const TYPE_SCOPES: Partial<Record<InstitutionType, MydataScope[]>> = {
 };
 
 // 불러올 정보 이름. 이 순서대로 보내고 보여 준다
-const SCOPE_LABEL: Record<string, string> = {
+const SCOPE_LABEL: Record<MydataScope, string> = {
   ACCOUNT_BALANCE: '계좌 잔액',
   TRANSACTIONS: '거래내역',
   CARD_USAGE: '카드 이용내역',
   LOANS: '대출',
 };
-const SCOPE_ORDER = Object.keys(SCOPE_LABEL);
+const SCOPE_ORDER = Object.keys(SCOPE_LABEL) as MydataScope[];
 
 // ON-003A 기관 목록. 순서는 서버 그대로
 export async function getInstitutionViews(): Promise<InstitutionView[]> {
@@ -154,7 +156,7 @@ export function scopesOf(selected: InstitutionView[]): MydataScope[] {
 
 // ["ACCOUNT_BALANCE", "TRANSACTIONS"] → "계좌 잔액 · 거래내역"
 export const scopeText = (scopes: MydataScope[]) =>
-  scopes.map((scope) => SCOPE_LABEL[scope] ?? scope).join(' · ');
+  scopes.map((scope) => SCOPE_LABEL[scope]).join(' · ');
 
 // ── 오류 문구 (서버 message 는 사용자 언어라 code 로 고른다) ────────
 
