@@ -69,7 +69,7 @@ export function useOnboardingStep() {
         router.replace('/home');
       }
     } catch (e: any) {
-      setNavError(e?.message ?? '다음 단계로 이동할 수 없어요. 다시 시도해 주세요.');
+      setNavError(errorText(e, '다음 단계로 이동할 수 없어요. 다시 시도해 주세요.'));
     } finally {
       setIsNavigating(false);
     }

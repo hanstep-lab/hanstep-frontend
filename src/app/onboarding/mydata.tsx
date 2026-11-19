@@ -66,8 +66,8 @@ export default function MydataScreen() {
         await saveConsents(MYDATA_CONSENTS);
         await connectInstitutions(selected.map((inst) => inst.id), scopes);
       } catch (e) {
-        const err: ApiError = { code: (e as ApiError).code, message: connectErrorText(e as ApiError) };
-        throw err;
+        // Error 로 던져야 goNext(errorText)가 이 마이데이터 전용 문구를 그대로 보여 줌 (일반 객체면 code 로 다시 고름)
+        throw new Error(connectErrorText(e as ApiError));
       }
     });
   };
