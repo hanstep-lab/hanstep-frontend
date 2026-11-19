@@ -53,7 +53,7 @@ export const MENU_GROUPS: { section: string; items: MenuItem[] }[] = [
   {
     section: '금융 성장',
     items: [
-      { label: '금융상품 추천', desc: '여유자금에 맞춘 적금 추천', action: 'products' },
+      { label: '금융상품 추천', desc: '여유자금에 맞춘 예금·적금 추천', action: 'products' },
       { label: '대안신용 사전진단', desc: '대안신용 점수·참고 한도' },
     ],
   },
