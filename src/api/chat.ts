@@ -64,8 +64,7 @@ export async function streamChatMessage(
 // 이벤트: started → tool_call(0개 이상) → delta(여러 번) → sources → done 또는 error. 그 뒤 서버가 연결을 닫는다
 // ---------------------------------------------------------------------------
 
-// toolName → 완료 문구. 서버는 문구를 주지 않는다 (Swagger ChatToolCallEvent).
-// TODO(CHT-04): 태건님께 toolName 전체 목록을 받으면 채운다. 표에 없는 이름은 문구 없이 넘어간다
+// toolName → 완료 문구. 서버는 문구를 주지 않는다 (Swagger ChatToolCallEvent). 표에 없는 이름은 문구 없이 넘어간다
 const TOOL_LABELS: Record<string, string> = {
   get_financial_analysis: '재무 분석을 확인했어요',
   get_remittance_recipients: '받는 분 정보를 확인했어요',

@@ -17,6 +17,7 @@ import { errorText } from '../../utils/errorText';
 import {
   EMPTY_VISA_PROFILE,
   VISA_PROFILE_KEYS,
+  SUPPORTED_VISA_TYPES,
   formatDateInput,
   normalizeVisaProfile,
   validateVisaProfile,
@@ -43,7 +44,13 @@ const FIELDS: {
     maxLength: 3,
   },
   { key: 'birthDate', label: '생년월일 (Birth)', placeholder: '1995-03-12', isDate: true },
-  { key: 'visaType', label: '체류자격 (Visa Status)', placeholder: 'E-9', maxLength: 10 },
+  {
+    key: 'visaType',
+    label: '체류자격 (Visa Status)',
+    placeholder: 'E-9',
+    hint: `등록증에 적힌 대로 입력해 주세요. (${SUPPORTED_VISA_TYPES.join(', ')})`,
+    maxLength: 10,
+  },
   { key: 'stayExpiry', label: '체류 만료일 (Expiry Date)', placeholder: '2027-10-04', isDate: true },
 ];
 
