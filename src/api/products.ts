@@ -6,6 +6,7 @@ import { USE_MOCK, mockDelay } from './config';
 import { mockProductRecommendation } from './mock/products';
 import { getMe } from './user';
 import { getLatestAnalysis } from './finance';
+import { fmtWon } from '../utils/format';
 import type {
   ProductAbstainReason,
   ProductAmountRange,
@@ -55,25 +56,8 @@ const ABSTAIN_TEXT: Record<ProductAbstainReason, string> = {
   NO_MATCHING_PRODUCT: '지금 조건에 맞는 상품이 없어요',
 };
 
-const MAN = 10_000;
-const EOK = 100_000_000;
-
 const withComma = (n: number) => String(n).replace(/\B(?=(\d{3})+(?!\d))/g, ',');
 const fmtDot = (iso: string) => iso.replaceAll('-', '.');
-
-// 1억 미만 금액 표시: 30만 원 / 15,000원
-function fmtUnderEok(n: number): string {
-  if (n >= MAN && n % MAN === 0) return `${withComma(n / MAN)}만 원`;
-  return `${withComma(n)}원`;
-}
-
-// 원 단위 금액 표시: 1억 원 / 1억 5,000만 원 / 30만 원 / 15,000원
-function fmtWon(n: number): string {
-  if (n < EOK) return fmtUnderEok(n);
-  const eok = Math.floor(n / EOK);
-  const rest = n % EOK;
-  return rest === 0 ? `${withComma(eok)}억 원` : `${withComma(eok)}억 ${fmtUnderEok(rest)}`;
-}
 
 function termText(t: ProductTermMonths): string | null {
   if (!t) return null;
