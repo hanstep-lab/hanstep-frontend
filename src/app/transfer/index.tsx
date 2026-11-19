@@ -15,6 +15,7 @@ import {
   defaultQuoteOf,
   productLabel,
   quoteNoticeText,
+  transferErrorText,
 } from '../../api/transfer';
 import { fmtNumber, fmtRate, fmtDate } from '../../utils/format';
 import type { ApiError, TransferContext, TransferQuote } from '../../types/api';
@@ -38,7 +39,7 @@ export default function TransferScreen() {
   useEffect(() => {
     getTransferContext()
       .then(setCtx)
-      .catch((e: ApiError) => setCtxError(e.message));
+      .catch((e: ApiError) => setCtxError(transferErrorText(e)));
   }, []);
 
   // 금액이 바뀌고 0.3초 동안 입력이 없으면 견적 요청 (키 누를 때마다 부르지 않으려고)
@@ -54,7 +55,7 @@ export default function TransferScreen() {
     const timer = setTimeout(() => {
       getTransferQuote(amount)
         .then((q) => !cancelled && setQuote(q))
-        .catch((e: ApiError) => !cancelled && setQuoteError(e.message))
+        .catch((e: ApiError) => !cancelled && setQuoteError(transferErrorText(e)))
         .finally(() => !cancelled && setQuoteLoading(false));
     }, 300);
     return () => {
