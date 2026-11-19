@@ -20,8 +20,8 @@ export default function Header({ title, showBack = true }: HeaderProps) {
       <Text style={styles.title}>{title}</Text>
 
       <View style={[styles.side, styles.right]}>
-        {/* 앱인앱 종료 자리. 지금은 임시로 홈 이동 */}
-        <Pressable onPress={() => router.replace('/home')} hitSlop={8}>
+        {/* 앱인앱 닫기: SOL Global 홈(SG-000)으로 */}
+        <Pressable onPress={() => router.replace('/')} hitSlop={8}>
           <Ionicons name="close" size={24} color={colors.text.strong} />
         </Pressable>
         <View style={styles.profile}>

@@ -29,7 +29,7 @@ export function useOnboardingStep() {
       const res = await updateStep(step.stepCode);
 
       if (res.onboardingCompleted) {
-        router.replace('/home');
+        router.replace('/chat');
       } else if (res.currentStep) {
         const nextRoute = getRouteFromStepCode(res.currentStep);
         if (isLast) {
@@ -38,7 +38,7 @@ export function useOnboardingStep() {
           router.push(nextRoute as Href);
         }
       } else {
-        router.replace('/home');
+        router.replace('/chat');
       }
     } catch (e: any) {
       setNavError(errorText(e, '다음 단계로 이동할 수 없어요. 다시 시도해 주세요.'));
@@ -57,7 +57,7 @@ export function useOnboardingStep() {
       const res = await updateStep(step.stepCode, 'SKIPPED');
 
       if (res.onboardingCompleted) {
-        router.replace('/home');
+        router.replace('/chat');
       } else if (res.currentStep) {
         const nextRoute = getRouteFromStepCode(res.currentStep);
         if (isLast) {
@@ -66,7 +66,7 @@ export function useOnboardingStep() {
           router.push(nextRoute as Href);
         }
       } else {
-        router.replace('/home');
+        router.replace('/chat');
       }
     } catch (e: any) {
       setNavError(errorText(e, '다음 단계로 이동할 수 없어요. 다시 시도해 주세요.'));
