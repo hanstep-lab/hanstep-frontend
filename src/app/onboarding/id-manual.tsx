@@ -1,5 +1,5 @@
 // ON-002 사진 없이 체류 정보 직접 입력. 등록증 촬영 화면의 "직접 정보 입력하기"에서 온다.
-// 저장하기: 칸별 검사 → PUT /api/v1/visa/profile → ON-003A 마이데이터
+// 저장하기: 칸별 검사 → PUT /api/v1/visa/profile → GET /onboarding 의 currentStep 화면 (보통 ON-003A 마이데이터)
 // 서버가 저장하면서 온보딩 ID_DOCUMENT 단계를 COMPLETED 로 기록하므로 updateStep(ONB-03)은 부르지 않는다.
 // 응답의 daysRemaining(D-day)은 이 화면에서 쓰지 않는다.
 
@@ -9,6 +9,8 @@ import { router, type Href } from 'expo-router';
 import Screen from '../../components/Screen';
 import Button from '../../components/Button';
 import { saveVisaProfile } from '../../api/visa';
+import { getOnboarding } from '../../api/onboarding';
+import { getRouteFromStepCode } from '../../constants/onboardingSteps';
 import { colors, typography, spacing, radius, shadow } from '../../constants/theme';
 import { errorText } from '../../utils/errorText';
 import {
@@ -76,7 +78,13 @@ export default function IdManualScreen() {
     setIsSaving(true);
     try {
       await saveVisaProfile(VISA_PROFILE_KEYS.map((k) => ({ fieldKey: k, value: clean[k] })));
-      router.push('/onboarding/mydata' as Href);
+      // 단계 완료는 서버가 이미 기록했으므로 다음 단계만 물어본다 (보통 ON-003A 마이데이터)
+      const ob = await getOnboarding();
+      if (ob.completed || !ob.currentStep) {
+        router.replace('/chat');
+      } else {
+        router.push(getRouteFromStepCode(ob.currentStep) as Href);
+      }
     } catch (e) {
       const fieldErrors = visaFieldErrorsFromApi(e);
       if (fieldErrors) setErrors(fieldErrors);

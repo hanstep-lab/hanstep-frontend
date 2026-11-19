@@ -2,7 +2,7 @@
 
 import { client } from './client';
 import { USE_MOCK, mockDelay } from './config';
-import { mockOnboardingSummary } from './mock/onboarding';
+import { getMockCurrentStep, mockCompleteStep, mockOnboardingSummary } from './mock/onboarding';
 import type {
   OnboardingProfileResponse,
   OnboardingResponse,
@@ -23,13 +23,14 @@ export const STEP_ORDER: StepCode[] = [
   'SUMMARY_CONFIRM',
 ];
 
-// GET /api/v1/onboarding — 진행 바·이어하기용. (P0 에서는 당장 안 쓰지만 명세대로 넣어둠)
+// GET /api/v1/onboarding — 진행 상태. 체류 정보 직접 저장(서버가 단계 완료 처리) 뒤 다음 화면을 정할 때 쓴다.
 export async function getOnboarding(): Promise<OnboardingResponse> {
   if (USE_MOCK) {
     await mockDelay();
+    const currentStep = getMockCurrentStep();
     return {
-      completed: false,
-      currentStep: 'LANGUAGE',
+      completed: currentStep === null,
+      currentStep,
       steps: STEP_ORDER.map((stepCode) => ({ stepCode, status: 'NOT_STARTED', completedAt: null })),
       profile: { residencePurpose: null },
     };
@@ -71,8 +72,7 @@ export async function updateStep(
 ): Promise<StepUpdateResponse> {
   if (USE_MOCK) {
     await mockDelay();
-    const nextIndex = STEP_ORDER.indexOf(stepCode) + 1;
-    const currentStep = nextIndex < STEP_ORDER.length ? STEP_ORDER[nextIndex] : null;
+    const currentStep = mockCompleteStep(stepCode);
     return {
       stepCode,
       status,

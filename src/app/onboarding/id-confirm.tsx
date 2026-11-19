@@ -15,22 +15,19 @@ import { useOnboardingStore } from '../../store/onboardingStore';
 import { getRouteFromStepCode } from '../../constants/onboardingSteps';
 import { colors, typography, spacing, radius, fonts, shadow } from '../../constants/theme';
 import { errorText } from '../../utils/errorText';
+import {
+  VISA_PROFILE_KEYS,
+  formatDateInput,
+  normalizeVisaProfile,
+  validateVisaProfile,
+  type VisaProfileValues,
+} from '../../utils/visaFields';
 import type { ApiError, DocumentField, DocumentFieldUpdateItem } from '../../types/api';
 
 type EditableKey = DocumentFieldUpdateItem['fieldKey'];
 type Values = Record<EditableKey, string>;
 const EDITABLE_KEYS: EditableKey[] = ['nameEn', 'nationality', 'birthDate', 'visaType', 'stayExpiry'];
 const REQUIRED_KEYS: EditableKey[] = ['nationality', 'birthDate', 'visaType', 'stayExpiry'];
-
-const DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
-
-// 형식(YYYY-MM-DD)과 실제 있는 날짜(13월·2월 30일 같은 값 제외)를 함께 본다
-function isValidDate(s: string): boolean {
-  if (!DATE_RE.test(s)) return false;
-  const [y, m, d] = s.split('-').map(Number);
-  const date = new Date(y, m - 1, d);
-  return date.getFullYear() === y && date.getMonth() === m - 1 && date.getDate() === d;
-}
 
 const FIELD_LABEL: Record<EditableKey, string> = {
   nameEn: '성명',
@@ -40,30 +37,25 @@ const FIELD_LABEL: Record<EditableKey, string> = {
   stayExpiry: '체류 만료일',
 };
 
-// 체류자격 코드 모양: E-9, F-2, E-7-4 (서버는 등록된 코드만 받음)
-const VISA_RE = /^[A-Z]-\d{1,2}(-\d{1,2})?$/;
+// 체류 정보 4칸(국적·생년월일·체류자격·만료일)만 골라낸다. 정리·검사는 직접 입력 화면과 같은 visaFields 규칙
+const stayOf = (v: Values): VisaProfileValues => ({
+  nationality: v.nationality,
+  birthDate: v.birthDate,
+  visaType: v.visaType,
+  stayExpiry: v.stayExpiry,
+});
 
-// 보내기 전 값 정리. OCR 값이나 사용자 입력에 섞인 공백·소문자를 서버 형식에 맞춘다
+// 보내기 전 값 정리. OCR 값이나 사용자 입력에 섞인 공백·소문자를 서버 형식에 맞춘다 ("E9" → "E-9" 포함)
 function normalize(v: Values): Values {
-  const visa = v.visaType.toUpperCase().replace(/\s+/g, '');
-  return {
-    nameEn: v.nameEn.trim().replace(/\s+/g, ' ').toUpperCase(),
-    nationality: v.nationality.trim().toUpperCase(),
-    birthDate: v.birthDate.trim(),
-    // "E9" → "E-9" (OCR 이 하이픈을 빠뜨린 경우)
-    visaType: /^[A-Z]\d/.test(visa) ? `${visa[0]}-${visa.slice(1)}` : visa,
-    stayExpiry: v.stayExpiry.trim(),
-  };
+  return { ...normalizeVisaProfile(stayOf(v)), nameEn: v.nameEn.trim().replace(/\s+/g, ' ').toUpperCase() };
 }
 
-// 확정 전 검사. 서버도 같은 검사를 하지만(400·422) 미리 막아서 바로 안내한다
+// 확정 전 검사. 서버도 같은 검사를 하지만(400·422) 미리 막아서 바로 안내한다. 첫 번째 틀린 칸의 문구 하나만
 function validate(v: Values): string | null {
   if (v.nameEn.length > 100) return '성명은 100자 이하로 입력해 주세요.';
-  if (!/^[A-Z]{3}$/.test(v.nationality)) return '국적은 영문 3자리 코드로 입력해 주세요. (예: PHL)';
-  if (!isValidDate(v.birthDate)) return '생년월일을 숫자 8자리로 정확히 입력해 주세요. (예: 19950312)';
-  if (!VISA_RE.test(v.visaType)) return '체류자격을 영문과 숫자로 입력해 주세요. (예: E-9)';
-  if (!isValidDate(v.stayExpiry)) return '체류 만료일을 숫자 8자리로 정확히 입력해 주세요. (예: 20271004)';
-  return null;
+  const errors = validateVisaProfile(stayOf(v));
+  const first = VISA_PROFILE_KEYS.find((k) => errors[k]);
+  return first ? errors[first] ?? null : null;
 }
 
 // 서버 검사 오류(400 VALIDATION_ERROR·422 INSUFFICIENT_DATA)를 칸 이름이 들어간 문구로.
@@ -80,14 +72,6 @@ function fieldErrorText(e: unknown, sent: EditableKey[]): string | null {
     .filter((l): l is string => l != null);
   if (labels.length === 0) return null;
   return `${[...new Set(labels)].join(', ')} 값을 다시 확인해 주세요.`;
-}
-
-// 숫자만 받아 YYYY-MM-DD 로 하이픈을 자동으로 넣는다. "20271004" → "2027-10-04"
-function formatDateInput(text: string): string {
-  const d = text.replace(/\D/g, '').slice(0, 8);
-  if (d.length <= 4) return d;
-  if (d.length <= 6) return `${d.slice(0, 4)}-${d.slice(4)}`;
-  return `${d.slice(0, 4)}-${d.slice(4, 6)}-${d.slice(6)}`;
 }
 
 // 값 한 줄. OCR 은 어느 칸이든 틀릴 수 있으므로 모든 칸을 입력칸으로 둔다.
@@ -203,6 +187,13 @@ export default function IdConfirmScreen() {
     }
   };
 
+  // 인식 실패·지연 때 대체 경로: 사진 없이 직접 입력 (PUT /visa/profile)
+  const manualLink = (
+    <Pressable onPress={() => router.push('/onboarding/id-manual' as Href)} hitSlop={8}>
+      <Text style={styles.manualLink}>사진 없이 직접 입력하기</Text>
+    </Pressable>
+  );
+
   // 카드 본문: 상태별로 다르게
   let body: ReactNode = null;
   if (documentId == null) {
@@ -221,13 +212,17 @@ export default function IdConfirmScreen() {
         <Pressable style={styles.stateBtn} onPress={retry}>
           <Text style={styles.stateBtnText}>다시 확인하기</Text>
         </Pressable>
+        {manualLink}
       </View>
     );
   } else if (phase === 'failed') {
     body = (
-      <Text style={styles.stateText}>
-        {error ?? '등록증을 읽지 못했어요. 밝은 곳에서 빛 반사 없이 다시 촬영해 주세요.'}
-      </Text>
+      <View style={styles.stateBox}>
+        <Text style={styles.stateText}>
+          {error ?? '등록증을 읽지 못했어요. 밝은 곳에서 빛 반사 없이 다시 촬영해 주세요.'}
+        </Text>
+        {manualLink}
+      </View>
     );
   } else if (isConfirmed) {
     body = <Text style={styles.stateText}>이미 확인을 마친 등록증이에요.</Text>;
@@ -245,21 +240,7 @@ export default function IdConfirmScreen() {
           />
         </View>
 
-        <View style={styles.divider} />
-
-        <View style={styles.fieldBetween}>
-          <View style={[styles.field, { flex: 1 }]}>
-            <Text style={styles.fieldLabel}>외국인등록번호 (ARC No.)</Text>
-            <View style={styles.arcRow}>
-              <Text style={styles.valueMain}>{fieldOf('registrationNo')?.value ?? '-'}</Text>
-              <Ionicons name="eye-off-outline" size={14} color={colors.text.sub} />
-            </View>
-          </View>
-          <View style={styles.maskBadge}>
-            <Text style={styles.maskBadgeText}>마스킹 완료</Text>
-          </View>
-        </View>
-
+        {/* 외국인등록번호는 마스킹값이라도 표시하지 않는다(팀 규칙). 저장 대상도 아님 */}
         <View style={styles.divider} />
 
         <View style={styles.field}>
@@ -485,14 +466,11 @@ const styles = StyleSheet.create({
   },
 
   field: { gap: 2 },
-  fieldBetween: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
   fieldLabel: { ...typography.badge, color: colors.text.sub },
-  arcRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
   twoColRow: { flexDirection: 'row', gap: spacing.md },
   twoColCell: { flex: 1, gap: 2 },
   divider: { height: 1, backgroundColor: colors.border },
 
-  valueMain: { ...typography.h3, color: colors.text.strong },
 
   inputWrap: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
   input: {
@@ -506,14 +484,6 @@ const styles = StyleSheet.create({
   inputWarn: { borderBottomColor: colors.errorText },
   reviewText: { ...typography.badge, fontFamily: fonts.bold, color: colors.errorText },
   hintText: { ...typography.badge, color: colors.text.sub },
-
-  maskBadge: {
-    backgroundColor: colors.background,
-    paddingHorizontal: spacing.sm,
-    paddingVertical: spacing.xs,
-    borderRadius: radius.sm,
-  },
-  maskBadgeText: { ...typography.badge, color: colors.text.sub },
 
   expiryBox: {
     backgroundColor: colors.background,
@@ -539,6 +509,7 @@ const styles = StyleSheet.create({
     borderRadius: radius.full,
   },
   stateBtnText: { ...typography.body, fontFamily: fonts.bold, color: colors.text.inverse },
+  manualLink: { ...typography.body, fontFamily: fonts.bold, color: colors.primary, textDecorationLine: 'underline' },
 
   footerInner: { gap: spacing.sm },
   btnRow: { flexDirection: 'row', gap: spacing.sm },
