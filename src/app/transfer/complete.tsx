@@ -28,7 +28,7 @@ export default function TransferCompleteScreen() {
     return <Redirect href={'/transfer' as Href} />;
   }
 
-  const { sendAmount, receiveAmount, appliedRate, recipient } = result;
+  const { sendAmount, receiveAmount, usdAppliedRate, recipient } = result;
 
   const handleBack = () => {
     reset();
@@ -47,23 +47,23 @@ export default function TransferCompleteScreen() {
 
         <View style={s.summaryCard}>
           <SummaryRow
-            label="보낸 금액"
+            label="출금 금액 (수수료 포함)"
             value={`${fmtNumber(sendAmount.amount)} 원`}
             highlight
           />
           <View style={s.divider} />
           <SummaryRow
             label="받는 분"
-            value={`${recipient.name} (${recipient.relation})`}
+            value={recipient.relation ? `${recipient.name} (${recipient.relation})` : recipient.name}
           />
           <SummaryRow
-            label="수취 예상"
-            value={`약 ${fmtNumber(receiveAmount.amount)} ${receiveAmount.currency}`}
+            label="수취 예상 (참고)"
+            value={receiveAmount ? `약 ${fmtNumber(receiveAmount.amount)} ${receiveAmount.currency}` : '—'}
           />
-          <SummaryRow
-            label="적용 환율"
-            value={`${appliedRate.unit} ${appliedRate.currency} = ${fmtRate(appliedRate.rate)} KRW`}
-          />
+          {/* 송금 환율은 USD 기준(기본 상품). PHP 참고 환율은 송금에 적용하는 값이 아니라 여기서는 쓰지 않는다 */}
+          {usdAppliedRate !== null ? (
+            <SummaryRow label="적용 환율" value={`1 USD = ${fmtRate(usdAppliedRate)} KRW`} />
+          ) : null}
         </View>
 
         <View style={s.btnWrap}>

@@ -86,47 +86,105 @@ export type StepUpdateResponse = {
   currentStep: StepCode | null; // 다음 이동할 단계
 };
 
-// 해외송금 (TR-001). 명세가 아직 없어서 Mock 기준으로 정한 모양. 백엔드와 맞춘 뒤 수정.
+// ── 해외송금 (TRF-01·02, /api/v1/transfers) — TR-001 ─────────────────────────
+// 필리핀도 송금 통화는 USD 다. PHP 금액·환율은 현지에서 바뀌는 참고값이고, 실제 송금 환율은 quotes[].usdAppliedRate
 
 export type TransferRecipient = {
-  name: string;
-  relation: string;     // 관계 (예: 어머니)
+  recipientId: number;
+  name: string;            // 영문 이름
+  relation: string | null; // 관계 (예: 어머니). 없으면 null
   bank: string;
   accountLast4: string;
-  country: string;      // 화면 표시용 국가명
-  countryCode: string;  // ISO 3166 두 글자 (VN)
+  country: string;         // 화면 표시용 국가명 (모르는 코드는 코드 그대로)
+  countryCode: string;     // ISO 3166-1 alpha-2 (PH)
+  currency: string;        // 받는 통화 (PHP)
 };
 
 export type TransferAccount = {
-  name: string;
-  number: string;
-  balance: Money; // 출금가능 잔액
+  name: string | null; // 상품명. 없으면 null
+  number: string;      // 마스킹된 계좌번호 (110-***-**4821)
+  balance: Money;      // 출금가능 잔액
 };
 
 export type TransferPurpose = { code: string; label: string };
 
-// 송금 화면 진입 시 한 번 받는 정보
+// GET /transfers/context — 송금 화면 진입 시 한 번 받는 정보
 export type TransferContext = {
-  recipient: TransferRecipient;
+  recipient: TransferRecipient;    // recipientId 를 안 보내면 어머니 우선
+  recipients: TransferRecipient[]; // 관계를 확인한 받는 분 전체
   account: TransferAccount;
   purpose: TransferPurpose;
   quickAmounts: number[]; // 빠른 금액 버튼 (원)
+  isMock: boolean;
 };
 
-// 적용 환율. unit 외화 = rate 원 (예: 100 VND = 5.43 KRW)
+// PHP 참고 환율(ECB). unit 외화 = rate 원. 송금에 적용하는 환율이 아니다
 export type AppliedRate = {
   currency: string;
   unit: number;
   rate: number;
   sourceLabel: string; // 예: ECB 기준환율 기반 참고값. 문구는 서버가 정함
   asOf: string;        // ECB 기준일 (YYYY-MM-DD)
+  isMock: boolean;
 };
 
-// 보낼 금액을 넣으면 서버가 계산해서 주는 견적
+export type RemittanceProduct = 'SOL_EASY' | 'SOL_FAST'; // 쏠편한(기본) / 쏠빠른(비교)
+
+// 견적에 쓴 환율. 원화 값은 1 외화 당 원
+export type RemittanceQuoteRates = {
+  usdBaseRate: number; // USD 매매기준율
+  usdRateDate: string;
+  usdSource: string;
+  phpRefRate: number | null; // PHP 참고 환율. 없으면 null
+  phpRateDate: string | null;
+  phpSource: string | null;
+  usdPhpRefRate: number | null;
+};
+
+export type RemittanceQuoteSource = {
+  item: string; // 어느 응답 필드의 출처인지
+  title: string;
+  approvalNo: string | null;
+  checkedOn: string;
+};
+
+// 상품 1개의 견적(추정). available=false 면 금액 칸은 null
+export type RemittanceProductQuote = {
+  product: RemittanceProduct;
+  available: boolean;
+  unavailableReason: 'AMOUNT_TOO_SMALL' | 'LIMIT_EXCEEDED' | 'FEE_TABLE_UNAVAILABLE' | null;
+  sendAmountUsd: number | null;
+  spreadPct: number;
+  preferentialPct: number;
+  remittanceCount1y: number | null;
+  usdAppliedRate: number; // 적용 송금 환율 (1 USD 당 원화)
+  krwPrincipal: number | null;
+  fxMarginKrw: number | null; // krwPrincipal 에 이미 포함된 참고값. 출금 총액에 더하지 않는다
+  sendFeeKrw: number | null;
+  telegraphicFeeKrw: number | null;
+  feeUsd: number | null;
+  totalWithdrawKrw: number | null;
+  unusedKrw: number | null; // USD 5,000 수수료 기준에 걸려 남는 원화
+  recipientAmountUsd: number | null;
+  recipientAmountPhpRef: number | null;
+  deliveryType: string; // SWIFT_ACCOUNT / WESTERN_UNION
+  notices: string[];    // INTERMEDIARY_FEE_MAY_APPLY · AMOUNT_CAPPED_AT_FEE_BOUNDARY 등
+  sources: RemittanceQuoteSource[];
+};
+
+// GET /transfers/quote — 내 계좌에서 나갈 원화 총액(수수료 포함)을 넣으면 서버가 계산해서 주는 견적(추정)
 export type TransferQuote = {
-  sendAmount: Money;
-  receiveAmount: Money; // 수취 예상액 (서버가 반올림까지 끝낸 값)
-  appliedRate: AppliedRate;
+  recipientId: number;
+  sendAmount: Money;           // 요청한 출금 총액 그대로
+  receiveAmount: Money | null; // PHP 참고값. PHP 참고 환율이 없거나 기본 상품 견적이 없으면 null
+  appliedRate: AppliedRate | null; // PHP 참고 환율. 없으면 null
+  isReference: boolean; // receiveAmount·appliedRate 가 참고값인지 (항상 true)
+  referenceNotice: string; // LOCAL_PAYOUT_RATE_DIFFERS / PHP_REF_RATE_UNAVAILABLE
+  sendCurrency: string; // 항상 USD
+  defaultProduct: RemittanceProduct; // receiveAmount 의 기준 상품
+  isEstimated: boolean;
+  rates: RemittanceQuoteRates;
+  quotes: RemittanceProductQuote[]; // SOL_EASY, SOL_FAST 순
 };
 
 export type TransferRequest = {
@@ -134,11 +192,12 @@ export type TransferRequest = {
   purposeCode: string;
 };
 
+// 송금 실행 API 가 없어 앱이 만드는 완료 결과(Mock). 금액·환율은 화면에 보여 준 견적 그대로
 export type TransferResult = {
   transferId: string;
-  sendAmount: Money;
-  receiveAmount: Money;
-  appliedRate: AppliedRate;
+  sendAmount: Money;             // 출금 총액
+  receiveAmount: Money | null;   // PHP 참고값
+  usdAppliedRate: number | null; // 기본 상품의 적용 송금 환율 (1 USD 당 원화)
   recipient: TransferRecipient;
   guide: string; // 예: 처리 완료까지 1-2 영업일이 소요돼요.
 };
