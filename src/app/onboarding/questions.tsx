@@ -57,6 +57,9 @@ function parseMan(text: string): number | null {
   return Math.round(n * MAN);
 }
 
+// 서버 API 가 없는 기능(송금처 추가·수정, 자동이체 등록)
+const preparing = () => Alert.alert('준비 중', '곧 사용할 수 있어요.');
+
 // 숫자와 소수점만 남김
 const onlyNumber = (t: string) => t.replace(/[^\d.]/g, '');
 
@@ -93,7 +96,6 @@ export default function QuestionsScreen() {
   const [remitChecked, setRemitChecked] = useState<Set<number>>(new Set()); // lastTransactionId
   const [fixedRows, setFixedRows] = useState<ExpenseRow[]>([]);
   const [varExpense, setVarExpense] = useState('');
-  const [autoTransfer, setAutoTransfer] = useState(true); // 저장 API 없음 (화면에만)
 
   const goalTypes = new Set(goals.map((g) => g.goalType));
   const showLump = goalTypes.has('LUMP_SUM');
@@ -437,7 +439,7 @@ export default function QuestionsScreen() {
                 ) : (
                   <Text style={styles.helperText}>마이데이터를 연결하면 송금 이력을 분석해 드려요.</Text>
                 )}
-                <Pressable style={styles.remitEditBtn} onPress={() => Alert.alert('준비 중', '곧 사용할 수 있어요.')}>
+                <Pressable style={styles.remitEditBtn} onPress={preparing}>
                   <Ionicons name="add-circle-outline" size={15} color={colors.primary} />
                   <Text style={styles.remitEditText}>송금처 추가 / 수정</Text>
                 </Pressable>
@@ -473,8 +475,8 @@ export default function QuestionsScreen() {
                 ))}
               </View>
               <Text style={styles.helperText}>비워 두면 저장하지 않아요.</Text>
-              {/* 자동이체 등록 API 없음: 화면 표시만 */}
-              <Pressable style={styles.autoTransferBox} onPress={() => setAutoTransfer((v) => !v)}>
+              {/* 자동이체 등록 API 없음: 토글은 꺼진 상태로 두고 누르면 "준비 중" (움직이기만 하면 등록된 것으로 오해함) */}
+              <Pressable style={styles.autoTransferBox} onPress={preparing}>
                 <View style={styles.autoTransferLeft}>
                   <Ionicons name="swap-horizontal-outline" size={18} color={colors.text.inverse} />
                   <View>
@@ -483,7 +485,7 @@ export default function QuestionsScreen() {
                   </View>
                 </View>
                 <View style={styles.toggleTrack}>
-                  <View style={[styles.toggleThumb, autoTransfer && styles.toggleThumbOn]} />
+                  <View style={styles.toggleThumb} />
                 </View>
               </Pressable>
             </View>
@@ -728,7 +730,6 @@ const styles = StyleSheet.create({
     backgroundColor: colors.surface,
     alignSelf: 'flex-start' as const,
   },
-  toggleThumbOn: { alignSelf: 'flex-end' as const },
 
   helperText: { ...typography.caption, color: colors.text.sub },
 
