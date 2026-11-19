@@ -6,7 +6,7 @@ import { router, useFocusEffect, useIsFocused, type Href } from 'expo-router';
 import { CameraView, useCameraPermissions } from 'expo-camera';
 import Header from '../../components/Header';
 import { useOnboardingStore } from '../../store/onboardingStore';
-import { resizeForUpload } from '../../utils/image';
+import { prepareIdCardPhoto } from '../../utils/image';
 import { uploadIdCard } from '../../api/document';
 import { colors, typography, spacing, radius, fonts, shadow } from '../../constants/theme';
 import { errorText } from '../../utils/errorText';
@@ -17,6 +17,9 @@ import { ocrTimeMark, ocrTimeStart } from '../../utils/ocrTiming';
 // "직접 정보 입력하기" 버튼. 사진 없이 체류 정보를 저장하는 화면(id-manual, PUT /visa/profile)으로 간다
 const SHOW_MANUAL_ENTRY = true;
 
+// 미리보기 상자 가장자리 ~ 가이드 모서리 거리(px). 촬영 후 이 틀 영역만 잘라 올린다
+const GUIDE_INSET = 8;
+
 function CornerGuide({ pos }: { pos: 'tl' | 'tr' | 'bl' | 'br' }) {
   const isLeft = pos === 'tl' || pos === 'bl';
   const isTop  = pos === 'tl' || pos === 'tr';
@@ -25,8 +28,8 @@ function CornerGuide({ pos }: { pos: 'tl' | 'tr' | 'bl' | 'br' }) {
     <View
       style={[
         styles.corner,
-        isTop  ? { top: 8 }  : { bottom: 8 },
-        isLeft ? { left: 8 } : { right: 8 },
+        isTop  ? { top: GUIDE_INSET }  : { bottom: GUIDE_INSET },
+        isLeft ? { left: GUIDE_INSET } : { right: GUIDE_INSET },
         !isLeft && { alignItems: 'flex-end' },
       ]}
     >
@@ -59,6 +62,7 @@ export default function IdCardScreen() {
   };
 
   const cameraRef = useRef<CameraView>(null);
+  const viewSize = useRef({ width: 0, height: 0 }); // 미리보기 상자 크기. 자를 영역 계산에 쓴다 (다시 그릴 필요 없어 ref)
   const capturingRef = useRef(false); // 두 번 눌림 즉시 잠금
   const [isCameraReady, setIsCameraReady] = useState(false);
   const [isCapturing, setIsCapturing] = useState(false);
@@ -89,8 +93,12 @@ export default function IdCardScreen() {
       ocrTimeStart('촬영 버튼');
       const photo = await cameraRef.current.takePictureAsync();
       ocrTimeMark(`촬영 ${photo.width}x${photo.height}`);
-      const resized = await resizeForUpload(photo);
-      ocrTimeMark(`리사이즈 ${resized.width}x${resized.height}`);
+      const resized = await prepareIdCardPhoto(photo, {
+        viewWidth: viewSize.current.width,
+        viewHeight: viewSize.current.height,
+        inset: GUIDE_INSET,
+      });
+      ocrTimeMark(`자르기·리사이즈 ${resized.width}x${resized.height}`);
       setIdCardFrontUri(resized.uri);
 
       uploading = true;
@@ -143,7 +151,13 @@ export default function IdCardScreen() {
         </View>
 
         <View style={styles.viewfinderWrap}>
-          <View style={styles.viewfinder}>
+          <View
+            style={styles.viewfinder}
+            onLayout={(e) => {
+              const { width, height } = e.nativeEvent.layout;
+              viewSize.current = { width, height };
+            }}
+          >
             {hasPermission ? (
               <>
                 {isFocused && (
