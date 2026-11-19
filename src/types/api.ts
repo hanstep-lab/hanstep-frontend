@@ -86,6 +86,17 @@ export type StepUpdateResponse = {
   currentStep: StepCode | null; // 다음 이동할 단계
 };
 
+// ── 데모 계정 초기화 (POST /api/v1/demo/reset) ─────────────────────────────
+// 지운 건수만 돌려준다. 화면에는 표시하지 않는다
+export type DemoResetResponse = {
+  deletedDocuments: number;
+  deletedDocumentFields: number;
+  deletedOcrJobs: number;
+  deletedOnboardingSteps: number;
+  deletedOriginals: number;
+  failedOriginals: number; // 원본 삭제 실패 수. 실패해도 200
+};
+
 // ── 해외송금 (TRF-01·02, /api/v1/transfers) — TR-001 ─────────────────────────
 // 필리핀도 송금 통화는 USD 다. PHP 금액·환율은 현지에서 바뀌는 참고값이고, 실제 송금 환율은 quotes[].usdAppliedRate
 

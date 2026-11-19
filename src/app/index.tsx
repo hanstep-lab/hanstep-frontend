@@ -3,6 +3,7 @@
 //   - 온보딩 미완료 → currentStep 에 해당하는 온보딩 화면 (처음이면 ON-001 언어)
 //   - 온보딩 완료  → AI 채팅
 // AI 버튼 말고는 시연용 모양이라 "준비 중" 안내만 한다(우리 앱에 해당 기능 없음).
+// 데모 토큰일 때만 '온보딩 다시 보기' 버튼: entry → POST /demo/reset → 앱 저장값 비우기 → ON-001 언어
 
 import { useState } from 'react';
 import { View, Text, Pressable, StyleSheet, Alert, ActivityIndicator, ScrollView } from 'react-native';
@@ -11,10 +12,12 @@ import { Image } from 'expo-image';
 import { router, type Href } from 'expo-router';
 import { entry } from '../api/auth';
 import { getMe } from '../api/user';
+import { isDemoAccount, resetDemo } from '../api/demo';
 import { useAuthStore } from '../store/authStore';
+import { useOnboardingStore } from '../store/onboardingStore';
 import { getRouteFromStepCode } from '../constants/onboardingSteps';
 import { ENTRY_TOKEN } from '../api/config';
-import { colors, fonts, radius, spacing } from '../constants/theme';
+import { colors, fonts, radius, spacing, typography } from '../constants/theme';
 import { errorText } from '../utils/errorText';
 
 const IMG = {
@@ -56,13 +59,16 @@ const preparing = () => Alert.alert('준비 중', '곧 사용할 수 있어요.'
 export default function SolGlobalHome() {
   const insets = useSafeAreaInsets();
   const setToken = useAuthStore((s) => s.setToken);
+  const resetOnboarding = useOnboardingStore((s) => s.reset);
   const [entering, setEntering] = useState(false);
+  const [resetting, setResetting] = useState(false);
   const [showBubble, setShowBubble] = useState(true);
   const [page, setPage] = useState(0);
+  const busy = entering || resetting; // 진입·초기화가 겹치지 않게 두 버튼을 함께 막는다
 
   // AI 버튼: 신한걸음 진입 (SOL 로그인 완료 전제, 진입 토큰으로 JWT 발급)
   const enterShinhan = async () => {
-    if (entering) return;
+    if (busy) return;
     setEntering(true);
     try {
       const entryRes = await entry(ENTRY_TOKEN);
@@ -83,6 +89,32 @@ export default function SolGlobalHome() {
     }
   };
 
+  // 온보딩 다시 보기: 홈에는 아직 토큰이 없어서 entry 로 먼저 받는다.
+  // 초기화 뒤 서버 온보딩은 첫 단계(NOT_STARTED)라 users/me 없이 ON-001 로 간다. 실패하면 앱 저장값은 그대로 둔다
+  const replayOnboarding = async () => {
+    if (busy) return;
+    setResetting(true);
+    try {
+      const entryRes = await entry(ENTRY_TOKEN);
+      setToken(entryRes.accessToken);
+      await resetDemo();
+      resetOnboarding();
+      router.push('/onboarding/language' as Href);
+    } catch {
+      Alert.alert('지금은 다시 볼 수 없어요.', '잠시 후 다시 시도해 주세요.');
+    } finally {
+      setResetting(false);
+    }
+  };
+
+  const confirmReplay = () => {
+    if (busy) return;
+    Alert.alert('온보딩을 처음부터 다시 볼까요?', '등록증 정보도 지워져요.', [
+      { text: '취소', style: 'cancel' },
+      { text: '다시 보기', onPress: replayOnboarding },
+    ]);
+  };
+
   const banner = BANNERS[page];
   const movePage = (delta: number) =>
     setPage((p) => (p + delta + BANNERS.length) % BANNERS.length);
@@ -97,7 +129,7 @@ export default function SolGlobalHome() {
             <Pressable
               style={styles.aiButton}
               onPress={enterShinhan}
-              disabled={entering}
+              disabled={busy}
               accessibilityRole="button"
               accessibilityLabel="신한걸음 AI 시작하기"
             >
@@ -174,6 +206,19 @@ export default function SolGlobalHome() {
           </View>
           <Image source={IMG.chevronRight} style={styles.icon20} />
         </Pressable>
+
+        {/* 데모 시연용: 데모 토큰이 아니면 그리지 않는다 */}
+        {isDemoAccount ? (
+          <Pressable
+            style={[styles.replayBtn, busy && styles.replayBtnBusy]}
+            onPress={confirmReplay}
+            disabled={busy}
+            hitSlop={8}
+            accessibilityRole="button"
+          >
+            <Text style={styles.replayText}>온보딩 다시 보기</Text>
+          </Pressable>
+        ) : null}
       </ScrollView>
 
       {/* SOL 앱 탭 모양 (화면 전환 없음: 홈은 현재 화면, 나머지는 준비 중) */}
@@ -313,6 +358,10 @@ const styles = StyleSheet.create({
   branchText: { flex: 1, gap: 4 },
   branchTitle: { fontFamily: fonts.bold, fontSize: 16, color: S.title },
   branchSub: { fontFamily: fonts.medium, fontSize: 13, color: S.sub },
+
+  replayBtn: { alignSelf: 'center', paddingVertical: spacing.sm, paddingHorizontal: spacing.md },
+  replayBtnBusy: { opacity: 0.5 },
+  replayText: { ...typography.body, color: S.sub, textDecorationLine: 'underline' },
 
   tabBar: {
     flexDirection: 'row',
