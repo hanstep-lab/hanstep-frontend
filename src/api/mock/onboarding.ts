@@ -1,9 +1,23 @@
 // 온보딩 요약 Mock (GET /api/v1/onboarding/summary).
 // 2026-11-19 서버 응답(demo-e9-ph-reyes)을 그대로 옮겼다. daysRemaining·합계·spare 는 서버 계산값이라 고정값으로 둔다.
 // 화면은 이 파일을 직접 import 하지 않고 src/api/onboarding.ts 를 거친다.
-import type { OnboardingSummaryResponse } from '../../types/api';
+import type { OnboardingSummaryResponse, StepCode } from '../../types/api';
+import { ONBOARDING_STEPS } from '../../constants/onboardingSteps';
 import { mockGetGoals } from './goals';
 import { mockGetCommitments } from './commitments';
+
+// 온보딩 진행 상태 Mock. 단계 완료(updateStep)·체류 정보 직접 저장(PUT /visa/profile)이 같이 쓴다.
+// 앱을 새로 켜면 처음(LANGUAGE)부터.
+let mockCurrentStep: StepCode | null = 'LANGUAGE';
+
+export const getMockCurrentStep = () => mockCurrentStep;
+
+// stepCode 를 마치고 다음 단계로. 마지막이면 null(온보딩 완료)
+export function mockCompleteStep(stepCode: StepCode): StepCode | null {
+  const i = ONBOARDING_STEPS.findIndex((s) => s.stepCode === stepCode);
+  mockCurrentStep = ONBOARDING_STEPS[i + 1]?.stepCode ?? null;
+  return mockCurrentStep;
+}
 
 const krw = (amount: number) => ({ amount, currency: 'KRW' });
 

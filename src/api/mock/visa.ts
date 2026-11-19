@@ -8,6 +8,7 @@ import type {
   VisaRoadmapDetailResponse,
   VisaRoadmapResponse,
 } from '../../types/api';
+import { mockCompleteStep } from './onboarding';
 
 // 빈 상태(404 → "아직 진단 결과가 없어요" + [로드맵 만들기])를 Mock 으로 보려면 false 로 바꾼다.
 const MOCK_HAS_ROADMAP_AT_START = true;
@@ -834,8 +835,10 @@ export function mockCreateRoadmap(): VisaRoadmapResponse {
 
 // PUT /visa/profile (사진 없이 직접 입력). 보낸 값을 그대로 돌려준다.
 // daysRemaining 은 서버 계산값을 흉내 낸 고정 숫자(날짜 계산 안 함, 온보딩 요약 Mock 과 같은 값). 화면은 쓰지 않는다
+// 서버처럼 온보딩 ID_DOCUMENT 단계를 완료로 넘긴다(다음 화면은 GET /onboarding 의 currentStep)
 export function mockSaveVisaProfile(items: VisaProfileUpdateItem[]): VisaProfileResponse {
   const valueOf = (key: VisaProfileUpdateItem['fieldKey']) => items.find((i) => i.fieldKey === key)?.value ?? '';
+  mockCompleteStep('ID_DOCUMENT');
   return {
     nationality: valueOf('nationality'),
     birthDate: valueOf('birthDate'),
