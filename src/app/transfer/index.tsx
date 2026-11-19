@@ -7,7 +7,15 @@ import Screen from '../../components/Screen';
 import Button from '../../components/Button';
 import { colors, typography, spacing, radius, fonts, shadow } from '../../constants/theme';
 import { useTransferStore } from '../../store/transferStore';
-import { getTransferContext, getTransferQuote, submitTransfer } from '../../api/transfer';
+import {
+  getTransferContext,
+  getTransferQuote,
+  submitTransfer,
+  canSendQuote,
+  defaultQuoteOf,
+  productLabel,
+  quoteNoticeText,
+} from '../../api/transfer';
 import { fmtNumber, fmtRate, fmtDate } from '../../utils/format';
 import type { ApiError, TransferContext, TransferQuote } from '../../types/api';
 
@@ -75,12 +83,14 @@ export default function TransferScreen() {
   const addAmount = (n: number) => setAmount(Math.min(amount + n, balance));
 
   const handleSubmit = async () => {
+    if (!quote) return;
     setSubmitting(true);
     try {
-      const result = await submitTransfer({
-        sendAmount: { amount, currency: 'KRW' },
-        purposeCode: purpose.code,
-      });
+      const result = await submitTransfer(
+        { sendAmount: { amount, currency: 'KRW' }, purposeCode: purpose.code },
+        quote,
+        recipient,
+      );
       setResult(result);
       router.replace('/transfer/complete' as Href);
     } catch (e) {
@@ -90,7 +100,10 @@ export default function TransferScreen() {
     }
   };
 
-  const canSubmit = amount > 0 && !!quote && !submitting;
+  // 기본 상품으로 보낼 수 없는 금액(예: 수수료보다 작음)이면 송금 버튼을 막는다
+  const canSubmit = amount > 0 && !!quote && canSendQuote(quote) && !submitting;
+  const mainQuote = quote ? defaultQuoteOf(quote) : null;
+  const notice = quote ? quoteNoticeText(quote) : null;
 
   return (
     <Screen
@@ -125,7 +138,7 @@ export default function TransferScreen() {
             </View>
             <View style={s.flex}>
               <Text style={s.recipientName} numberOfLines={1}>
-                {recipient.name} ({recipient.relation})
+                {recipient.relation ? `${recipient.name} (${recipient.relation})` : recipient.name}
               </Text>
               <Text style={s.subText} numberOfLines={1}>
                 {recipient.bank} ****{recipient.accountLast4} · {recipient.country}
@@ -140,7 +153,7 @@ export default function TransferScreen() {
 
       {/* 보낼 금액 */}
       <View style={s.section}>
-        <Text style={s.sectionLabel}>보낼 금액 (내 통장 출금, KRW)</Text>
+        <Text style={s.sectionLabel}>보낼 금액 (수수료 포함 출금 총액, KRW)</Text>
         <View style={[s.card, s.amountCard]}>
           <View style={s.row}>
             <View style={s.amountRow}>
@@ -177,12 +190,14 @@ export default function TransferScreen() {
         </View>
       </View>
 
-      {/* 수취 예상: 서버 견적을 그대로 표시 */}
+      {/* 수취 예상: 서버 견적을 그대로 표시. PHP 금액·환율은 참고값, 송금 환율은 기본 상품의 USD 환율 */}
       <View style={s.preview}>
         <View style={s.row}>
-          <Text style={s.previewLabel}>받는 분 수취 예상</Text>
+          <Text style={s.previewLabel}>받는 분 수취 예상{quote?.isReference === false ? '' : ' (참고)'}</Text>
           <Text style={s.previewValue}>
-            {quote ? `약 ${fmtNumber(quote.receiveAmount.amount)} ${quote.receiveAmount.currency}` : '—'}
+            {quote?.receiveAmount
+              ? `약 ${fmtNumber(quote.receiveAmount.amount)} ${quote.receiveAmount.currency}`
+              : '—'}
           </Text>
         </View>
         {quoteError ? (
@@ -190,14 +205,29 @@ export default function TransferScreen() {
         ) : quoteLoading ? (
           <Text style={s.rateLabel}>예상 금액을 확인하고 있어요.</Text>
         ) : quote ? (
-          <View style={s.row}>
-            <Text style={[s.rateLabel, s.flex]} numberOfLines={2}>
-              적용 환율 ({quote.appliedRate.sourceLabel} · {fmtDate(quote.appliedRate.asOf, { short: true })} 기준)
-            </Text>
-            <Text style={s.rateValue}>
-              {quote.appliedRate.unit} {quote.appliedRate.currency} = {fmtRate(quote.appliedRate.rate)} KRW
-            </Text>
-          </View>
+          <>
+            {mainQuote ? (
+              <View style={s.row}>
+                <Text style={[s.rateLabel, s.flex]} numberOfLines={2}>
+                  적용 환율 ({productLabel(mainQuote.product)} · {fmtDate(quote.rates.usdRateDate, { short: true })} 기준)
+                </Text>
+                <Text style={s.rateValue}>
+                  1 {quote.sendCurrency} = {fmtRate(mainQuote.usdAppliedRate)} KRW
+                </Text>
+              </View>
+            ) : null}
+            {quote.appliedRate ? (
+              <View style={s.row}>
+                <Text style={[s.rateLabel, s.flex]} numberOfLines={2}>
+                  참고 환율 ({quote.appliedRate.sourceLabel} · {fmtDate(quote.appliedRate.asOf, { short: true })} 기준)
+                </Text>
+                <Text style={s.rateValue}>
+                  {quote.appliedRate.unit} {quote.appliedRate.currency} = {fmtRate(quote.appliedRate.rate)} KRW
+                </Text>
+              </View>
+            ) : null}
+            {notice ? <Text style={s.rateLabel}>{notice}</Text> : null}
+          </>
         ) : null}
       </View>
 
@@ -205,9 +235,10 @@ export default function TransferScreen() {
       <View style={s.section}>
         <Text style={s.sectionLabel}>출금 계좌</Text>
         <Pressable style={[s.card, s.row]} onPress={preparingAlert}>
+          {/* 상품명이 없으면 마스킹된 계좌번호를 이름 자리에 한 번만 보여 준다 */}
           <View>
-            <Text style={s.accountName}>{account.name}</Text>
-            <Text style={s.subText}>{account.number}</Text>
+            <Text style={s.accountName}>{account.name ?? account.number}</Text>
+            {account.name ? <Text style={s.subText}>{account.number}</Text> : null}
           </View>
           <Ionicons name="chevron-down" size={16} color={colors.primary} />
         </Pressable>
