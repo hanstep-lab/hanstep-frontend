@@ -3,6 +3,7 @@
 // 화면은 이 파일을 직접 import 하지 않고 src/api/onboarding.ts 를 거친다.
 import type { OnboardingSummaryResponse } from '../../types/api';
 import { mockGetGoals } from './goals';
+import { mockGetCommitments } from './commitments';
 
 const krw = (amount: number) => ({ amount, currency: 'KRW' });
 
@@ -21,22 +22,9 @@ export function mockOnboardingSummary(): OnboardingSummaryResponse {
       daysRemaining: 319,
       monthsRemaining: 10,
     },
-    // ON-004 에서 저장한 목표가 요약에도 보이도록 목표 Mock 의 현재 값을 그대로 쓴다
+    // ON-004·005 에서 저장한 값이 요약에도 보이도록 목표·필수 확보액 Mock 의 현재 값을 그대로 쓴다
     goals: mockGetGoals().goals,
-    commitments: {
-      items: [
-        { id: 1, commitmentType: 'LIVING_MINIMUM', label: '고정생활비', amount: krw(520000), source: 'USER', detectedFromTxnId: null },
-        { id: 2, commitmentType: 'REMITTANCE', label: '가족 송금', amount: krw(700000), source: 'USER', detectedFromTxnId: null },
-        { id: 3, commitmentType: 'VARIABLE_EXPENSE', label: '변동지출', amount: krw(450000), source: 'USER', detectedFromTxnId: null },
-      ],
-      totals: {
-        fixedLiving: krw(520000),
-        remittance: krw(700000),
-        variableExpense: krw(450000),
-        mandatorySaving: krw(0),
-        deductibleTotal: krw(1670000),
-      },
-    },
+    commitments: mockGetCommitments(),
     balance: {
       avgMonthlyIncome: krw(2350000),
       fixedLiving: krw(520000),
