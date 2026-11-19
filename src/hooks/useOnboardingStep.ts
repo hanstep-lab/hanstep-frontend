@@ -47,6 +47,34 @@ export function useOnboardingStep() {
     }
   };
 
+  // 건너뛰기: 현재 단계를 SKIPPED 로 저장한 뒤 응답의 currentStep 으로 이동한다(예: ON-003A '나중에 연결할게요').
+  // isNavigating·navError 는 goNext 와 함께 쓴다.
+  const skip = async () => {
+    if (!step || isNavigating) return;
+    setNavError(null);
+    setIsNavigating(true);
+    try {
+      const res = await updateStep(step.stepCode, 'SKIPPED');
+
+      if (res.onboardingCompleted) {
+        router.replace('/home');
+      } else if (res.currentStep) {
+        const nextRoute = getRouteFromStepCode(res.currentStep);
+        if (isLast) {
+          router.replace(nextRoute as Href);
+        } else {
+          router.push(nextRoute as Href);
+        }
+      } else {
+        router.replace('/home');
+      }
+    } catch (e: any) {
+      setNavError(e?.message ?? '다음 단계로 이동할 수 없어요. 다시 시도해 주세요.');
+    } finally {
+      setIsNavigating(false);
+    }
+  };
+
   return {
     step,
     stage: step?.stage ?? 1,
@@ -54,6 +82,7 @@ export function useOnboardingStep() {
     isFirst,
     isLast,
     goNext,
+    skip,
     isNavigating,
     navError,
   };
