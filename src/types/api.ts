@@ -764,3 +764,59 @@ export type ChatBlock =
   | ChatFxSummaryBlock
   | ChatE74ScoreBlock
   | ChatMissingInputsBlock;
+
+// ── SOL 글로벌론 상품 상세 (CR-002, GET /api/v1/credit/loans/sol-global) ─────────────────
+// 문구(title·desc·label·value·notice)는 서버가 완성해서 준다. 앱은 key 로 행을 찾고 글자를 그대로 보여 준다.
+// 모의 한도(limitEstimate)는 서버가 계산한 값이며 isMock 은 항상 true.
+export type SolGlobalLoanConditionKey = 'salary' | 'visa' | 'nationality' | 'stay' | 'income';
+export type SolGlobalLoanCondition = {
+  key: SolGlobalLoanConditionKey | (string & {});
+  title: string;
+  desc: string; // "조건 설명 · 현재 값"
+  met: boolean;
+};
+
+export type SolGlobalLoanTermKey = 'limit' | 'term' | 'repayment' | 'rate';
+export type SolGlobalLoanTermRow = {
+  key: SolGlobalLoanTermKey | (string & {});
+  label: string;
+  value: string;
+};
+
+export type SolGlobalLoanLimitReason = 'NOT_ELIGIBLE' | 'TERM_TOO_SHORT';
+export type SolGlobalLoanIncomeSource = 'INCOME_RECORD' | 'CONTRACT_SALARY' | 'NONE';
+export type SolGlobalLoanLimitEstimate = {
+  estimatedLimit: Money | null; // 모의 한도. 조건 미충족·기간 6개월 미만이면 null (사유는 reasonCode)
+  reasonCode: SolGlobalLoanLimitReason | null;
+  annualIncome: Money | null;
+  incomeSource: SolGlobalLoanIncomeSource;
+  incomeYear: number | null; // INCOME_RECORD 일 때만
+  latestMaturityOn: string | null; // "2027-09-30"
+  maxTermMonths: number | null;
+  byIncomeRatio: Money | null;
+  byRepayment: Money | null;
+  cap: Money;
+  existingLoans: Money;
+  dsrApplied: boolean;
+  asOfDate: string;
+};
+
+export type SolGlobalLoanResponse = {
+  productTag: string;
+  name: string;
+  summary: string;
+  eligibility: {
+    title: string;
+    source: string;
+    resultLabel: string; // "5개 중 5개 충족"
+    conditions: SolGlobalLoanCondition[]; // salary·visa·nationality·stay·income 순
+  };
+  terms: {
+    title: string;
+    basis: string;
+    rows: SolGlobalLoanTermRow[];
+  };
+  notice: string;
+  limitEstimate: SolGlobalLoanLimitEstimate;
+  isMock: boolean;
+};

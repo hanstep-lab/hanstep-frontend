@@ -1,6 +1,7 @@
 // CR-002 SOL 글로벌론 상품 상세 (Figma 447:2). 데이터는 src/api/credit.ts 에서만 받고 글자를 그대로 보여준다.
 // 입력 없이 보여주기만 하는 화면. 메뉴에 연결하지 않고 /credit/loan 주소로만 연다.
-// 진단과 비교 구역은 CR-001 대안신용 진단이 생긴 뒤 추가.
+// 모의 한도는 Figma "신한걸음 진단과 비교"(447:62) 자리에 둔다. 금액은 서버 값을 표시 형식만 바꿔 보여 주고 계산하지 않는다.
+// 범위 막대(447:74)는 화면에서 비율을 계산해야 해서 넣지 않는다.
 import { useEffect, useState } from 'react';
 import { View, Text, StyleSheet, Alert } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
@@ -9,8 +10,41 @@ import Screen from '../../components/Screen';
 import Button from '../../components/Button';
 import Pill from '../../components/Pill';
 import { colors, typography, spacing, radius, fonts, shadow } from '../../constants/theme';
+import {
+  LOAN_TEXT as T,
+  LIMIT_REASON_TEXT,
+  LIMIT_REASON_FALLBACK,
+  INCOME_SOURCE_TEXT,
+  LOAN_ERROR_TEXT,
+  LOAN_ERROR_FALLBACK,
+} from '../../constants/credit';
 import { getGlobalLoan, type GlobalLoan } from '../../api/credit';
-import type { ApiError } from '../../types/api';
+import { fmtDate, fmtWon } from '../../utils/format';
+import type { ApiError, SolGlobalLoanLimitEstimate } from '../../types/api';
+
+// 오류 코드 → 안내 문구. 서버 메시지는 쓰지 않는다
+function errorText(code: string | undefined): string {
+  if (code && Object.prototype.hasOwnProperty.call(LOAN_ERROR_TEXT, code)) return LOAN_ERROR_TEXT[code];
+  return LOAN_ERROR_FALLBACK;
+}
+
+// 모의 한도 기준 한 줄: "2025년 소득 · 최대 10개월(2027.09.30 만기) 기준". 없는 값은 그 부분만 뺀다
+function basisLine(e: SolGlobalLoanLimitEstimate): string | null {
+  const income =
+    e.incomeSource === 'INCOME_RECORD'
+      ? e.incomeYear != null
+        ? `${e.incomeYear}년 소득`
+        : null
+      : e.incomeSource === 'CONTRACT_SALARY'
+        ? INCOME_SOURCE_TEXT.CONTRACT_SALARY
+        : null;
+  const term =
+    e.maxTermMonths != null
+      ? `최대 ${e.maxTermMonths}개월${e.latestMaturityOn ? `(${fmtDate(e.latestMaturityOn)} 만기)` : ''}`
+      : null;
+  const parts = [income, term].filter((p): p is string => p != null);
+  return parts.length > 0 ? `${parts.join(' · ')} 기준` : null;
+}
 
 export default function GlobalLoanScreen() {
   const [loan, setLoan] = useState<GlobalLoan | null>(null);
@@ -19,25 +53,33 @@ export default function GlobalLoanScreen() {
   useEffect(() => {
     getGlobalLoan()
       .then(setLoan)
-      .catch((e: ApiError) => setError(e.message));
+      .catch((e: ApiError) => setError(errorText(e?.code)));
   }, []);
 
   if (!loan) {
     return (
       <Screen>
-        <Text style={s.stateText}>{error ?? '상품 정보를 불러오는 중이에요.'}</Text>
+        <Text style={s.stateText}>{error ?? T.loading}</Text>
       </Screen>
     );
   }
 
-  const { eligibility, terms } = loan;
+  const { eligibility, terms, limitEstimate } = loan;
+  const estimated = limitEstimate?.estimatedLimit ?? null;
+  const basis = limitEstimate ? basisLine(limitEstimate) : null;
+  const reason =
+    (limitEstimate?.reasonCode && LIMIT_REASON_TEXT[limitEstimate.reasonCode]) || LIMIT_REASON_FALLBACK;
 
   return (
     <Screen
       footer={
         <View style={s.footer}>
-          <Button title="신한 SOL에서 신청하기" showArrow onPress={() => Alert.alert('준비 중', '곧 사용할 수 있어요.')} />
-          <Button title="신한걸음에 물어보기" variant="text" onPress={() => router.push('/(tabs)/chat' as Href)} />
+          <Button
+            title={T.applyButton}
+            showArrow
+            onPress={() => Alert.alert(T.preparingTitle, T.preparingBody)}
+          />
+          <Button title={T.askButton} variant="text" onPress={() => router.push('/(tabs)/chat' as Href)} />
         </View>
       }
     >
@@ -64,9 +106,9 @@ export default function GlobalLoanScreen() {
           {eligibility.conditions.map((c) => (
             <View key={c.key} style={s.condition}>
               <Ionicons
-                name={c.met ? 'checkmark-circle' : 'ellipse-outline'}
+                name={c.met ? 'checkmark-circle' : 'close-circle'}
                 size={20}
-                color={c.met ? colors.primary : colors.disabled}
+                color={c.met ? colors.primary : colors.required.text}
               />
               <View style={s.conditionTexts}>
                 <Text style={s.conditionTitle}>{c.title}</Text>
@@ -86,13 +128,42 @@ export default function GlobalLoanScreen() {
 
         <View style={[s.card, s.termsCard]}>
           {terms.rows.map((row, i) => (
-            <View key={row.label} style={[s.termRow, i > 0 && s.termDivider]}>
+            <View key={row.key} style={[s.termRow, i > 0 && s.termDivider]}>
               <Text style={s.termLabel}>{row.label}</Text>
               <Text style={s.termValue}>{row.value}</Text>
             </View>
           ))}
         </View>
       </View>
+
+      {/* 신한걸음 모의 한도 (Figma 진단과 비교 자리) */}
+      {limitEstimate && (
+        <View style={s.section}>
+          <View style={s.sectionHeader}>
+            <View style={s.titles}>
+              <Text style={s.sectionTitle}>{T.limitTitle}</Text>
+              {!limitEstimate.dsrApplied && <Text style={s.sectionSub}>{T.limitDesc}</Text>}
+            </View>
+            {loan.isMock && <Pill label={T.mockPill} type="step" />}
+          </View>
+
+          <View style={[s.card, s.limitCard]}>
+            <View style={s.limitRow}>
+              <Text style={s.termLabel}>{T.capLabel}</Text>
+              <Text style={s.termValue}>{fmtWon(limitEstimate.cap.amount)}</Text>
+            </View>
+            <View style={s.limitRow}>
+              <Text style={s.termLabel}>{T.estimateLabel}</Text>
+              {estimated && <Text style={s.limitAmount}>{fmtWon(estimated.amount)}</Text>}
+            </View>
+            {estimated ? (
+              basis != null && <Text style={s.limitBasis}>{basis}</Text>
+            ) : (
+              <Text style={s.limitBasis}>{reason}</Text>
+            )}
+          </View>
+        </View>
+      )}
 
       {/* 참고 안내 한 줄 */}
       <View style={s.notice}>
@@ -141,6 +212,12 @@ const s = StyleSheet.create({
   termDivider: { borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: colors.border },
   termLabel: { ...typography.body, color: colors.text.sub },
   termValue: { ...typography.body, fontFamily: fonts.bold, color: colors.text.strong, flexShrink: 1, textAlign: 'right' },
+
+  // 모의 한도 카드 (Figma 447:67)
+  limitCard: { padding: spacing.xl, gap: spacing.md },
+  limitRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', gap: spacing.md },
+  limitAmount: { ...typography.amount, color: colors.primary, flexShrink: 1, textAlign: 'right' },
+  limitBasis: { ...typography.caption, color: colors.text.sub },
 
   notice: { flexDirection: 'row', alignItems: 'flex-start', gap: spacing.xs },
   noticeText: { ...typography.caption, color: colors.text.sub, flex: 1 },
