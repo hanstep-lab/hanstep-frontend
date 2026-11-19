@@ -27,6 +27,8 @@ import {
   type FxAlert,
 } from '../../api/fx';
 import { fmtRate, fmtPercent, fmtDate } from '../../utils/format';
+import { addSeenIds, setPermissionAsked, wasPermissionAsked } from '../../utils/fxAlertStorage';
+import { requestNotificationPermission } from '../../utils/fxNotification';
 import type { ApiError } from '../../types/api';
 
 const FLAGS: Record<AlertCurrency, number> = {
@@ -83,6 +85,8 @@ export default function FxAlertScreen() {
       .then((data) => {
         setAlerts(data);
         setAlertsError(false);
+        // 이 화면에서 본 도달 알림은 "확인함" → ☰ 메뉴 점이 사라진다
+        addSeenIds(data.items.filter((a) => a.status === 'TRIGGERED').map((a) => a.alertId));
       })
       .catch(() => {
         setAlerts(null);
@@ -114,6 +118,11 @@ export default function FxAlertScreen() {
   const register = async () => {
     if (!setup || sameAsCurrent) return;
     setSaving(true);
+    // 처음 등록할 때만 폰 알림 권한을 묻는다. 거절해도 등록은 하고, 도달 시 ☰ 메뉴 점으로만 보인다
+    if (!(await wasPermissionAsked())) {
+      await requestNotificationPermission();
+      await setPermissionAsked();
+    }
     try {
       await createFxAlert({ currency, comparator, targetRate: target });
       loadAlerts();

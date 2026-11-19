@@ -1,8 +1,10 @@
 import { Tabs } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { colors } from '../../constants/theme';
+import { useFxAlertNotifier } from '../../hooks/useFxAlertNotifier';
 
 export default function TabsLayout() {
+  useFxAlertNotifier(); // 처음 켤 때·다시 열 때 목표 환율 도달 확인, 알림 누르면 /fx/alert
   return (
     <Tabs
       screenOptions={{
