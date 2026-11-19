@@ -705,6 +705,19 @@ export type DocumentFieldUpdateItem = {
 };
 export type DocumentFieldsUpdateRequest = { fields: DocumentFieldUpdateItem[] };
 
+// ── 체류 정보 직접 입력 (PUT /api/v1/visa/profile) ─────────────────────────
+// 요청 형식은 DOC-03 과 같지만 키는 4개만, 모두 필수 (nameEn·registrationNo 를 보내면 400)
+export type VisaProfileFieldKey = 'nationality' | 'birthDate' | 'visaType' | 'stayExpiry';
+export type VisaProfileUpdateItem = { fieldKey: VisaProfileFieldKey; value: string };
+export type VisaProfileResponse = {
+  nationality: string; // ISO 3166-1 alpha-3
+  birthDate: string; // YYYY-MM-DD
+  visaType: string; // 체류자격 코드 (E-9 등)
+  stayExpiry: string; // YYYY-MM-DD
+  daysRemaining: number; // 서버 계산값, 지났으면 음수
+  evidenceStatus: string; // 직접 입력이라 'DECLARED'
+};
+
 // ── AI 채팅 카드 (CHT-04 chat.done.blocks, ChatMessage.blocks) ─────────────────
 // 도구가 성공했을 때 서버 코드가 만드는 카드 배열. 없으면 null. 모르는 type 은 앱이 버린다.
 // 형식은 Swagger 채팅 스트림 200 예시(송금·환율·E-7-4 카드)와 blocks 설명을 따른다.
