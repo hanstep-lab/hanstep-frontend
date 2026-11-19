@@ -18,8 +18,12 @@ export default function GoalScreen() {
   const [selected, setSelected] = useState<Set<GoalType>>(new Set());
   // 서버에 저장돼 있던 목표. 다시 저장할 때 목표 금액·시점(ON-005 에서 입력)을 지우지 않으려고 들고 있음
   const [savedGoals, setSavedGoals] = useState<GoalResponse[]>([]);
+  // 저장된 목표를 불러오기 전에는 카드·다음 버튼을 막는다.
+  // 막지 않으면 (1) 불러오기 전에 저장해서 목돈 금액·시점이 지워지고 (2) 늦게 온 응답이 사용자 선택을 덮어씀
+  const [loaded, setLoaded] = useState(false);
 
-  // 처음 들어올 때 저장된 목표를 체크해 둔다. 실패하면 빈 선택으로 시작(화면은 계속 쓸 수 있게)
+  // 처음 들어올 때 저장된 목표를 체크해 둔다.
+  // 실패하면 빈 선택으로 진행 허용 (이때 저장하면 목돈 금액이 비지만, 바로 다음 ON-005 에서 다시 입력함)
   useEffect(() => {
     let cancelled = false;
     getGoals()
@@ -28,7 +32,10 @@ export default function GoalScreen() {
         setSavedGoals(res.goals);
         setSelected(new Set(res.goals.map((g) => g.goalType)));
       })
-      .catch(() => {});
+      .catch(() => {})
+      .finally(() => {
+        if (!cancelled) setLoaded(true);
+      });
     return () => {
       cancelled = true;
     };
@@ -86,6 +93,7 @@ export default function GoalScreen() {
                 key={goal.key}
                 style={[styles.card, on ? styles.cardOn : styles.cardOff]}
                 onPress={() => toggle(goal.key)}
+                disabled={!loaded}
               >
                 <View style={styles.cardLeft}>
                   <View style={styles.cardTitleRow}>
@@ -130,13 +138,15 @@ export default function GoalScreen() {
           title={
             isNavigating
               ? '처리 중...'
-              : count > 0
+              : !loaded
+                ? '저장된 목표를 불러오는 중...'
+                : count > 0
                 ? `선택 완료 (${count}개) - 세부 계획 세우기`
                 : '목표를 선택해 주세요'
           }
           showArrow={!isNavigating && count > 0}
           onPress={() => goNext(save)}
-          disabled={count === 0 || isNavigating}
+          disabled={!loaded || count === 0 || isNavigating}
         />
       </View>
     </SafeAreaView>
