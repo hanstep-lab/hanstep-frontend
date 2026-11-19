@@ -52,7 +52,7 @@ export default function TransferScreen() {
   useEffect(() => {
     getTransferContext()
       .then(setCtx)
-      .catch((e: ApiError) => setCtxError(transferErrorText(e)));
+      .catch((e: ApiError) => setCtxError(transferErrorText(e, '송금 정보를 불러오지 못했어요. 다시 시도해 주세요.')));
   }, []);
 
   // 금액이 바뀌고 0.3초 동안 입력이 없으면 견적 요청 (키 누를 때마다 부르지 않으려고)
@@ -68,7 +68,7 @@ export default function TransferScreen() {
     const timer = setTimeout(() => {
       getTransferQuote(amount)
         .then((q) => !cancelled && setQuote(q))
-        .catch((e: ApiError) => !cancelled && setQuoteError(transferErrorText(e)))
+        .catch((e: ApiError) => !cancelled && setQuoteError(transferErrorText(e, '견적을 불러오지 못했어요. 다시 시도해 주세요.')))
         .finally(() => !cancelled && setQuoteLoading(false));
     }, 300);
     return () => {

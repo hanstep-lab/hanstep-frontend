@@ -6,6 +6,7 @@ import { client } from './client';
 import { USE_MOCK, mockDelay } from './config';
 import { MOCK_TRANSFER_CONTEXT, mockQuote, mockSubmit } from './mock/transfer';
 import { fmtNumber } from '../utils/format';
+import { errorText } from '../utils/errorText';
 import type {
   ApiError,
   RemittanceProduct,
@@ -103,10 +104,11 @@ export function quoteNoticeText(quote: TransferQuote): string | null {
 
 // ── 오류 문구 ─────────────────────────────────────────
 // 서버 message 는 사용자 언어(예: Reyes 는 vi)로 와서 아는 code 는 한국어 문구를 고른다(utils/errorText 관례).
-// 여기 없는 code 는 서버 message 를 그대로 보여 준다.
+// 여기 없는 code 는 공통 errorText(네트워크·401·5xx 등)로 넘기고, 그래도 없으면 fallback 문구.
 const ERROR_TEXT: Record<string, string> = {
   INSUFFICIENT_BALANCE: '출금가능 잔액보다 많이 보낼 수 없어요.',
   INSUFFICIENT_DATA: '출금할 계좌를 찾지 못해 송금할 수 없어요. 마이데이터 연결을 확인해 주세요.', // 출금 계좌 없음(NO_ACCOUNT)
 };
 
-export const transferErrorText = (e: ApiError) => ERROR_TEXT[e.code] ?? e.message;
+export const transferErrorText = (e: ApiError, fallback: string) =>
+  ERROR_TEXT[e.code] ?? errorText(e, fallback);
