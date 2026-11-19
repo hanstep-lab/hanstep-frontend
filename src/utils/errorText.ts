@@ -6,6 +6,7 @@ import type { ApiError } from '../types/api';
 const BY_CODE: Record<string, string> = {
   NETWORK: '네트워크 연결을 확인하고 다시 시도해 주세요.',
   HTTP_401: '접속 정보가 만료됐어요. 앱을 다시 시작해 주세요.',
+  UNAUTHORIZED: '접속 정보가 만료됐어요. 앱을 다시 시작해 주세요.', // 서버가 401 때 주는 code (토큰 만료 등)
   VALIDATION_ERROR: '입력한 값을 다시 확인해 주세요.',
   INVALID_STATE: '지금은 처리할 수 없어요. 화면을 다시 열어 주세요.',
   RESOURCE_NOT_FOUND: '정보를 찾을 수 없어요. 처음부터 다시 시도해 주세요.',
