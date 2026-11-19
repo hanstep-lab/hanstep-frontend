@@ -12,6 +12,7 @@ import { getRouteFromStepCode } from '../constants/onboardingSteps';
 import { ENTRY_TOKEN } from '../api/config';
 import { colors, typography, spacing } from '../constants/theme';
 import type { ApiError } from '../types/api';
+import { errorText } from '../utils/errorText';
 
 type Status = 'loading' | 'error';
 
@@ -40,7 +41,7 @@ export default function IndexScreen() {
       }
     } catch (e) {
       const err = e as ApiError;
-      setErrorMsg(err.message ?? '앱을 시작할 수 없어요. 잠시 후 다시 시도해 주세요.');
+      setErrorMsg(errorText(err, '앱을 시작할 수 없어요. 잠시 후 다시 시도해 주세요.'));
       setStatus('error');
     }
   };

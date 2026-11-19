@@ -27,8 +27,11 @@ export type StepStatus = 'NOT_STARTED' | 'IN_PROGRESS' | 'COMPLETED' | 'SKIPPED'
 export type UserStatus = 'ACTIVE' | 'SUSPENDED' | 'WITHDRAWN';
 
 // 오류 응답. 서버는 { code, message, details, requestId } 로 주지만
-// 화면에서 쓰는 건 code·message 뿐이라 client.ts 에서 이 모양으로 통일한다.
-export type ApiError = { code: string; message: string };
+// 화면에서 쓰는 것만 client.ts 에서 이 모양으로 통일한다.
+// message 는 서버가 사용자 언어(예: vi)로 줄 수 있어 화면 문구로 쓰지 않는다 → utils/errorText.ts 로 code 기준 한국어 문구
+// fields: VALIDATION_ERROR 일 때 어느 칸이 왜 틀렸는지 (details.fields). field 는 요청 경로 예: "fields[0].value"
+export type ApiFieldError = { field: string; reason: string };
+export type ApiError = { code: string; message: string; fields?: ApiFieldError[] };
 
 // ── Auth (AUTH-01) ─────────────────────────────────────
 export type EntryRequest = { entryToken: string };

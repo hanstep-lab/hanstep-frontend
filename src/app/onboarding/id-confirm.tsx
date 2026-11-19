@@ -14,7 +14,8 @@ import { useIdDocument } from '../../hooks/useIdDocument';
 import { useOnboardingStore } from '../../store/onboardingStore';
 import { getRouteFromStepCode } from '../../constants/onboardingSteps';
 import { colors, typography, spacing, radius, fonts, shadow } from '../../constants/theme';
-import type { DocumentField, DocumentFieldUpdateItem } from '../../types/api';
+import { errorText } from '../../utils/errorText';
+import type { ApiError, DocumentField, DocumentFieldUpdateItem } from '../../types/api';
 
 type EditableKey = DocumentFieldUpdateItem['fieldKey'];
 type Values = Record<EditableKey, string>;
@@ -31,13 +32,54 @@ function isValidDate(s: string): boolean {
   return date.getFullYear() === y && date.getMonth() === m - 1 && date.getDate() === d;
 }
 
-// 확정 전 검사. 서버도 같은 검사를 하지만(422) 미리 막아서 바로 안내한다
+const FIELD_LABEL: Record<EditableKey, string> = {
+  nameEn: '성명',
+  nationality: '국적',
+  birthDate: '생년월일',
+  visaType: '체류자격',
+  stayExpiry: '체류 만료일',
+};
+
+// 체류자격 코드 모양: E-9, F-2, E-7-4 (서버는 등록된 코드만 받음)
+const VISA_RE = /^[A-Z]-\d{1,2}(-\d{1,2})?$/;
+
+// 보내기 전 값 정리. OCR 값이나 사용자 입력에 섞인 공백·소문자를 서버 형식에 맞춘다
+function normalize(v: Values): Values {
+  const visa = v.visaType.toUpperCase().replace(/\s+/g, '');
+  return {
+    nameEn: v.nameEn.trim().replace(/\s+/g, ' ').toUpperCase(),
+    nationality: v.nationality.trim().toUpperCase(),
+    birthDate: v.birthDate.trim(),
+    // "E9" → "E-9" (OCR 이 하이픈을 빠뜨린 경우)
+    visaType: /^[A-Z]\d/.test(visa) ? `${visa[0]}-${visa.slice(1)}` : visa,
+    stayExpiry: v.stayExpiry.trim(),
+  };
+}
+
+// 확정 전 검사. 서버도 같은 검사를 하지만(400·422) 미리 막아서 바로 안내한다
 function validate(v: Values): string | null {
+  if (v.nameEn.length > 100) return '성명은 100자 이하로 입력해 주세요.';
   if (!/^[A-Z]{3}$/.test(v.nationality)) return '국적은 영문 3자리 코드로 입력해 주세요. (예: PHL)';
   if (!isValidDate(v.birthDate)) return '생년월일을 숫자 8자리로 정확히 입력해 주세요. (예: 19950312)';
-  if (!v.visaType) return '체류자격을 입력해 주세요. (예: E-9)';
+  if (!VISA_RE.test(v.visaType)) return '체류자격을 영문과 숫자로 입력해 주세요. (예: E-9)';
   if (!isValidDate(v.stayExpiry)) return '체류 만료일을 숫자 8자리로 정확히 입력해 주세요. (예: 20271004)';
   return null;
+}
+
+// 서버 검사 오류(400 VALIDATION_ERROR·422 INSUFFICIENT_DATA)를 칸 이름이 들어간 문구로.
+// field 는 "fields[0].value"(보낸 배열 순서) 또는 "stayExpiry" 처럼 올 수 있다
+function fieldErrorText(e: unknown, sent: EditableKey[]): string | null {
+  const fields = (e as ApiError | null)?.fields;
+  if (!fields || fields.length === 0) return null;
+  const labels = fields
+    .map((f) => {
+      const idx = f.field.match(/^fields\[(\d+)\]/);
+      const key = idx ? sent[Number(idx[1])] : EDITABLE_KEYS.find((k) => f.field.includes(k));
+      return key ? FIELD_LABEL[key] : null;
+    })
+    .filter((l): l is string => l != null);
+  if (labels.length === 0) return null;
+  return `${[...new Set(labels)].join(', ')} 값을 다시 확인해 주세요.`;
 }
 
 // 숫자만 받아 YYYY-MM-DD 로 하이픈을 자동으로 넣는다. "20271004" → "2027-10-04"
@@ -138,8 +180,11 @@ export default function IdConfirmScreen() {
     if (!doc) return;
     setNavError(null);
 
-    if (!isConfirmed && values) {
-      const message = validate(values);
+    // 정리한 값을 화면에도 반영해서, 사용자가 보는 값 = 서버에 보내는 값
+    const clean = !isConfirmed && values ? normalize(values) : null;
+    if (clean) {
+      setValues(clean);
+      const message = validate(clean);
       if (message) {
         setNavError(message);
         return;
@@ -147,19 +192,20 @@ export default function IdConfirmScreen() {
     }
 
     setIsNavigating(true);
+    let sent: EditableKey[] = [];
     try {
-      if (!isConfirmed && values) {
+      if (clean) {
         // 화면 값을 모두 보낸다. 서버가 OCR 값과 같으면 CONFIRMED, 다르면 CORRECTED 로 기록
-        const items = EDITABLE_KEYS.filter((k) => values[k] !== '').map((k) => ({
-          fieldKey: k,
-          value: values[k],
-        }));
-        await updateDocumentFields(doc.documentId, items);
+        sent = EDITABLE_KEYS.filter((k) => clean[k] !== '');
+        await updateDocumentFields(
+          doc.documentId,
+          sent.map((k) => ({ fieldKey: k, value: clean[k] })),
+        );
         await confirmDocument(doc.documentId);
       }
       await goNextStep();
-    } catch (e: any) {
-      setNavError(e?.message ?? '다음 단계로 이동할 수 없어요. 다시 시도해 주세요.');
+    } catch (e) {
+      setNavError(fieldErrorText(e, sent) ?? errorText(e, '다음 단계로 이동할 수 없어요. 다시 시도해 주세요.'));
     } finally {
       setIsNavigating(false);
     }

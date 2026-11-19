@@ -6,7 +6,7 @@
 import axios, { AxiosError } from 'axios';
 import { API_URL } from './config';
 import { useAuthStore } from '../store/authStore';
-import type { ApiError } from '../types/api';
+import type { ApiError, ApiFieldError } from '../types/api';
 
 export const client = axios.create({
   baseURL: API_URL,
@@ -23,14 +23,18 @@ client.interceptors.request.use((config) => {
   return config;
 });
 
-// 응답 인터셉터: 오류를 항상 { code, message } 로 바꿔서 reject
+// 응답 인터셉터: 오류를 항상 { code, message, fields? } 로 바꿔서 reject
 client.interceptors.response.use(
   (response) => response,
-  (error: AxiosError<{ code?: string; message?: string }>) => {
+  (error: AxiosError<{ code?: string; message?: string; details?: { fields?: unknown } }>) => {
     const data = error.response?.data;
+    const fields = Array.isArray(data?.details?.fields)
+      ? (data.details.fields as ApiFieldError[]).filter((f) => typeof f?.field === 'string')
+      : undefined;
     const apiError: ApiError = {
       code: data?.code ?? (error.response ? `HTTP_${error.response.status}` : 'NETWORK'),
       message: data?.message ?? error.message ?? '알 수 없는 오류가 발생했어요.',
+      ...(fields && fields.length > 0 ? { fields } : {}),
     };
     return Promise.reject(apiError);
   },
