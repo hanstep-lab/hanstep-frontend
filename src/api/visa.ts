@@ -4,7 +4,7 @@
 // 점수·D-day·날짜·개월 수는 서버(Mock) 값을 그대로 쓰고 표시 형식만 바꾼다 (더하기·빼기 계산 없음).
 import { client } from './client';
 import { USE_MOCK, mockDelay } from './config';
-import { mockCreateRoadmap, mockLatestE74, mockLatestRoadmap } from './mock/visa';
+import { mockCreateRoadmap, mockLatestE74, mockLatestRoadmap, mockSaveVisaProfile } from './mock/visa';
 import { getOnboardingSummary } from './onboarding';
 import { fmtDate, fmtNumber } from '../utils/format';
 import type {
@@ -12,6 +12,8 @@ import type {
   E74AssessmentDetailResponse,
   E74Improvement,
   SummaryVisa,
+  VisaProfileResponse,
+  VisaProfileUpdateItem,
   VisaRoadmapDetailResponse,
   VisaRoadmapResponse,
   VisaRoadmapScoreItem,
@@ -383,4 +385,18 @@ export async function getVisaScreen(): Promise<VisaScreenData> {
   ]);
   if (!detail) return { kind: 'empty' };
   return { kind: 'ready', view: toView(detail, e74, summaryVisa) };
+}
+
+// ── 체류 정보 직접 입력 ─────────────────────────────────────────
+
+// PUT /api/v1/visa/profile — 사진 없이 국적·생년월일·체류자격·체류 만료일 4개를 저장한다.
+// 서버가 온보딩 ID_DOCUMENT 단계를 COMPLETED 로 기록하므로 화면은 updateStep 을 부르지 않는다.
+// 400 VALIDATION_ERROR 는 client.ts 가 fields(칸별 오류)로 바꿔 준다
+export async function saveVisaProfile(fields: VisaProfileUpdateItem[]): Promise<VisaProfileResponse> {
+  if (USE_MOCK) {
+    await mockDelay();
+    return mockSaveVisaProfile(fields);
+  }
+  const res = await client.put<VisaProfileResponse>('/api/v1/visa/profile', { fields });
+  return res.data;
 }

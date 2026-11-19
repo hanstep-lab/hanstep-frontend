@@ -11,9 +11,8 @@ import { uploadIdCard } from '../../api/document';
 import { colors, typography, spacing, radius, fonts, shadow } from '../../constants/theme';
 import { errorText } from '../../utils/errorText';
 
-// "직접 정보 입력하기" 버튼. 사진 없이 체류 정보를 저장하는 API(VIS-02 PATCH /visa/profile)가
-// 아직 서버에 없어서 숨겨 둔다. API 가 생기면 true 로 바꾸고 이동 화면을 연결할 것
-const SHOW_MANUAL_ENTRY = false;
+// "직접 정보 입력하기" 버튼. 사진 없이 체류 정보를 저장하는 화면(id-manual, PUT /visa/profile)으로 간다
+const SHOW_MANUAL_ENTRY = true;
 
 function CornerGuide({ pos }: { pos: 'tl' | 'tr' | 'bl' | 'br' }) {
   const isLeft = pos === 'tl' || pos === 'bl';
@@ -36,7 +35,7 @@ function CornerGuide({ pos }: { pos: 'tl' | 'tr' | 'bl' | 'br' }) {
 }
 
 export default function IdCardScreen() {
-  const goToConfirm = () => router.push('/onboarding/id-confirm' as Href);
+  const goToManual = () => router.push('/onboarding/id-manual' as Href);
 
   const [permission, requestPermission] = useCameraPermissions();
   const hasPermission = permission?.granted === true;
@@ -208,7 +207,7 @@ export default function IdCardScreen() {
           {SHOW_MANUAL_ENTRY && (
             <View style={styles.manualWrap}>
               <Text style={styles.manualHint}>인식이 잘 되지 않나요?</Text>
-              <Pressable style={styles.manualBtn} onPress={goToConfirm}>
+              <Pressable style={styles.manualBtn} onPress={goToManual}>
                 <Text style={styles.manualBtnText}>직접 정보 입력하기</Text>
                 <Ionicons name="chevron-forward" size={12} color={colors.primary} />
               </Pressable>

@@ -86,6 +86,17 @@ export type StepUpdateResponse = {
   currentStep: StepCode | null; // 다음 이동할 단계
 };
 
+// ── 데모 계정 초기화 (POST /api/v1/demo/reset) ─────────────────────────────
+// 지운 건수만 돌려준다. 화면에는 표시하지 않는다
+export type DemoResetResponse = {
+  deletedDocuments: number;
+  deletedDocumentFields: number;
+  deletedOcrJobs: number;
+  deletedOnboardingSteps: number;
+  deletedOriginals: number;
+  failedOriginals: number; // 원본 삭제 실패 수. 실패해도 200
+};
+
 // ── 해외송금 (TRF-01·02, /api/v1/transfers) — TR-001 ─────────────────────────
 // 필리핀도 송금 통화는 USD 다. PHP 금액·환율은 현지에서 바뀌는 참고값이고, 실제 송금 환율은 quotes[].usdAppliedRate
 
@@ -682,6 +693,7 @@ export type DocumentResponse = {
   failureCode: string | null;
   ocrJob: DocumentOcrJob | null;
   fields: DocumentField[]; // OCR 결과 전에는 빈 배열
+  daysRemaining: number | null; // 저장된 체류 만료일까지 남은 일수(서버 계산값, 지났으면 음수). 만료일이 없거나 확정 후에는 null
   uploadedAt: string;
   confirmedAt: string | null;
 };
@@ -692,6 +704,19 @@ export type DocumentFieldUpdateItem = {
   value: string;
 };
 export type DocumentFieldsUpdateRequest = { fields: DocumentFieldUpdateItem[] };
+
+// ── 체류 정보 직접 입력 (PUT /api/v1/visa/profile) ─────────────────────────
+// 요청 형식은 DOC-03 과 같지만 키는 4개만, 모두 필수 (nameEn·registrationNo 를 보내면 400)
+export type VisaProfileFieldKey = 'nationality' | 'birthDate' | 'visaType' | 'stayExpiry';
+export type VisaProfileUpdateItem = { fieldKey: VisaProfileFieldKey; value: string };
+export type VisaProfileResponse = {
+  nationality: string; // ISO 3166-1 alpha-3
+  birthDate: string; // YYYY-MM-DD
+  visaType: string; // 체류자격 코드 (E-9 등)
+  stayExpiry: string; // YYYY-MM-DD
+  daysRemaining: number; // 서버 계산값, 지났으면 음수
+  evidenceStatus: string; // 직접 입력이라 'DECLARED'
+};
 
 // ── AI 채팅 카드 (CHT-04 chat.done.blocks, ChatMessage.blocks) ─────────────────
 // 도구가 성공했을 때 서버 코드가 만드는 카드 배열. 없으면 null. 모르는 type 은 앱이 버린다.

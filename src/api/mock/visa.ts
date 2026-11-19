@@ -1,7 +1,13 @@
 // VS-001 비자 로드맵·E-7-4 사전진단 Mock.
 // 2026-11-18 서버 응답(demo-e9-ph-reyes, POST /visa/roadmaps {} 1회 후 GET latest 2개)을 그대로 옮겼다.
 // 서버 모드와 화면이 같게 하려고 값·모양을 바꾸지 않는다. 화면은 이 파일을 직접 import 하지 않고 src/api/visa.ts 를 거친다.
-import type { E74AssessmentDetailResponse, VisaRoadmapDetailResponse, VisaRoadmapResponse } from '../../types/api';
+import type {
+  E74AssessmentDetailResponse,
+  VisaProfileResponse,
+  VisaProfileUpdateItem,
+  VisaRoadmapDetailResponse,
+  VisaRoadmapResponse,
+} from '../../types/api';
 
 // 빈 상태(404 → "아직 진단 결과가 없어요" + [로드맵 만들기])를 Mock 으로 보려면 false 로 바꾼다.
 const MOCK_HAS_ROADMAP_AT_START = true;
@@ -824,4 +830,18 @@ export function mockCreateRoadmap(): VisaRoadmapResponse {
   const reused = mockHasRoadmap;
   mockHasRoadmap = true;
   return { roadmapId: ROADMAP_DETAIL.roadmapId, reused, roadmap: ROADMAP_DETAIL.roadmap };
+}
+
+// PUT /visa/profile (사진 없이 직접 입력). 보낸 값을 그대로 돌려준다.
+// daysRemaining 은 서버 계산값을 흉내 낸 고정 숫자(날짜 계산 안 함, 온보딩 요약 Mock 과 같은 값). 화면은 쓰지 않는다
+export function mockSaveVisaProfile(items: VisaProfileUpdateItem[]): VisaProfileResponse {
+  const valueOf = (key: VisaProfileUpdateItem['fieldKey']) => items.find((i) => i.fieldKey === key)?.value ?? '';
+  return {
+    nationality: valueOf('nationality'),
+    birthDate: valueOf('birthDate'),
+    visaType: valueOf('visaType'),
+    stayExpiry: valueOf('stayExpiry'),
+    daysRemaining: 319,
+    evidenceStatus: 'DECLARED',
+  };
 }

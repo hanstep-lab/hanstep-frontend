@@ -31,6 +31,7 @@ export function mockUpload(): DocumentResponse {
     failureCode: null,
     ocrJob: { jobId: 101, status: 'QUEUED', publishStatus: 'PUBLISHED', errorCode: null, retryable: false },
     fields: [],
+    daysRemaining: null, // 체류 만료일이 아직 없음
     uploadedAt: new Date().toISOString(),
     confirmedAt: null,
   };
@@ -51,10 +52,16 @@ export function mockGet(): DocumentResponse {
   return doc;
 }
 
+// 체류 만료일을 저장했을 때의 남은 일수. 서버 계산값을 흉내 낸 고정 숫자(날짜 계산 안 함, 온보딩 요약 Mock 과 같은 값)
+const MOCK_DAYS_REMAINING = 319;
+
 export function mockUpdateFields(items: DocumentFieldUpdateItem[]): DocumentResponse {
   if (!doc) throw { code: 'NOT_FOUND', message: '문서를 찾을 수 없어요.' };
+  const expiry = items.find((i) => i.fieldKey === 'stayExpiry');
   doc = {
     ...doc,
+    // 만료일을 보내지 않았으면 이전 값 유지, 빈 값이면 null
+    daysRemaining: expiry ? (expiry.value !== '' ? MOCK_DAYS_REMAINING : null) : doc.daysRemaining,
     fields: doc.fields.map((f) => {
       const item = items.find((i) => i.fieldKey === f.fieldKey);
       if (!item) return f;
@@ -72,6 +79,7 @@ export function mockConfirm(): DocumentResponse {
     status: 'CONFIRMED',
     confirmedAt: new Date().toISOString(),
     fields: doc.fields.map((f) => ({ ...f, value: null })),
+    daysRemaining: null, // 확정 후에는 null (ONB-04 의 visa.daysRemaining 을 씀)
   };
   return doc;
 }
