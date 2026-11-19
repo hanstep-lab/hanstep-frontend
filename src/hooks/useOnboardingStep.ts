@@ -6,6 +6,7 @@ import { useState } from 'react';
 import { router, usePathname, Href } from 'expo-router';
 import { ONBOARDING_STEPS, TOTAL_STAGES, getRouteFromStepCode } from '../constants/onboardingSteps';
 import { updateStep } from '../api/onboarding';
+import type { StepUpdateRequest } from '../types/api';
 
 export function useOnboardingStep() {
   const [isNavigating, setIsNavigating] = useState(false);
@@ -19,13 +20,17 @@ export function useOnboardingStep() {
 
   // beforeComplete: 단계 완료 API 전에 실행할 비동기 작업(예: 언어 변경, 프로필 저장).
   // 여기서 throw 하면 updateStep 은 호출되지 않고 navError 로 처리된다.
-  const goNext = async (beforeComplete?: () => Promise<void>) => {
+  // status: 단계 저장 상태. 기본 COMPLETED, 건너뛰기만 SKIPPED (예: ON-003A '나중에 연결할게요')
+  const goNext = async (
+    beforeComplete?: () => Promise<void>,
+    status: StepUpdateRequest['status'] = 'COMPLETED',
+  ) => {
     if (!step || isNavigating) return;
     setNavError(null);
     setIsNavigating(true);
     try {
       if (beforeComplete) await beforeComplete();
-      const res = await updateStep(step.stepCode);
+      const res = await updateStep(step.stepCode, status);
 
       if (res.onboardingCompleted) {
         router.replace('/home');
