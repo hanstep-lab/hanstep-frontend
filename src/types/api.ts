@@ -722,11 +722,21 @@ export type VisaProfileResponse = {
 // 도구가 성공했을 때 서버 코드가 만드는 카드 배열. 없으면 null. 모르는 type 은 앱이 버린다.
 // 형식은 Swagger 채팅 스트림 200 예시(송금·환율·E-7-4 카드)와 blocks 설명을 따른다.
 
+// 받는 분 관계 코드 (백엔드 DB ENUM 7개)
+export type RemittanceRelationship =
+  | 'MOTHER'
+  | 'FATHER'
+  | 'SPOUSE'
+  | 'CHILD'
+  | 'SIBLING'
+  | 'SELF'
+  | 'OTHER';
+
 // quote_remittance → 송금 확인 카드. 받는 분 필드 이름이 송금 API(TransferRecipient)와 다르다
 export type ChatRemittanceRecipient = {
   recipientId: number;
   nameEn: string;
-  relationship: string; // 예: MOTHER. 전체 값 목록은 Swagger 에 없음
+  relationship: string; // 코드값. 아는 값은 RemittanceRelationship, 모르는 값이 와도 받는다
   bankName: string;
   accountLast4: string;
   countryCode: string;

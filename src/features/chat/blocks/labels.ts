@@ -1,12 +1,19 @@
 // 채팅 카드(CHT-04 blocks)에 쓰는 화면 문구 표. 서버는 코드값만 주고 문구는 앱이 정한다.
 // 표에 없는 값은 null 을 돌려주고, 카드는 그 줄을 숨긴다 (코드값을 그대로 보여 주지 않는다).
-import type { FxRateSource } from '../../../types/api';
+import type { FxRateSource, RemittanceRelationship } from '../../../types/api';
 
-// 받는 분 관계 (REMITTANCE_CONFIRM recipient.relationship). 전체 값 목록이 Swagger 에 없어 확인된 MOTHER 만
-const RELATIONSHIP_TEXT: Record<string, string> = {
+// 받는 분 관계 (REMITTANCE_CONFIRM recipient.relationship). 백엔드 DB ENUM 7개 기준
+const RELATIONSHIP_TEXT: Record<RemittanceRelationship, string> = {
   MOTHER: '어머니',
+  FATHER: '아버지',
+  SPOUSE: '배우자',
+  CHILD: '자녀',
+  SIBLING: '형제·자매',
+  SELF: '본인',
+  OTHER: '기타',
 };
-export const relationshipText = (code: string): string | null => RELATIONSHIP_TEXT[code] ?? null;
+export const relationshipText = (code: string): string | null =>
+  RELATIONSHIP_TEXT[code as RemittanceRelationship] ?? null;
 
 // 환율 출처 (FX_SUMMARY_CARD currencies[].source). "실시간" 같은 말은 쓰지 않는다
 const FX_SOURCE_TEXT: Partial<Record<FxRateSource, string>> = {
