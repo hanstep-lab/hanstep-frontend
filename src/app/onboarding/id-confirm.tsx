@@ -358,12 +358,14 @@ export default function IdConfirmScreen() {
           </Text>
         </View>
 
-        <View style={styles.ocrBanner}>
-          {idCardFrontUri ? (
-            <Image source={{ uri: idCardFrontUri }} style={StyleSheet.absoluteFill} contentFit="cover" />
-          ) : null}
-          <View style={styles.ocrPill}>
-            <Text style={styles.ocrPillText}>{bannerText}</Text>
+        <View style={styles.ocrBannerWrap}>
+          <View style={styles.ocrBanner}>
+            {idCardFrontUri ? (
+              <Image source={{ uri: idCardFrontUri }} style={StyleSheet.absoluteFill} contentFit="cover" />
+            ) : null}
+            <View style={styles.ocrPill}>
+              <Text style={styles.ocrPillText}>{bannerText}</Text>
+            </View>
           </View>
         </View>
 
@@ -417,9 +419,12 @@ const styles = StyleSheet.create({
   title: { ...typography.h2, color: colors.text.strong },
   subtitle: { ...typography.subtitle, color: colors.text.sub },
 
+  // 촬영 화면(id-card.tsx viewfinder)과 같은 크기·비율(실제 카드 340:215). 찍을 때 본 모습 그대로 보이게
+  ocrBannerWrap: { paddingHorizontal: spacing.xl, alignItems: 'center' },
   ocrBanner: {
-    marginHorizontal: spacing.xl,
-    height: 144,
+    width: '100%',
+    maxWidth: 340,
+    aspectRatio: 340 / 215,
     backgroundColor: colors.idCard.bg,
     borderRadius: radius.lg,
     alignItems: 'center',
