@@ -13,7 +13,7 @@ export type SuggestionChip = {
 };
 
 // 칩·메뉴를 누르면 이동하는 곳. 주소는 chat.tsx 의 ACTION_ROUTES 에 있다
-export type ChatAction = 'visa_tab' | 'fx' | 'fx_alert' | 'products' | 'transfer';
+export type ChatAction = 'visa_tab' | 'fx' | 'fx_alert' | 'products' | 'transfer' | 'credit';
 
 export type MockChatResponse = {
   text: string;
@@ -37,7 +37,7 @@ export const LANDING_SUGGESTIONS = [
   '비자 만료까지 얼마나 남았어요?',
 ];
 
-// action 이 없는 메뉴는 "준비 중" (대안신용 CR-001, 설정)
+// action 이 없는 메뉴는 "준비 중" (설정)
 export type MenuItem = { label: string; desc: string; action?: ChatAction };
 
 export const MENU_GROUPS: { section: string; items: MenuItem[] }[] = [
@@ -53,7 +53,7 @@ export const MENU_GROUPS: { section: string; items: MenuItem[] }[] = [
     section: '금융 성장',
     items: [
       { label: '금융상품 추천', desc: '여유자금에 맞춘 예금·적금 추천', action: 'products' },
-      { label: '대안신용 사전진단', desc: '대안신용 점수·참고 한도' },
+      { label: '대안신용 사전진단', desc: '대안신용 점수·참고 한도', action: 'credit' },
     ],
   },
   {
