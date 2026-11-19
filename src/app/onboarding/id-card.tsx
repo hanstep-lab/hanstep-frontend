@@ -10,6 +10,8 @@ import { resizeForUpload } from '../../utils/image';
 import { uploadIdCard } from '../../api/document';
 import { colors, typography, spacing, radius, fonts, shadow } from '../../constants/theme';
 import { errorText } from '../../utils/errorText';
+import OnboardingProgress from '../../components/OnboardingProgress';
+import { TOTAL_STAGES, stageOf } from '../../constants/onboardingSteps';
 import { ocrTimeMark, ocrTimeStart } from '../../utils/ocrTiming';
 
 // "직접 정보 입력하기" 버튼. 사진 없이 체류 정보를 저장하는 화면(id-manual, PUT /visa/profile)으로 간다
@@ -114,6 +116,10 @@ export default function IdCardScreen() {
       <Header title="외국인등록증 촬영" showBack />
 
       <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
+        <View style={styles.progressWrap}>
+          <OnboardingProgress current={stageOf('ID_DOCUMENT')} total={TOTAL_STAGES} sub="등록증 촬영" />
+        </View>
+
         <View style={styles.row}>
           <Pressable
             style={[styles.chip, !hasPermission && styles.chipDisabled]}
@@ -129,9 +135,6 @@ export default function IdCardScreen() {
           <View style={styles.infoCard}>
             <View style={styles.infoCardTop}>
               <Text style={styles.infoCardTitle}>외국인등록증 앞면 인식</Text>
-              <View style={styles.progressBadge}>
-                <Text style={styles.progressBadgeText}>진행중 1/3</Text>
-              </View>
             </View>
             <Text style={styles.infoCardDesc}>
               {'빛 반사에 유의하여 카드를 어두운 배경에 올려놓고\n사각형 가이드라인에 맞춰주세요.'}
@@ -228,6 +231,7 @@ const styles = StyleSheet.create({
   safe: { flex: 1, backgroundColor: colors.background },
   content: { paddingBottom: spacing.xl, gap: spacing.sm },
   px: { paddingHorizontal: spacing.xl },
+  progressWrap: { paddingHorizontal: spacing.xl, paddingTop: spacing.md },
   row: { flexDirection: 'row', paddingHorizontal: spacing.xl, paddingVertical: spacing.sm },
 
   chip: {
@@ -251,13 +255,6 @@ const styles = StyleSheet.create({
   },
   infoCardTop: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
   infoCardTitle: { ...typography.h3, color: colors.text.strong },
-  progressBadge: {
-    backgroundColor: colors.primary,
-    paddingHorizontal: spacing.sm,
-    paddingVertical: 2,
-    borderRadius: radius.full,
-  },
-  progressBadgeText: { ...typography.badge, color: colors.text.inverse },
   infoCardDesc: { ...typography.body, color: colors.text.sub },
 
   viewfinderWrap: { paddingHorizontal: spacing.xl, alignItems: 'center' },

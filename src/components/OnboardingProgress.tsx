@@ -1,50 +1,87 @@
+// 온보딩 진행 표시 (온보딩 전 화면 공통). 디자인은 ON-005(Figma) 기준: 점 + 연결선, 현재 단계는 흰 점이 든 큰 원, 숫자는 pill.
+// current·total 은 useOnboardingStep 의 stage·totalStages 를 넘긴다(화면에 숫자를 직접 쓰지 않음).
+// sub: 1단계처럼 한 단계에 화면이 여러 개일 때, 아래 줄에 지금 세부 화면 이름 + 작은 점(지나온·지금·남은)을 보여 준다.
 import { Fragment } from 'react';
 import { View, Text, StyleSheet } from 'react-native';
-import { colors, fonts, typography, spacing, radius } from '../constants/theme';
+import { colors, fonts, typography, radius, spacing } from '../constants/theme';
+import { STAGE1_SUBSTEPS, type Stage1SubStep } from '../constants/onboardingSteps';
 
-type OnboardingProgressProps = { current: number; total: number };
+type OnboardingProgressProps = { current: number; total: number; sub?: Stage1SubStep };
 
-export default function OnboardingProgress({ current, total }: OnboardingProgressProps) {
+export default function OnboardingProgress({ current, total, sub }: OnboardingProgressProps) {
+  const subIndex = sub ? STAGE1_SUBSTEPS.indexOf(sub) : -1;
+
   return (
-    <View style={styles.row}>
-      <View style={styles.steps}>
-        {Array.from({ length: total }, (_, i) => {
-          const step = i + 1;
-          const isDone = step < current;      // 지난 단계
-          const isCurrent = step === current; // 지금 단계
-
-          return (
-            <Fragment key={step}>
-              {/* 단계 사이 연결선*/}
-              {i > 0 && <View style={[styles.line, step <= current && styles.lineActive]} />}
-
-              {/* 단계 동그라미 */}
-              <View style={[styles.dot, (isDone || isCurrent) && styles.dotActive]}>
-                {isCurrent && <View style={styles.dotInner} />}
-              </View>
-            </Fragment>
-          );
-        })}
+    <View style={styles.wrap}>
+      <View style={styles.row}>
+        <View style={styles.steps}>
+          {Array.from({ length: total }, (_, i) => {
+            const step = i + 1;
+            return (
+              <Fragment key={step}>
+                {/* 단계 사이 연결선: 지금 단계까지 파랑 */}
+                {i > 0 && <View style={[styles.line, step <= current ? styles.on : styles.off]} />}
+                {step === current ? (
+                  <View style={styles.current}>
+                    <View style={styles.currentInner} />
+                  </View>
+                ) : (
+                  <View style={[styles.dot, step < current ? styles.on : styles.off]} />
+                )}
+              </Fragment>
+            );
+          })}
+        </View>
+        <View style={styles.pill}>
+          <Text style={styles.num}>{current}</Text>
+          <Text style={styles.total}> / {total} 단계</Text>
+        </View>
       </View>
-      <Text style={styles.label}>{current} / {total} 단계</Text>
+
+      {sub ? (
+        <View style={styles.subRow}>
+          <Text style={styles.subLabel}>{sub}</Text>
+          <View style={styles.subDots}>
+            {STAGE1_SUBSTEPS.map((name, i) => (
+              <View key={name} style={[styles.subDot, i <= subIndex ? styles.on : styles.off]} />
+            ))}
+          </View>
+        </View>
+      ) : null}
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  row: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
-  steps: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
-  dot: {
-    width: 10,
-    height: 10,
+  wrap: { gap: spacing.sm },
+  row: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
+  steps: { flexDirection: 'row', alignItems: 'center', gap: 4 },
+  dot: { width: 10, height: 10, borderRadius: radius.full },
+  line: { width: 20, height: 2 },
+  on: { backgroundColor: colors.primary },
+  off: { backgroundColor: colors.border },
+  current: {
+    width: 12,
+    height: 12,
     borderRadius: radius.full,
-    backgroundColor: colors.border,
+    backgroundColor: colors.primary,
     alignItems: 'center',
     justifyContent: 'center',
   },
-  dotActive: { backgroundColor: colors.primary },
-  dotInner: { width: 4, height: 4, borderRadius: radius.full, backgroundColor: colors.surface }, // 현재 단계 가운데 흰 점
-  line: { width: 32, height: 4, borderRadius: radius.full, backgroundColor: colors.border },
-  lineActive: { backgroundColor: colors.primary },
-  label: { ...typography.body, fontFamily: fonts.bold, color: colors.primary },
+  currentInner: { width: 6, height: 6, borderRadius: radius.full, backgroundColor: colors.surface },
+  pill: {
+    flexDirection: 'row',
+    alignItems: 'baseline',
+    backgroundColor: colors.background,
+    borderRadius: radius.full,
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+  },
+  num: { ...typography.badge, fontFamily: fonts.bold, color: colors.primary },
+  total: { ...typography.badge, color: colors.text.sub },
+
+  subRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
+  subLabel: { ...typography.caption, fontFamily: fonts.bold, color: colors.text.sub },
+  subDots: { flexDirection: 'row', alignItems: 'center', gap: 4 },
+  subDot: { width: 6, height: 6, borderRadius: radius.full },
 });

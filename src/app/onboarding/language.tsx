@@ -98,7 +98,7 @@ export default function LanguageScreen() {
       }
     >
       {/* 진행 표시 */}
-      <OnboardingProgress current={stage} total={totalStages} />
+      <OnboardingProgress current={stage} total={totalStages} sub="언어 선택" />
 
       {/* 배지 + 제목 */}
       <View style={styles.heading}>
