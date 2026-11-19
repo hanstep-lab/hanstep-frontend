@@ -24,6 +24,8 @@ import {
   USER_NAME,
 } from '../../api/mock/chat';
 import { createChatSession, streamChatMessage } from '../../api/chat';
+import { getFxAlerts } from '../../api/fx';
+import { hasUnseenIds } from '../../utils/fxAlertStorage';
 import type { ApiError } from '../../types/api';
 import { useTransferStore } from '../../store/transferStore';
 
@@ -511,6 +513,22 @@ function MenuSheet({ visible, onClose }: { visible: boolean; onClose: () => void
     runAction(action);
   };
 
+  // "목표 환율 알림" 점: 도달(TRIGGERED)했는데 /fx/alert 에서 아직 확인 안 한 알림이 있을 때. 메뉴를 열 때마다 확인
+  const [fxAlertDot, setFxAlertDot] = useState(false);
+  useEffect(() => {
+    if (!visible) return;
+    let cancelled = false;
+    getFxAlerts()
+      .then((data) =>
+        hasUnseenIds(data.items.filter((a) => a.status === 'TRIGGERED').map((a) => a.alertId)),
+      )
+      .then((unseen) => !cancelled && setFxAlertDot(unseen))
+      .catch(() => !cancelled && setFxAlertDot(false));
+    return () => {
+      cancelled = true;
+    };
+  }, [visible]);
+
   return (
     <Modal visible={visible} transparent animationType="slide" onRequestClose={onClose}>
       <View style={menuStyles.wrap}>
@@ -534,7 +552,12 @@ function MenuSheet({ visible, onClose }: { visible: boolean; onClose: () => void
                     onPress={() => handleItem(item.action)}
                   >
                     <View style={{ flex: 1 }}>
-                      <Text style={menuStyles.menuLabel}>{item.label}</Text>
+                      <View style={menuStyles.labelRow}>
+                        <Text style={menuStyles.menuLabel}>{item.label}</Text>
+                        {item.action === 'fx_alert' && fxAlertDot && (
+                          <View style={menuStyles.dot} accessibilityLabel="확인하지 않은 도달 알림 있음" />
+                        )}
+                      </View>
                       <Text style={menuStyles.menuDesc}>{item.desc}</Text>
                     </View>
                     <Ionicons name="chevron-forward" size={16} color={colors.text.sub} />
@@ -836,6 +859,8 @@ const menuStyles = StyleSheet.create({
     paddingVertical: spacing.sm,
     gap: spacing.sm,
   },
+  labelRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.xs },
+  dot: { width: spacing.sm, height: spacing.sm, borderRadius: radius.full, backgroundColor: colors.primary },
   menuLabel: { ...typography.h3, color: colors.text.strong },
   menuDesc: { ...typography.body, color: colors.text.sub },
   solRow: {

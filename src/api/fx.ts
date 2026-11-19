@@ -388,7 +388,8 @@ function toFxAlert(a: FxAlertResponse): FxAlert {
   };
 }
 
-export async function getFxAlerts(): Promise<FxAlertList> {
+// GET /fx/alerts. 서버는 ACTIVE·TRIGGERED 만 주지만, 혹시 온 CANCELLED 는 뺀다. 순서는 서버(최신순) 그대로
+async function fetchFxAlerts(): Promise<FxAlertResponse[]> {
   let data: FxAlertListResponse;
   if (USE_MOCK) {
     await mockDelay(200);
@@ -396,12 +397,50 @@ export async function getFxAlerts(): Promise<FxAlertList> {
   } else {
     data = (await client.get<FxAlertListResponse>('/api/v1/fx/alerts')).data;
   }
-  // 서버는 ACTIVE·TRIGGERED 만 주지만, 혹시 온 CANCELLED 는 뺀다. 순서는 서버(최신순) 그대로
-  const alerts = data.alerts.filter((a) => a.status !== 'CANCELLED');
+  return data.alerts.filter((a) => a.status !== 'CANCELLED');
+}
+
+export async function getFxAlerts(): Promise<FxAlertList> {
+  const alerts = await fetchFxAlerts();
   return {
     items: alerts.map(toFxAlert),
     activeCount: alerts.filter((a) => a.status === 'ACTIVE').length,
   };
+}
+
+// ── 도달 알림 (폰 상단 로컬 알림 문구) ─────────────────────
+// 서버는 알림 문구를 주지 않아서 currency·comparator·targetRate·triggeredRate·triggeredAt 으로 만든다.
+// 값은 서버(Mock) 그대로 표시만 하고, 날짜는 triggeredAt 글자에서 월/일만 자른다.
+
+export type FxAlertNotice = { title: string; body: string };
+
+// "2026-11-19T09:00:00+09:00" → "11/19"
+const fmtMonthDay = (iso: string) => `${iso.slice(5, 7)}/${iso.slice(8, 10)}`;
+
+// "20.48원 (목표 20.50원 이하 · 11/19)"
+function reachedText(a: FxAlertResponse): string {
+  const rate = a.triggeredRate !== null ? `${fmtRate(a.triggeredRate)}원 ` : '';
+  const date = a.triggeredAt ? ` · ${fmtMonthDay(a.triggeredAt)}` : '';
+  return `${rate}(목표 ${fmtRate(a.targetRate)}원 ${COMPARATOR_TEXT[a.comparator]}${date})`;
+}
+
+// 1건: "PHP 목표 환율 도달 · 20.48원 (목표 20.50원 이하 · 11/19)"
+// 여러 건: 제목 "목표 환율 알림 2건 도달", 본문은 통화별 한 줄씩
+export function toFxAlertNotice(alerts: FxAlertResponse[]): FxAlertNotice {
+  if (alerts.length === 1) {
+    const a = alerts[0];
+    return { title: '목표 환율 알림', body: `${a.currency} 목표 환율 도달 · ${reachedText(a)}` };
+  }
+  return {
+    title: `목표 환율 알림 ${alerts.length}건 도달`,
+    body: alerts.map((a) => `${a.currency} ${reachedText(a)}`).join('\n'),
+  };
+}
+
+// 도달(TRIGGERED)한 알림만. 앱을 켤 때·다시 열 때 확인용
+export async function getTriggeredFxAlerts(): Promise<FxAlertResponse[]> {
+  const alerts = await fetchFxAlerts();
+  return alerts.filter((a) => a.status === 'TRIGGERED');
 }
 
 // ── 등록·삭제 ─────────────────────────────────────────
