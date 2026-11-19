@@ -1,17 +1,29 @@
-import { useState } from 'react';
+// ON-003A 마이데이터 기관 선택·약관 동의, ON-003B 연결 확인 모달.
+// 기관 목록은 서버(MYD-01) 값, 동의 저장(CNS-02)·연결(MYD-02)은 src/api 에서만 부른다.
+// 확인하고 연결: POST consents → POST mydata/connections → 단계 COMPLETED / 나중에 연결할게요: 단계 SKIPPED
+import { useEffect, useState } from 'react';
 import { View, Text, Pressable, ScrollView, StyleSheet, Modal } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import Header from '../../components/Header';
 import Button from '../../components/Button';
 import { useOnboardingStep } from '../../hooks/useOnboardingStep';
+import {
+  getInstitutionViews,
+  connectInstitutions,
+  scopesOf,
+  scopeText,
+  connectErrorText,
+  LOOKBACK_MONTHS,
+  MYDATA_LOAD_ERROR,
+  type InstitutionView,
+} from '../../api/mydata';
+import { saveConsents, MYDATA_CONSENTS } from '../../api/consents';
+import type { ApiError } from '../../types/api';
 import { colors, typography, spacing, radius, fonts } from '../../constants/theme';
 
-const INSTITUTIONS = [
-  { name: '신한은행', tag: '주거래', desc: '입출금·적금 계좌, 거래내역', selected: true },
-  { name: '신한카드', tag: '카드',   desc: '카드 이용내역, 결제 예정 금액', selected: true },
-];
-
+// 필수 두 건은 MYDATA·MYDATA_TERMS 로 저장한다(consents.ts MYDATA_CONSENTS).
+// 선택 동의는 맞는 consentType 이 정해지지 않아 서버에 보내지 않는다.
 const CONSENTS = [
   { label: '[필수] 개인신용정보 전송요구 및 수집·이용 동의', required: true },
   { label: '[필수] 마이데이터 서비스 이용약관',              required: true },
@@ -22,12 +34,43 @@ export default function MydataScreen() {
   const { goNext, isNavigating, navError } = useOnboardingStep();
   const [checks, setChecks] = useState([false, false, false]);
   const [showModal, setShowModal] = useState(false);
+  const [institutions, setInstitutions] = useState<InstitutionView[] | null>(null);
+  const [loadError, setLoadError] = useState<string | null>(null);
+  const [selectedIds, setSelectedIds] = useState<number[]>([]);
+
+  useEffect(() => {
+    getInstitutionViews()
+      .then((list) => {
+        setInstitutions(list);
+        setSelectedIds(list.map((inst) => inst.id)); // 처음에는 모두 선택
+      })
+      .catch(() => setLoadError(MYDATA_LOAD_ERROR));
+  }, []);
 
   const allChecked  = checks.every(Boolean);
   const requiredOk  = checks[0] && checks[1];
 
+  const selected   = (institutions ?? []).filter((inst) => selectedIds.includes(inst.id));
+  const scopes     = scopesOf(selected);
+  const canConnect = requiredOk && selected.length > 0 && scopes.length > 0;
+
   const toggleAll = () => { const v = !allChecked; setChecks([v, v, v]); };
   const toggle    = (i: number) => setChecks((prev) => prev.map((c, j) => (j === i ? !c : c)));
+  const toggleInstitution = (id: number) =>
+    setSelectedIds((prev) => (prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]));
+
+  const connect = () => {
+    setShowModal(false);
+    goNext(async () => {
+      try {
+        await saveConsents(MYDATA_CONSENTS);
+        await connectInstitutions(selected.map((inst) => inst.id), scopes);
+      } catch (e) {
+        const err: ApiError = { code: (e as ApiError).code, message: connectErrorText(e as ApiError) };
+        throw err;
+      }
+    });
+  };
 
   return (
     <SafeAreaView style={styles.safe} edges={['top', 'bottom']}>
@@ -58,22 +101,42 @@ export default function MydataScreen() {
 
         {/* 금융기관 카드 */}
         <View style={styles.cardList}>
-          {INSTITUTIONS.map((inst) => (
-            <View key={inst.name} style={styles.instCardSelected}>
-              <View style={styles.instCardLeft}>
-                <View style={styles.instCardTitle}>
-                  <Text style={styles.instName}>{inst.name}</Text>
-                  <View style={styles.instTag}>
-                    <Text style={styles.instTagText}>{inst.tag}</Text>
+          {!institutions ? (
+            <Text style={styles.stateText}>{loadError ?? '연결할 금융기관을 불러오는 중이에요.'}</Text>
+          ) : (
+            institutions.map((inst) => {
+              const on = selectedIds.includes(inst.id);
+              return (
+                <Pressable
+                  key={inst.id}
+                  style={on ? styles.instCardSelected : styles.instCardDefault}
+                  onPress={() => toggleInstitution(inst.id)}
+                  disabled={isNavigating}
+                >
+                  <View style={styles.instCardLeft}>
+                    <View style={styles.instCardTitle}>
+                      <Text style={on ? styles.instName : styles.instNameDark}>{inst.name}</Text>
+                      {inst.tag ? (
+                        <View style={on ? styles.instTag : styles.instTagDark}>
+                          <Text style={on ? styles.instTagText : styles.instTagTextDark}>{inst.tag}</Text>
+                        </View>
+                      ) : null}
+                    </View>
+                    {inst.desc ? <Text style={on ? styles.instDesc : styles.instDescDark}>{inst.desc}</Text> : null}
                   </View>
-                </View>
-                <Text style={styles.instDesc}>{inst.desc}</Text>
-              </View>
-              <View style={styles.instCheck}>
-                <Ionicons name="checkmark" size={14} color={colors.text.inverse} />
-              </View>
-            </View>
-          ))}
+                  {on ? (
+                    <View style={styles.instCheck}>
+                      <Ionicons name="checkmark" size={14} color={colors.text.inverse} />
+                    </View>
+                  ) : (
+                    <View style={styles.instAdd}>
+                      <Ionicons name="add" size={16} color={colors.text.sub} />
+                    </View>
+                  )}
+                </Pressable>
+              );
+            })
+          )}
 
           <View style={styles.instCardDefault}>
             <View style={styles.instCardLeft}>
@@ -113,9 +176,9 @@ export default function MydataScreen() {
           title={isNavigating ? '처리 중...' : '동의하고 연결하기'}
           showArrow={!isNavigating}
           onPress={() => setShowModal(true)}
-          disabled={!requiredOk || isNavigating}
+          disabled={!canConnect || isNavigating}
         />
-        <Pressable onPress={() => goNext()} disabled={isNavigating}>
+        <Pressable onPress={() => goNext(undefined, 'SKIPPED')} disabled={isNavigating}>
           <Text style={styles.skipText}>나중에 연결할게요</Text>
         </Pressable>
       </View>
@@ -132,9 +195,9 @@ export default function MydataScreen() {
 
             <View style={styles.summaryBox}>
               {[
-                { label: '연결 기관',  value: '신한은행, 신한카드' },
-                { label: '불러올 정보', value: '계좌 잔액 · 거래내역 · 카드 이용내역' },
-                { label: '조회 기간',  value: '최근 12개월' },
+                { label: '연결 기관',  value: selected.map((inst) => inst.name).join(', ') },
+                { label: '불러올 정보', value: scopeText(scopes) },
+                { label: '조회 기간',  value: `최근 ${LOOKBACK_MONTHS}개월` },
                 { label: '이용 목적',  value: '소득·지출 분석, 금융 진단' },
               ].map((row) => (
                 <View key={row.label} style={styles.summaryRow}>
@@ -150,7 +213,7 @@ export default function MydataScreen() {
               </Pressable>
               <Pressable
                 style={[styles.confirmBtn, isNavigating && { opacity: 0.7 }]}
-                onPress={() => { setShowModal(false); goNext(); }}
+                onPress={connect}
                 disabled={isNavigating}
               >
                 <Text style={styles.confirmText}>
@@ -223,6 +286,14 @@ const styles = StyleSheet.create({
     borderRadius: radius.full,
   },
   instTagText: { ...typography.badge, color: colors.text.inverse },
+  instTagDark: {
+    backgroundColor: colors.background,
+    paddingHorizontal: spacing.sm,
+    paddingVertical: 2,
+    borderRadius: radius.full,
+  },
+  instTagTextDark: { ...typography.badge, color: colors.text.sub },
+  stateText: { ...typography.body, color: colors.text.sub, textAlign: 'center', paddingVertical: spacing.lg },
   instDesc: { ...typography.body, color: colors.onColor.sub },
   instDescDark: { ...typography.body, color: colors.text.sub },
   instCheck: {
