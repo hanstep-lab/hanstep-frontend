@@ -72,6 +72,11 @@ const TOOL_LABELS: Record<string, string> = {
   quote_remittance: '송금 금액을 계산했어요',
   fx_rate_summary: '환율을 확인했어요',
   calculate_e74_score: 'E-7-4 점수를 계산했어요',
+  get_fx_rate: '환율을 확인했어요',
+  get_visa_roadmap: '비자 로드맵을 확인했어요',
+  search_visa_policies: '비자 정책을 찾아봤어요',
+  search_finance_policy: '금융 정책을 찾아봤어요',
+  recommend_savings_products: '적금 상품을 찾아봤어요',
 };
 
 // 화면이 그릴 줄 아는 카드 type. 이 밖의 type 은 버린다 (Swagger: 모르는 type 은 무시)
