@@ -31,7 +31,7 @@ const CONSENTS = [
 ];
 
 export default function MydataScreen() {
-  const { goNext, isNavigating, navError } = useOnboardingStep();
+  const { goNext, skip, isNavigating, navError } = useOnboardingStep();
   const [checks, setChecks] = useState([false, false, false]);
   const [showModal, setShowModal] = useState(false);
   const [institutions, setInstitutions] = useState<InstitutionView[] | null>(null);
@@ -178,7 +178,7 @@ export default function MydataScreen() {
           onPress={() => setShowModal(true)}
           disabled={!canConnect || isNavigating}
         />
-        <Pressable onPress={() => goNext(undefined, 'SKIPPED')} disabled={isNavigating}>
+        <Pressable onPress={() => skip()} disabled={isNavigating}>
           <Text style={styles.skipText}>나중에 연결할게요</Text>
         </Pressable>
       </View>

@@ -6,7 +6,6 @@ import { useState } from 'react';
 import { router, usePathname, Href } from 'expo-router';
 import { ONBOARDING_STEPS, TOTAL_STAGES, getRouteFromStepCode } from '../constants/onboardingSteps';
 import { updateStep } from '../api/onboarding';
-import type { StepUpdateRequest } from '../types/api';
 
 export function useOnboardingStep() {
   const [isNavigating, setIsNavigating] = useState(false);
@@ -20,17 +19,41 @@ export function useOnboardingStep() {
 
   // beforeComplete: 단계 완료 API 전에 실행할 비동기 작업(예: 언어 변경, 프로필 저장).
   // 여기서 throw 하면 updateStep 은 호출되지 않고 navError 로 처리된다.
-  // status: 단계 저장 상태. 기본 COMPLETED, 건너뛰기만 SKIPPED (예: ON-003A '나중에 연결할게요')
-  const goNext = async (
-    beforeComplete?: () => Promise<void>,
-    status: StepUpdateRequest['status'] = 'COMPLETED',
-  ) => {
+  const goNext = async (beforeComplete?: () => Promise<void>) => {
     if (!step || isNavigating) return;
     setNavError(null);
     setIsNavigating(true);
     try {
       if (beforeComplete) await beforeComplete();
-      const res = await updateStep(step.stepCode, status);
+      const res = await updateStep(step.stepCode);
+
+      if (res.onboardingCompleted) {
+        router.replace('/home');
+      } else if (res.currentStep) {
+        const nextRoute = getRouteFromStepCode(res.currentStep);
+        if (isLast) {
+          router.replace(nextRoute as Href);
+        } else {
+          router.push(nextRoute as Href);
+        }
+      } else {
+        router.replace('/home');
+      }
+    } catch (e: any) {
+      setNavError(e?.message ?? '다음 단계로 이동할 수 없어요. 다시 시도해 주세요.');
+    } finally {
+      setIsNavigating(false);
+    }
+  };
+
+  // 건너뛰기: 현재 단계를 SKIPPED 로 저장한 뒤 응답의 currentStep 으로 이동한다(예: ON-003A '나중에 연결할게요').
+  // isNavigating·navError 는 goNext 와 함께 쓴다.
+  const skip = async () => {
+    if (!step || isNavigating) return;
+    setNavError(null);
+    setIsNavigating(true);
+    try {
+      const res = await updateStep(step.stepCode, 'SKIPPED');
 
       if (res.onboardingCompleted) {
         router.replace('/home');
@@ -58,6 +81,7 @@ export function useOnboardingStep() {
     isFirst,
     isLast,
     goNext,
+    skip,
     isNavigating,
     navError,
   };
