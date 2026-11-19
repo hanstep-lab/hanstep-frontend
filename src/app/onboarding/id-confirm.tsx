@@ -90,15 +90,6 @@ function formatDateInput(text: string): string {
   return `${d.slice(0, 4)}-${d.slice(4, 6)}-${d.slice(6)}`;
 }
 
-// 오늘부터 만료일까지 남은 날 수. 형식이 틀리면 null
-function daysUntil(date: string): number | null {
-  if (!isValidDate(date)) return null;
-  const [y, m, d] = date.split('-').map(Number);
-  const today = new Date();
-  today.setHours(0, 0, 0, 0);
-  return Math.round((new Date(y, m - 1, d).getTime() - today.getTime()) / 86400000);
-}
-
 // 값 한 줄. OCR 은 어느 칸이든 틀릴 수 있으므로 모든 칸을 입력칸으로 둔다.
 // "확인 필요"는 서버가 needsReview(신뢰도 0.8 미만·못 읽음)로 준 칸에만 붙이는 눈길 끌기 표시
 function FieldValue({
@@ -160,7 +151,8 @@ export default function IdConfirmScreen() {
 
   const isConfirmed = doc?.status === 'CONFIRMED';
   const needsReviewCount = doc?.fields.filter((f) => f.needsReview).length ?? 0;
-  const daysLeft = values ? daysUntil(values.stayExpiry) : null;
+  // 서버가 저장된 만료일로 계산한 남은 일수. 없으면(null) 표시하지 않는다 (화면에서 계산하지 않음)
+  const daysLeft = doc?.daysRemaining ?? null;
   // 확정 필수 4칸(서버 confirm 조건)이 모두 채워져야 버튼이 눌린다. 형식 검사는 누를 때(validate)
   const requiredFilled =
     values != null &&
@@ -311,9 +303,11 @@ export default function IdConfirmScreen() {
         <View style={styles.expiryBox}>
           <View style={styles.expiryRow}>
             <Text style={styles.fieldLabel}>체류 만료일 (Expiry Date)</Text>
-            {daysLeft != null && daysLeft >= 0 ? (
+            {daysLeft != null ? (
               <View style={styles.dBadge}>
-                <Text style={styles.dBadgeText}>D-{daysLeft}일 남음</Text>
+                <Text style={styles.dBadgeText}>
+                  {daysLeft < 0 ? '체류 기간이 지났어요' : `D-${daysLeft}일 남음`}
+                </Text>
               </View>
             ) : null}
           </View>

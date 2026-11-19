@@ -693,6 +693,7 @@ export type DocumentResponse = {
   failureCode: string | null;
   ocrJob: DocumentOcrJob | null;
   fields: DocumentField[]; // OCR 결과 전에는 빈 배열
+  daysRemaining: number | null; // 저장된 체류 만료일까지 남은 일수(서버 계산값, 지났으면 음수). 만료일이 없거나 확정 후에는 null
   uploadedAt: string;
   confirmedAt: string | null;
 };
