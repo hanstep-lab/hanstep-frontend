@@ -103,16 +103,11 @@ function ProductRow({ p, rank, lang }: { p: ProductRecommendItem; rank: number; 
           {kind ? <Tag label={kind} /> : null}
         </View>
       </View>
-      {/* 기간 · 금리(+작은 글씨 기준) · 금액. 순위 배지 폭만큼 들여쓰고, null 인 줄은 숨김 */}
+      {/* 기간 · 금리 · 금액. 순위 배지 폭만큼 들여쓰고, null 인 줄은 숨김 */}
       {term || rate || amount ? (
         <View style={[s.lines, s.indent]}>
           {term ? <Text style={s.line}>{term}</Text> : null}
-          {rate ? (
-            <View>
-              <Text style={s.rateLine}>{rate.main}</Text>
-              {rate.note ? <Text style={s.itemSub}>{rate.note}</Text> : null}
-            </View>
-          ) : null}
+          {rate ? <Text style={s.rateLine}>{rate}</Text> : null}
           {amount ? <Text style={s.line}>{amount}</Text> : null}
         </View>
       ) : null}
@@ -196,7 +191,7 @@ export default function ProductRecommendCard({ block, userName, language = 'ko',
   );
 }
 
-// 환율 카드(FxSummaryCard)와 같은 값: card·header·dot·title·headerMeta·item·itemSub·footnote
+// 환율 카드(FxSummaryCard)와 같은 값: card·header·dot·title·headerMeta·item·footnote
 const s = StyleSheet.create({
   wrap: { gap: spacing.sm, marginTop: spacing.sm },
   flex: { flex: 1 },
@@ -233,7 +228,6 @@ const s = StyleSheet.create({
   rankTextFirst: { color: colors.text.inverse },
   nameRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.xs, flexWrap: 'wrap' },
   name: { ...typography.title, color: colors.text.strong, flexShrink: 1 },
-  itemSub: { ...typography.badge, color: colors.text.sub },
   checkRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.xs },
   checkText: { ...typography.badge, color: colors.text.strong },
   moreBtn: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: spacing.xs },

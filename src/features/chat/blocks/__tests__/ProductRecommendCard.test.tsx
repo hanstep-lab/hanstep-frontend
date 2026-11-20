@@ -15,12 +15,12 @@ describe('영어 사용자(en·vi·zh): 카드 글자 전부 영어', () => {
     expect(screen.getByText('Based on product descriptions')).toBeTruthy();
     // 1위: 6개월, 최고금리 있음, 월 1,000~300,000
     expect(screen.getByText('6 months')).toBeTruthy();
-    expect(screen.getByText('Base 2.2% · Up to 3.7% with preferential terms')).toBeTruthy();
-    expect(screen.getByText('for the shortest term · as of 2026-10-01')).toBeTruthy();
+    expect(screen.getByText('Interest rate: 2.2%–3.7%')).toBeTruthy();
+    expect(screen.queryByText(/as of|shortest term/)).toBeNull(); // 금리 작은 글씨 줄 없음
     expect(screen.getByText('Monthly KRW 1,000 – 300,000')).toBeTruthy();
     // 2위: 범위 기간, 최고금리 없음, 월 상한 없음
     expect(screen.getByText('1–60 months')).toBeTruthy();
-    expect(screen.getByText('Base 2.2%')).toBeTruthy();
+    expect(screen.getByText('Interest rate: 2.2%')).toBeTruthy();
     expect(screen.getByText('from KRW 10,000')).toBeTruthy();
     // 3위: 금액 정보 없음 → 금액 줄 없음
     expect(screen.getByText('1–12 months')).toBeTruthy();
@@ -53,13 +53,14 @@ describe('한국어 사용자(ko·모름): 카드 글자 전부 한국어', () =
 
     expect(screen.getByText('Mark 님 맞춤 적금')).toBeTruthy();
     expect(screen.getByText('6개월')).toBeTruthy();
-    expect(screen.getByText('기본 2.2% · 우대 조건 충족 시 최고 3.7%')).toBeTruthy();
-    expect(screen.getByText('가장 짧은 기간 기준 · 2026-10-01 기준')).toBeTruthy();
-    expect(screen.getByText('월 1,000~300,000원')).toBeTruthy();
-    expect(screen.getByText('1~60개월')).toBeTruthy();
+    expect(screen.getByText('금리: 2.2%–3.7%')).toBeTruthy();
+    expect(screen.queryByText(/가장 짧은 기간|2026-10-01/)).toBeNull(); // 금리 작은 글씨 줄 없음
+    expect(screen.getByText('월 1,000–300,000원')).toBeTruthy();
+    expect(screen.getByText('1–60개월')).toBeTruthy();
     expect(screen.getByText('월 10,000원부터')).toBeTruthy();
     expect(screen.getByText('금융상품 추천 화면에서 보기')).toBeTruthy();
-    expect(screen.queryByText(/months|Base|Monthly|KRW|Savings/)).toBeNull();
+    expect(screen.queryByText(/months|Interest|Monthly|KRW|Savings/)).toBeNull();
+    expect(screen.queryByText(/~/)).toBeNull();
   });
 
   it('language 를 주지 않으면 한국어', async () => {

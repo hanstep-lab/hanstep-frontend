@@ -20,15 +20,15 @@ export type CardLanguage = 'ko' | 'en';
 export const cardLanguage = (lang: Language | null | undefined): CardLanguage =>
   !lang || lang === 'ko' ? 'ko' : 'en';
 
-const DASH = '–'; // en dash. 영어 기간 "1–60 months", 금액 "1,000 – 300,000"
+const DASH = '–'; // 범위는 모두 en dash(~ 쓰지 않음). 기간 "1–60개월", 금리 "2.2%–3.7%", 금액 "1,000–300,000원"
 
 // 기간
-// ko: [6, 12] → "6·12개월", {12, 12} → "12개월", {1, 60} → "1~60개월"
+// ko: [6, 12] → "6·12개월", {12, 12} → "12개월", {1, 60} → "1–60개월"
 // en: "6·12 months", "12 months", "1–60 months" (1개월 하나면 "1 month")
 export function productTermLine(t: ProductTermMonths, lang: CardLanguage): string | null {
   if (!t) return null;
   if (!Array.isArray(t) && t.min !== t.max) {
-    return lang === 'ko' ? `${t.min}~${t.max}개월` : `${t.min}${DASH}${t.max} months`;
+    return lang === 'ko' ? `${t.min}${DASH}${t.max}개월` : `${t.min}${DASH}${t.max} months`;
   }
   const values = Array.isArray(t) ? t : [t.min];
   if (values.length === 0) return null;
@@ -36,33 +36,26 @@ export function productTermLine(t: ProductTermMonths, lang: CardLanguage): strin
   return `${values.join('·')} ${values.length === 1 && values[0] === 1 ? 'month' : 'months'}`;
 }
 
-export type ProductRateLine = {
-  main: string; // ko "기본 2.2% · 우대 조건 충족 시 최고 3.7%", en "Base 2.2% · Up to 3.7% with preferential terms"
-  note: string | null; // 작은 글씨. 기본금리가 있을 때만: 가장 짧은 기간 기준 · 기준일
-};
-
 const pct = (r: ProductRate) => `${fmtNumber(r.ratePct)}%`;
 
-// 금리: 최고금리가 있으면 기본·최고, 없으면 기본만. 둘 다 없으면 null
-// 기본금리는 기간별이면 가장 짧은 기간의 값이라(카드 계약 product_recommend_card_v1.md) 작은 글씨로 알린다
+// 금리: 기본금리–우대 최고금리 범위. ko "금리: 2.2%–3.7%", en "Interest rate: 2.2%–3.7%"
+// 최고금리가 없거나 같으면 기본만, 기본이 없으면 최고만("최고"·"up to"). 둘 다 없으면 null
 export function productRateLine(
   base: ProductBaseRate | null,
   max: ProductRate | null,
   lang: CardLanguage,
-): ProductRateLine | null {
+): string | null {
   if (!base && !max) return null;
   const ko = lang === 'ko';
-  const baseText = base ? (ko ? `기본 ${pct(base)}` : `Base ${pct(base)}`) : null;
-  const maxText = max ? (ko ? `우대 조건 충족 시 최고 ${pct(max)}` : `Up to ${pct(max)} with preferential terms`) : null;
-  const main = [baseText, maxText].filter(Boolean).join(' · ');
-  if (!base) return { main, note: null };
-  const shortest = ko ? '가장 짧은 기간 기준' : 'for the shortest term';
-  const asOf = base.asOf ? (ko ? `${base.asOf} 기준` : `as of ${base.asOf}`) : null;
-  return { main, note: [shortest, asOf].filter(Boolean).join(' · ') };
+  let value: string;
+  if (base && max && max.ratePct !== base.ratePct) value = `${pct(base)}${DASH}${pct(max)}`;
+  else if (base) value = pct(base);
+  else value = ko ? `최고 ${pct(max!)}` : `up to ${pct(max!)}`;
+  return `${ko ? '금리' : 'Interest rate'}: ${value}`;
 }
 
 // 금액: 적금은 월 납입(monthlyAmountKrw), 예금은 예치(depositAmountKrw)
-// ko: "월 1,000~300,000원", 상한 없음 "월 10,000원부터", 최소 없음 "월 300,000원까지" (예금은 "예치")
+// ko: "월 1,000–300,000원", 상한 없음 "월 10,000원부터", 최소 없음 "월 300,000원까지" (예금은 "예치")
 // en: "Monthly KRW 1,000 – 300,000" / "Deposit KRW 500,000 – 20,000,000", 상한 없음 "from KRW 500,000", 최소 없음 "up to KRW 300,000"
 export function productAmountLine(
   kind: ProductKind,
@@ -76,7 +69,7 @@ export function productAmountLine(
   const maxNum = typeof max === 'number' ? max : null; // "no limit"·null 은 상한 없음으로 본다
   if (lang === 'ko') {
     const label = kind === 'SAVINGS' ? '월' : '예치';
-    if (min != null && maxNum != null) return `${label} ${fmtNumber(min)}~${fmtNumber(maxNum)}원`;
+    if (min != null && maxNum != null) return `${label} ${fmtNumber(min)}${DASH}${fmtNumber(maxNum)}원`;
     if (min != null) return `${label} ${fmtNumber(min)}원부터`;
     if (maxNum != null) return `${label} ${fmtNumber(maxNum)}원까지`;
     return null;
