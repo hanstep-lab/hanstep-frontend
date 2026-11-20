@@ -87,3 +87,8 @@ export function mockRemittanceCandidates(): RemittanceCandidateListResponse {
     isMock: true,
   };
 }
+
+// 데모 초기화 Mock: 서버처럼 매달 나가는 돈을 비활성으로 (조회에서 빠짐)
+export function mockDeactivateCommitments() {
+  items = [];
+}

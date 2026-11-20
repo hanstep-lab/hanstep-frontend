@@ -87,7 +87,7 @@ export type StepUpdateResponse = {
 };
 
 // ── 데모 계정 초기화 (POST /api/v1/demo/reset) ─────────────────────────────
-// 지운 건수만 돌려준다. 화면에는 표시하지 않는다
+// 지우거나 바꾼 건수만 돌려준다. 화면에는 표시하지 않는다
 export type DemoResetResponse = {
   deletedDocuments: number;
   deletedDocumentFields: number;
@@ -95,6 +95,13 @@ export type DemoResetResponse = {
   deletedOnboardingSteps: number;
   deletedOriginals: number;
   failedOriginals: number; // 원본 삭제 실패 수. 실패해도 200
+  alertsCancelled: number; // 목표 환율 알림 CANCELLED (행은 남음)
+  profileRestored: boolean; // 체류 정보를 데모 시드 값으로 되돌렸는지 (Reyes 만 true)
+  e74AssessmentsDeleted: number;
+  roadmapsDeleted: number;
+  languageRestored: boolean; // 서비스 언어를 데모 시드 값(en)으로 되돌렸는지 (Reyes 만 true)
+  goalsCancelled: number; // 금융 목표 CANCELLED (행은 남음)
+  commitmentsDeactivated: number; // 매달 나가는 돈 비활성 (행은 남음)
 };
 
 // ── 해외송금 (TRF-01·02, /api/v1/transfers) — TR-001 ─────────────────────────

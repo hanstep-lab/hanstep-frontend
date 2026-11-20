@@ -1,5 +1,6 @@
 import { Stack } from 'expo-router';
 import { useFonts } from 'expo-font';
+import ToastHost from '../components/Toast';
 
 export default function RootLayout() {
   const [fontsLoaded, fontError] = useFonts({
@@ -13,5 +14,11 @@ export default function RootLayout() {
     return null;
   }
 
-  return <Stack screenOptions={{ headerShown: false }} />;
+  // 토스트는 화면을 옮겨도 보이도록 모든 화면 위에 하나만 둔다
+  return (
+    <>
+      <Stack screenOptions={{ headerShown: false }} />
+      <ToastHost />
+    </>
+  );
 }

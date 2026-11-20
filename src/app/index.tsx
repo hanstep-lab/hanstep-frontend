@@ -3,7 +3,8 @@
 //   - 온보딩 미완료 → currentStep 에 해당하는 온보딩 화면 (처음이면 ON-001 언어)
 //   - 온보딩 완료  → AI 채팅
 // AI 버튼 말고는 시연용 모양이라 "준비 중" 안내만 한다(우리 앱에 해당 기능 없음).
-// 데모 토큰일 때만 '온보딩 다시 보기' 버튼: entry → POST /demo/reset → 앱 저장값 비우기 → ON-001 언어
+// 데모 토큰일 때만 숨은 기능: "SOL Global" 로고를 1.5초 안에 3번 탭 → 확인 창 → 데모 계정 초기화 → ON-001 언어
+//   로고에는 눈에 보이는 표시·접근성 라벨 변화를 넣지 않는다. 초기화 범위·앱 상태 처리는 features/demo/demoReset.ts
 
 import { useState } from 'react';
 import { View, Text, Pressable, StyleSheet, Alert, ActivityIndicator, ScrollView } from 'react-native';
@@ -12,12 +13,15 @@ import { Image } from 'expo-image';
 import { router, type Href } from 'expo-router';
 import { entry } from '../api/auth';
 import { getMe } from '../api/user';
-import { isDemoAccount, resetDemo } from '../api/demo';
+import { isDemoAccount } from '../api/demo';
+import { resetDemoAccount } from '../features/demo/demoReset';
+import { useMultiTap } from '../hooks/useMultiTap';
 import { useAuthStore } from '../store/authStore';
-import { useOnboardingStore } from '../store/onboardingStore';
+import { showToast } from '../store/toastStore';
 import { getRouteFromStepCode } from '../constants/onboardingSteps';
 import { ENTRY_TOKEN } from '../api/config';
-import { colors, fonts, radius, spacing, typography } from '../constants/theme';
+import { colors, fonts, radius, spacing } from '../constants/theme';
+import { confirmDialog } from '../utils/confirm';
 import { errorText } from '../utils/errorText';
 
 const IMG = {
@@ -56,10 +60,14 @@ const TABS = [
 
 const preparing = () => Alert.alert('준비 중', '곧 사용할 수 있어요.');
 
+// 데모 초기화 확인 창 문구. 범위는 backend Swagger(POST /demo/reset) 설명 기준
+const RESET_TITLE = '데모 계정 초기화';
+const RESET_MESSAGE =
+  '온보딩·등록증·E-7-4·비자 로드맵 기록을 지우고 금융 목표·고정 지출·목표 환율 알림을 취소한 뒤 처음 화면으로 돌아갑니다. 마이데이터와 금융 분석은 그대로 둬요.';
+
 export default function SolGlobalHome() {
   const insets = useSafeAreaInsets();
   const setToken = useAuthStore((s) => s.setToken);
-  const resetOnboarding = useOnboardingStore((s) => s.reset);
   const [entering, setEntering] = useState(false);
   const [resetting, setResetting] = useState(false);
   const [showBubble, setShowBubble] = useState(true);
@@ -89,31 +97,37 @@ export default function SolGlobalHome() {
     }
   };
 
-  // 온보딩 다시 보기: 홈에는 아직 토큰이 없어서 entry 로 먼저 받는다.
-  // 초기화 뒤 서버 온보딩은 첫 단계(NOT_STARTED)라 users/me 없이 ON-001 로 간다. 실패하면 앱 저장값은 그대로 둔다
-  const replayOnboarding = async () => {
+  // 데모 계정 초기화. 초기화 뒤 서버 온보딩은 첫 단계(NOT_STARTED)라 users/me 없이 ON-001 로 간다.
+  // 403·404(데모 계정 아님·서버에서 꺼짐)는 토스트, 그 밖의 오류는 공통 오류 문구. 실패하면 앱 상태는 그대로 둔다
+  const runDemoReset = async () => {
     if (busy) return;
     setResetting(true);
     try {
-      const entryRes = await entry(ENTRY_TOKEN);
-      setToken(entryRes.accessToken);
-      await resetDemo();
-      resetOnboarding();
-      router.push('/onboarding/language' as Href);
-    } catch {
-      Alert.alert('지금은 다시 볼 수 없어요.', '잠시 후 다시 시도해 주세요.');
+      const result = await resetDemoAccount();
+      if (result.status === 'done') {
+        router.push('/onboarding/language' as Href);
+        showToast('초기화했어요');
+      } else if (result.status === 'unavailable') {
+        showToast('지금은 초기화할 수 없어요');
+      } else if (result.status === 'failed') {
+        Alert.alert('초기화하지 못했어요', errorText(result.error, '잠시 후 다시 시도해 주세요.'));
+      }
     } finally {
       setResetting(false);
     }
   };
 
-  const confirmReplay = () => {
+  const onLogoTripleTap = useMultiTap(async () => {
     if (busy) return;
-    Alert.alert('온보딩을 처음부터 다시 볼까요?', '등록증 정보도 지워져요.', [
-      { text: '취소', style: 'cancel' },
-      { text: '다시 보기', onPress: replayOnboarding },
-    ]);
-  };
+    const ok = await confirmDialog({
+      title: RESET_TITLE,
+      message: RESET_MESSAGE,
+      cancelText: '취소',
+      confirmText: '초기화',
+      destructive: true,
+    });
+    if (ok) runDemoReset();
+  });
 
   const banner = BANNERS[page];
   const movePage = (delta: number) =>
@@ -123,7 +137,10 @@ export default function SolGlobalHome() {
     <SafeAreaView style={styles.safe} edges={['top']}>
       {/* 헤더: SOL Global + AI 버튼(쏠) · 언어 · 상담 · 알림 */}
       <View style={styles.header}>
-        <Text style={styles.logo}>SOL Global</Text>
+        {/* 데모 토큰이 아니면 탭을 받지 않는다(일반 텍스트 그대로) */}
+        <Text style={styles.logo} onPress={isDemoAccount ? onLogoTripleTap : undefined} suppressHighlighting>
+          SOL Global
+        </Text>
         <View style={styles.headerActions}>
           <View>
             <Pressable
@@ -206,19 +223,6 @@ export default function SolGlobalHome() {
           </View>
           <Image source={IMG.chevronRight} style={styles.icon20} />
         </Pressable>
-
-        {/* 데모 시연용: 데모 토큰이 아니면 그리지 않는다 */}
-        {isDemoAccount ? (
-          <Pressable
-            style={[styles.replayBtn, busy && styles.replayBtnBusy]}
-            onPress={confirmReplay}
-            disabled={busy}
-            hitSlop={8}
-            accessibilityRole="button"
-          >
-            <Text style={styles.replayText}>온보딩 다시 보기</Text>
-          </Pressable>
-        ) : null}
       </ScrollView>
 
       {/* SOL 앱 탭 모양 (화면 전환 없음: 홈은 현재 화면, 나머지는 준비 중) */}
@@ -358,10 +362,6 @@ const styles = StyleSheet.create({
   branchText: { flex: 1, gap: 4 },
   branchTitle: { fontFamily: fonts.bold, fontSize: 16, color: S.title },
   branchSub: { fontFamily: fonts.medium, fontSize: 13, color: S.sub },
-
-  replayBtn: { alignSelf: 'center', paddingVertical: spacing.sm, paddingHorizontal: spacing.md },
-  replayBtnBusy: { opacity: 0.5 },
-  replayText: { ...typography.body, color: S.sub, textDecorationLine: 'underline' },
 
   tabBar: {
     flexDirection: 'row',

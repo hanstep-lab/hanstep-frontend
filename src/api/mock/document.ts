@@ -83,3 +83,9 @@ export function mockConfirm(): DocumentResponse {
   };
   return doc;
 }
+
+// 데모 초기화 Mock: 서버처럼 등록증 문서를 지움
+export function mockDeleteDocument() {
+  doc = null;
+  pollCount = 0;
+}

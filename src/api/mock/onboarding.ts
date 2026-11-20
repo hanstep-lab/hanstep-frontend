@@ -50,3 +50,8 @@ export function mockOnboardingSummary(): OnboardingSummaryResponse {
     },
   };
 }
+
+// 데모 초기화 Mock: 서버처럼 온보딩 진행을 지워 처음(LANGUAGE)부터
+export function mockResetOnboarding() {
+  mockCurrentStep = 'LANGUAGE';
+}
