@@ -36,3 +36,8 @@ export function mockSaveGoals(req: GoalSaveRequest): GoalListResponse {
   });
   return { goals };
 }
+
+// 데모 초기화 Mock: 서버처럼 ACTIVE 목표를 CANCELLED 로 (조회에서 빠짐)
+export function mockCancelGoals() {
+  goals = [];
+}

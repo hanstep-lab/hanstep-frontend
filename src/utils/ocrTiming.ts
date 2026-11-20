@@ -19,3 +19,9 @@ export function ocrTimeMark(label: string) {
   console.log(`[OCR 시간] ${label}  +${now - lastAt}ms (누적 ${now - startAt}ms)`);
   lastAt = now;
 }
+
+// 데모 초기화로 OCR 작업이 지워졌을 때 이어 재던 기록을 버린다
+export function ocrTimeReset() {
+  startAt = null;
+  lastAt = 0;
+}
