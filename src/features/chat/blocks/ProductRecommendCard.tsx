@@ -2,6 +2,7 @@
 // 계약: hanstep-AI specs/chat/product_recommend_card_v1.md. 상품 필드는 PRD-02(GET /finance/products/recommend)와 같다.
 // - 색·여백·모서리·글꼴은 환율 카드(FxSummaryCard)와 같은 값을 쓴다
 // - 숫자(금리·금액·개월)는 받은 값을 표시만 한다. null 인 값은 그 줄만 숨긴다
+// - 상품마다 기간·금리·금액 줄(#60). 문구 규칙은 productLines.ts
 // - Figma 와 다른 점: 조건 칩·'추천 기준 자세히 보기'·기권 카드의 다시 찾기 버튼·연관 질문 칩은 넣지 않음(판정 근거·동작이 없음)
 import { useState } from 'react';
 import { View, Text, Pressable, StyleSheet } from 'react-native';
@@ -9,15 +10,10 @@ import { Ionicons } from '@expo/vector-icons';
 import Button from '../../../components/Button';
 import Tag from '../../../components/Tag';
 import { colors, typography, spacing, radius, fonts } from '../../../constants/theme';
-import { fmtDate, fmtWon } from '../../../utils/format';
 import type { ChatAction } from '../../../api/mock/chat';
-import type {
-  ChatProductRecommendBlock,
-  ProductAmountRange,
-  ProductRecommendItem,
-  ProductTermMonths,
-} from '../../../types/api';
+import type { ChatProductRecommendBlock, ProductRecommendItem } from '../../../types/api';
 import { productAbstainText, productExcludedText } from './labels';
+import { productAmountLine, productRateLine, productTermLine } from './productLines';
 
 type Props = {
   block: ChatProductRecommendBlock;
@@ -38,54 +34,16 @@ function kindWord(products: ProductRecommendItem[]): string {
   return '상품';
 }
 
-// [6, 12] → "6·12개월", {1, 60} → "1~60개월", {6, 6} → "6개월"
-function termText(t: ProductTermMonths): string | null {
-  if (!t) return null;
-  if (Array.isArray(t)) return t.length ? `${t.join('·')}개월` : null;
-  return t.min === t.max ? `${t.min}개월` : `${t.min}~${t.max}개월`;
-}
-
-// 적금: "월 1,000원~30만 원" / "월 1만 원부터"(max 제한없음) / "월 30만 원까지". 예금은 '월' 없이
-function amountText(range: ProductAmountRange | null, monthly: boolean): string | null {
-  if (!range) return null;
-  const prefix = monthly ? '월 ' : '';
-  const { min, max } = range;
-  const maxNum = typeof max === 'number' ? max : null;
-  if (min != null && maxNum != null) return `${prefix}${fmtWon(min)}~${fmtWon(maxNum)}`;
-  if (min != null) return `${prefix}${fmtWon(min)}부터`; // max 가 "no limit" 이거나 null
-  if (maxNum != null) return `${prefix}${fmtWon(maxNum)}까지`;
-  return null;
-}
-
-const pct = (n: number) => `연 ${n.toFixed(2)}%`;
-
 function ProductRow({ p, rank }: { p: ProductRecommendItem; rank: number }) {
   const kind = KIND_LABEL[p.kind] ?? null;
-  const meta = [
-    termText(p.termMonths),
-    amountText(p.kind === 'DEPOSIT' ? p.depositAmountKrw : p.monthlyAmountKrw, p.kind !== 'DEPOSIT'),
-  ]
-    .filter(Boolean)
-    .join(' · ');
-  const baseAsOf = p.baseRate?.asOf ? `${fmtDate(p.baseRate.asOf, { short: true })} 기준` : null;
-
-  // 최고금리가 있으면 크게 '최고', 아래에 '우대 조건 충족 시'와 기본금리. 없으면 기본금리를 크게
-  let bigRate: string | null = null;
-  let rateSub: string | null = null;
-  let baseLine: string | null = null;
-  if (p.maxRate) {
-    bigRate = `최고 ${pct(p.maxRate.ratePct)}`;
-    rateSub = '우대 조건 충족 시';
-    baseLine = p.baseRate ? [`기본 ${pct(p.baseRate.ratePct)}`, baseAsOf].filter(Boolean).join(' · ') : null;
-  } else if (p.baseRate) {
-    bigRate = `기본 ${pct(p.baseRate.ratePct)}`;
-    rateSub = baseAsOf;
-  }
+  const term = productTermLine(p.termMonths);
+  const rate = productRateLine(p.baseRate, p.maxRate);
+  const amount = productAmountLine(p.kind, p.monthlyAmountKrw, p.depositAmountKrw);
   const stayFits = p.stayFits === true;
 
   return (
     <View style={s.item}>
-      {/* 1줄: 순위 · 상품명+종류 · 큰 금리 */}
+      {/* 1줄: 순위 · 상품명+종류 */}
       <View style={s.itemTop}>
         <View style={[s.rank, rank === 1 && s.rankFirst]}>
           <Text style={[s.rankText, rank === 1 && s.rankTextFirst]}>{rank}</Text>
@@ -96,27 +54,25 @@ function ProductRow({ p, rank }: { p: ProductRecommendItem; rank: number }) {
           </Text>
           {kind ? <Tag label={kind} /> : null}
         </View>
-        {bigRate ? <Text style={s.rate}>{bigRate}</Text> : null}
       </View>
-      {/* 2줄: 기간·납입 범위 · 금리 설명 (순위 배지 폭만큼 들여씀) */}
-      {meta || rateSub ? (
-        <View style={[s.itemRow, s.indent]}>
-          <Text style={[s.itemSub, s.flex]}>{meta}</Text>
-          {rateSub ? <Text style={s.itemSub}>{rateSub}</Text> : null}
+      {/* 기간 · 금리(+작은 글씨 기준) · 금액. 순위 배지 폭만큼 들여쓰고, null 인 줄은 숨김 */}
+      {term || rate || amount ? (
+        <View style={[s.lines, s.indent]}>
+          {term ? <Text style={s.line}>{term}</Text> : null}
+          {rate ? (
+            <View>
+              <Text style={s.rateLine}>{rate.main}</Text>
+              {rate.note ? <Text style={s.itemSub}>{rate.note}</Text> : null}
+            </View>
+          ) : null}
+          {amount ? <Text style={s.line}>{amount}</Text> : null}
         </View>
       ) : null}
-      {/* 3줄: 체류 만료 전 만기 · 기본금리 (글자가 길어 들여쓰지 않고 카드 폭을 다 쓴다) */}
-      {stayFits || baseLine ? (
-        <View style={s.itemRow}>
-          {stayFits ? (
-            <View style={s.checkRow}>
-              <Ionicons name="checkmark" size={14} color={colors.primary} />
-              <Text style={s.checkText}>{STAY_FITS_TEXT}</Text>
-            </View>
-          ) : (
-            <View />
-          )}
-          {baseLine ? <Text style={s.itemSub}>{baseLine}</Text> : null}
+      {/* 체류 만료 전 만기 */}
+      {stayFits ? (
+        <View style={[s.checkRow, s.indent]}>
+          <Ionicons name="checkmark" size={14} color={colors.primary} />
+          <Text style={s.checkText}>{STAY_FITS_TEXT}</Text>
         </View>
       ) : null}
     </View>
@@ -211,8 +167,10 @@ const s = StyleSheet.create({
   items: { gap: spacing.md, paddingBottom: spacing.md },
   item: { gap: spacing.xs, padding: spacing.md, borderRadius: radius.lg, backgroundColor: colors.background },
   itemTop: { flexDirection: 'row', alignItems: 'center', gap: spacing.md },
-  itemRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: spacing.sm },
   indent: { paddingLeft: 24 + spacing.md }, // 순위 배지(24) + 간격
+  lines: { gap: spacing.xs },
+  line: { ...typography.caption, color: colors.text.strong },
+  rateLine: { ...typography.caption, fontFamily: fonts.bold, color: colors.primary },
   rank: {
     width: 24,
     height: 24,
@@ -227,7 +185,6 @@ const s = StyleSheet.create({
   nameRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.xs, flexWrap: 'wrap' },
   name: { ...typography.title, color: colors.text.strong, flexShrink: 1 },
   itemSub: { ...typography.badge, color: colors.text.sub },
-  rate: { ...typography.h3, color: colors.primary },
   checkRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.xs },
   checkText: { ...typography.badge, color: colors.text.strong },
   moreBtn: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: spacing.xs },
