@@ -8,14 +8,16 @@ import RemittanceConfirmCard from './RemittanceConfirmCard';
 import FxSummaryCard from './FxSummaryCard';
 import E74ScoreCard from './E74ScoreCard';
 import MissingInputsCard from './MissingInputsCard';
+import ProductRecommendCard from './ProductRecommendCard';
 
 type Props = {
   blocks: ChatBlock[];
+  userName?: string | null; // 상품 추천 카드 헤더 이름 (users/me shortName)
   onAction: (action: ChatAction) => void;
   onOpenTransferPath: (path: string) => void;
 };
 
-export default function ChatBlocks({ blocks, onAction, onOpenTransferPath }: Props) {
+export default function ChatBlocks({ blocks, userName, onAction, onOpenTransferPath }: Props) {
   if (blocks.length === 0) return null;
   return (
     <View style={s.wrap}>
@@ -30,6 +32,8 @@ export default function ChatBlocks({ blocks, onAction, onOpenTransferPath }: Pro
             return <E74ScoreCard key={key} block={b} onAction={onAction} />;
           case 'MISSING_INPUTS':
             return <MissingInputsCard key={key} block={b} />;
+          case 'PRODUCT_RECOMMEND_CARD':
+            return <ProductRecommendCard key={key} block={b} userName={userName} onAction={onAction} />;
           default:
             return null;
         }

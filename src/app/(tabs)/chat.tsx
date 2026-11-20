@@ -19,9 +19,9 @@ import {
   type SuggestionChip,
   LANDING_SUGGESTIONS,
   MENU_GROUPS,
-  USER_NAME,
 } from '../../api/mock/chat';
 import { createChatSession, streamChatMessage } from '../../api/chat';
+import { getMe } from '../../api/user';
 import { getFxAlerts } from '../../api/fx';
 import { hasUnseenIds } from '../../utils/fxAlertStorage';
 import type { ApiError, ChatBlock } from '../../types/api';
@@ -97,6 +97,8 @@ export default function ChatScreen() {
   const [showMenu, setShowMenu] = useState(false);
   const [askedSet, setAskedSet] = useState<Set<string>>(new Set());
   const [streaming, setStreaming] = useState(false); // 답하는 중이면 보내기 버튼을 막는다
+  // 첫 인사·상품 카드 헤더의 이름 (users/me shortName). 못 받으면 null → 이름 없이 표시
+  const [userName, setUserName] = useState<string | null>(null);
   const scrollRef = useRef<ComponentRef<typeof ScrollView>>(null);
   // ref: 바뀌어도 화면을 다시 그리지 않는 값. 그리기와 상관없는 "기억"에 쓴다
   const sessionIdRef = useRef<number | null>(null);           // 대화방 id. 첫 질문 때 만들고 새 대화까지 재사용
@@ -175,6 +177,17 @@ export default function ChatScreen() {
   // 화면이 사라지면 연결을 끊는다 (return 한 함수는 화면이 없어질 때 실행된다)
   useEffect(() => () => abortRef.current?.abort(), []);
 
+  // 이름: 금융상품 추천 화면(products.ts)과 같은 방식으로 users/me shortName 을 쓴다
+  useEffect(() => {
+    let cancelled = false;
+    getMe()
+      .then((me) => !cancelled && setUserName(me.shortName || null))
+      .catch(() => {});
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
   const clearChat = () => {
     abortRef.current?.abort(); // 답하는 중이면 끊기
     abortRef.current = null;
@@ -224,12 +237,19 @@ export default function ChatScreen() {
           }}
         >
           {messages.length === 0 ? (
-            <LandingContent onSend={send} />
+            <LandingContent onSend={send} userName={userName} />
           ) : (
             <>
               <Text style={styles.dateSep}>{getTodayString()}</Text>
               {messages.map(msg => (
-                <MessageItem key={msg.id} msg={msg} onSend={send} onRetry={retry} askedSet={askedSet} />
+                <MessageItem
+                  key={msg.id}
+                  msg={msg}
+                  onSend={send}
+                  onRetry={retry}
+                  askedSet={askedSet}
+                  userName={userName}
+                />
               ))}
             </>
           )}
@@ -270,12 +290,13 @@ export default function ChatScreen() {
   );
 }
 
-function LandingContent({ onSend }: { onSend: (t: string) => void }) {
+function LandingContent({ onSend, userName }: { onSend: (t: string) => void; userName: string | null }) {
+  const hello = userName ? `안녕하세요, ${userName}님.` : '안녕하세요.';
   return (
     <View style={landStyles.wrap}>
       <Text style={landStyles.date}>{getLandingDateString()}</Text>
       <Text style={landStyles.greeting}>
-        {`안녕하세요, ${USER_NAME}님.\n한국 생활과 금융, 무엇이 궁금하신가요?`}
+        {`${hello}\n한국 생활과 금융, 무엇이 궁금하신가요?`}
       </Text>
       <Text style={landStyles.sub}>아래 질문 확인해 보세요</Text>
       <View style={landStyles.card}>
@@ -341,11 +362,13 @@ function MessageItem({
   onSend,
   onRetry,
   askedSet,
+  userName,
 }: {
   msg: ChatMessage;
   onSend: (t: string) => void;
   onRetry: (msg: ChatMessage) => void;
   askedSet: Set<string>;
+  userName: string | null;
 }) {
   if (msg.role === 'user') {
     return (
@@ -381,7 +404,12 @@ function MessageItem({
         </View>
       )}
       {msg.blocks && msg.blocks.length > 0 && (
-        <ChatBlocks blocks={msg.blocks} onAction={runAction} onOpenTransferPath={openTransferPath} />
+        <ChatBlocks
+          blocks={msg.blocks}
+          userName={userName}
+          onAction={runAction}
+          onOpenTransferPath={openTransferPath}
+        />
       )}
       {msg.suggestions && msg.suggestions.length > 0 && (
         <SuggestionChipRow
@@ -451,7 +479,7 @@ function MenuSheet({ visible, onClose }: { visible: boolean; onClose: () => void
                           <View style={menuStyles.dot} accessibilityLabel="확인하지 않은 도달 알림 있음" />
                         )}
                       </View>
-                      <Text style={menuStyles.menuDesc}>{item.desc}</Text>
+                      {item.desc ? <Text style={menuStyles.menuDesc}>{item.desc}</Text> : null}
                     </View>
                     <Ionicons name="chevron-forward" size={16} color={colors.text.sub} />
                   </Pressable>

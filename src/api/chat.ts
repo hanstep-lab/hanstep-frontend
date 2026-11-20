@@ -84,6 +84,7 @@ const KNOWN_BLOCK_TYPES: ReadonlySet<string> = new Set<ChatBlock['type']>([
   'FX_SUMMARY_CARD',
   'E74_SCORE_CARD',
   'MISSING_INPUTS',
+  'PRODUCT_RECOMMEND_CARD',
 ]);
 
 // chat.done 의 blocks → 카드 배열. null·배열 아님은 빈 배열, 아는 type 만 남긴다.

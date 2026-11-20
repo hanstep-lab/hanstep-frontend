@@ -808,11 +808,23 @@ export type ChatMissingInputsBlock = {
   fields: { field: string; question: string }[];
 };
 
+// recommend_savings_products → 금융상품 추천 카드 (프롬프트 v4.5부터). 상품 필드는 PRD-02 와 같다.
+// 기권이면 products 가 [] 이고 abstainReason 이 있다. 계약: hanstep-AI specs/chat/product_recommend_card_v1.md
+export type ChatProductRecommendBlock = {
+  type: 'PRODUCT_RECOMMEND_CARD';
+  asOf: string; // YYYY-MM-DD
+  remainingStayMonths: number | null;
+  abstainReason: ProductAbstainReason | null;
+  products: ProductRecommendItem[]; // 최대 5개
+  excludedSummary: { reason: string; count: number }[];
+};
+
 export type ChatBlock =
   | ChatRemittanceConfirmBlock
   | ChatFxSummaryBlock
   | ChatE74ScoreBlock
-  | ChatMissingInputsBlock;
+  | ChatMissingInputsBlock
+  | ChatProductRecommendBlock;
 
 // ── SOL 글로벌론 상품 상세 (CR-002, GET /api/v1/credit/loans/sol-global) ─────────────────
 // 문구(title·desc·label·value·notice)는 서버가 완성해서 준다. 앱은 key 로 행을 찾고 글자를 그대로 보여 준다.
