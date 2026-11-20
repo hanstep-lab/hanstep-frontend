@@ -432,7 +432,10 @@ function MenuSheet({ visible, onClose }: { visible: boolean; onClose: () => void
             </Pressable>
           </View>
           <ScrollView showsVerticalScrollIndicator={false}>
-            {MENU_GROUPS.map(group => (
+            {/* hidden 항목은 빼고, 남는 항목이 없는 그룹(설정)은 제목도 그리지 않는다 */}
+            {MENU_GROUPS.map(group => ({ ...group, items: group.items.filter(item => !item.hidden) }))
+              .filter(group => group.items.length > 0)
+              .map(group => (
               <View key={group.section} style={menuStyles.group}>
                 <Text style={menuStyles.groupTitle}>{group.section}</Text>
                 {group.items.map(item => (

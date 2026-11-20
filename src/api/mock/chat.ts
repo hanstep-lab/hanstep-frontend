@@ -37,8 +37,9 @@ export const LANDING_SUGGESTIONS = [
   '비자 만료까지 얼마나 남았어요?',
 ];
 
-// action 이 없는 메뉴는 "준비 중" (설정)
-export type MenuItem = { label: string; desc: string; action?: ChatAction };
+// action 이 없는 메뉴는 "준비 중" (설정). hidden 이면 메뉴 목록에 보이지 않는다(항목·화면 코드는 남겨 둠)
+// desc 가 없으면 설명 줄을 그리지 않는다
+export type MenuItem = { label: string; desc?: string; action?: ChatAction; hidden?: boolean };
 
 export const MENU_GROUPS: { section: string; items: MenuItem[] }[] = [
   {
@@ -63,8 +64,9 @@ export const MENU_GROUPS: { section: string; items: MenuItem[] }[] = [
   {
     section: '설정',
     items: [
-      { label: '내 정보 수정', desc: '온보딩 답변 다시 입력' },
-      { label: '화면 언어', desc: '한국어·English·Filipino·中文' },
+      // 시연 범위 밖이라 목록에서만 숨김 (#54)
+      { label: '내 정보 수정', desc: '온보딩 답변 다시 입력', hidden: true },
+      { label: '화면 언어', desc: '한국어·English·Filipino·中文', hidden: true },
     ],
   },
 ];
