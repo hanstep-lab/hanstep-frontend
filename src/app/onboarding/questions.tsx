@@ -407,12 +407,17 @@ export default function QuestionsScreen() {
               <View style={styles.section}>
                 <View style={styles.sectionHeader}>
                   <Text style={styles.goalLabel}>{nextNo()}</Text>
-                  <Text style={styles.sectionQ}>{'이전 송금 이력을 분석했어요.\n이 지출이 맞나요?'}</Text>
+                  {/* 이력이 없으면 "찾아봤어요"가 아래 안내와 안 맞아서 질문 한 줄만 */}
+                  <Text style={styles.sectionQ}>
+                    {candidates.length > 0
+                      ? '매달 보내는 송금이 있으신가요?\n자주 보낸 곳을 찾아봤어요'
+                      : '매달 보내는 송금이 있으신가요?'}
+                  </Text>
                 </View>
                 {candidates.length > 0 ? (
                   <>
                     <View style={styles.mydataBadge}>
-                      <Text style={styles.mydataBadgeText}>마이데이터 신한 해외송금 Top 3</Text>
+                      <Text style={styles.mydataBadgeText}>최근 12개월 신한 해외송금 기준</Text>
                     </View>
                     <View style={styles.remitList}>
                       {candidates.map((c) => {
@@ -443,7 +448,7 @@ export default function QuestionsScreen() {
                     </View>
                   </>
                 ) : (
-                  <Text style={styles.helperText}>마이데이터를 연결하면 송금 이력을 분석해 드려요.</Text>
+                  <Text style={styles.helperText}>마이데이터를 연결하면 자주 보낸 곳을 찾아 드려요.</Text>
                 )}
                 <Pressable style={styles.remitEditBtn} onPress={preparing}>
                   <Ionicons name="add-circle-outline" size={15} color={colors.primary} />
