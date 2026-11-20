@@ -27,6 +27,7 @@ import { hasUnseenIds } from '../../utils/fxAlertStorage';
 import type { ApiError, ChatBlock } from '../../types/api';
 import { useTransferStore } from '../../store/transferStore';
 import ChatBlocks from '../../features/chat/blocks/ChatBlocks';
+import AnswerText from '../../features/chat/AnswerText';
 
 function openTransfer(amountKRW: number | null) {
   useTransferStore.getState().setInitialAmount(amountKRW);
@@ -389,7 +390,8 @@ function MessageItem({
         </Text>
       ))}
       {msg.text ? (
-        <Text style={msgStyles.aiText}>{msg.text}</Text>
+        // 답변 서식(**굵게**, "- " 목록)을 그린다. 답하는 중·도중 실패면 끝부분이 덜 온 글
+        <AnswerText text={msg.text} style={msgStyles.aiText} partial={msg.status !== 'done'} />
       ) : msg.status === 'streaming' ? (
         // 첫 글자가 오기 전까지
         <Text style={msgStyles.pendingText}>답변을 준비하고 있어요…</Text>
