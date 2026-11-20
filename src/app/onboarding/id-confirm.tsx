@@ -316,7 +316,7 @@ export default function IdConfirmScreen() {
             field={fieldOf('stayExpiry')}
             value={values.stayExpiry}
             onChange={setValue('stayExpiry')}
-            placeholder="2027-10-04"
+            placeholder="YYYY-MM-DD"
             isDate
           />
           {values.stayExpiry.trim() === '' ? (
@@ -327,8 +327,8 @@ export default function IdConfirmScreen() {
     );
   }
 
-  const bannerText =
-    phase === 'ready' ? 'OCR 자동 인식 완료' : phase === 'waiting' ? '자동 인식 중...' : '자동 인식 실패';
+  // 사진 위 칩: 인식 중·실패일 때만 보여 준다. 인식이 끝나면(ready) 사진만 보이게 칩을 숨긴다
+  const bannerText = phase === 'ready' ? null : phase === 'waiting' ? '자동 인식 중...' : '자동 인식 실패';
 
   const footer = (
     <View style={styles.footerInner}>
@@ -376,9 +376,11 @@ export default function IdConfirmScreen() {
             {idCardFrontUri ? (
               <Image source={{ uri: idCardFrontUri }} style={StyleSheet.absoluteFill} contentFit="cover" />
             ) : null}
-            <View style={styles.ocrPill}>
-              <Text style={styles.ocrPillText}>{bannerText}</Text>
-            </View>
+            {bannerText ? (
+              <View style={styles.ocrPill}>
+                <Text style={styles.ocrPillText}>{bannerText}</Text>
+              </View>
+            ) : null}
           </View>
         </View>
 

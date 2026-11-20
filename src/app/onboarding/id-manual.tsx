@@ -51,7 +51,7 @@ const FIELDS: {
     hint: `등록증에 적힌 대로 입력해 주세요. (${SUPPORTED_VISA_TYPES.join(', ')})`,
     maxLength: 10,
   },
-  { key: 'stayExpiry', label: '체류 만료일 (Expiry Date)', placeholder: '2027-10-04', isDate: true },
+  { key: 'stayExpiry', label: '체류 만료일 (Expiry Date)', placeholder: 'YYYY-MM-DD', isDate: true },
 ];
 
 export default function IdManualScreen() {
