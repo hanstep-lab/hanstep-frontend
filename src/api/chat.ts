@@ -12,10 +12,15 @@ import { API_URL, USE_MOCK, mockDelay } from './config';
 import { createSseParser } from './sse';
 import { getMockResponse, type SuggestionChip } from './mock/chat';
 
+// 앱이 모르는 카드 자리(개발 빌드 __DEV__ 에서만 생긴다). 카드 목록이 "Unsupported card: {type}" 회색 칸으로 그린다.
+// 운영 빌드에서는 만들지 않고 모르는 카드를 지금처럼 버린다
+export type UnsupportedBlock = { type: 'UNSUPPORTED'; originalType: string };
+export type ChatCardBlock = ChatBlock | UnsupportedBlock;
+
 // 답변이 끝났을 때 돌려주는 덧붙임(카드·추천 버튼).
 // 카드(blocks)는 실서버 chat.done 과 Mock 이 같은 모양이다. 추천 버튼은 Mock 에만 있다.
 export type ChatStreamResult = {
-  blocks?: ChatBlock[];
+  blocks?: ChatCardBlock[];
   suggestions?: SuggestionChip[];
   suggestionsLabel?: string;
 };
@@ -87,14 +92,33 @@ const KNOWN_BLOCK_TYPES: ReadonlySet<string> = new Set<ChatBlock['type']>([
   'PRODUCT_RECOMMEND_CARD',
 ]);
 
+const blockType = (b: object) => String((b as { type?: unknown }).type);
+
 // chat.done 의 blocks → 카드 배열. null·배열 아님은 빈 배열, 아는 type 만 남긴다.
+// 모르는 type 은 운영 빌드에서 버리고, 개발 빌드(__DEV__)에서는 UnsupportedBlock 으로 바꿔 자리를 보여 준다.
 // 값은 서버가 만든 그대로 쓰고 다시 계산하지 않는다
-export function parseBlocks(raw: unknown): ChatBlock[] {
+export function parseBlocks(raw: unknown): ChatCardBlock[] {
   if (!Array.isArray(raw)) return [];
-  return raw.filter(
-    (b): b is ChatBlock =>
-      !!b && typeof b === 'object' && KNOWN_BLOCK_TYPES.has(String((b as { type?: unknown }).type)),
-  );
+  const cards: ChatCardBlock[] = [];
+  for (const b of raw) {
+    if (!b || typeof b !== 'object') continue;
+    const type = blockType(b);
+    if (KNOWN_BLOCK_TYPES.has(type)) cards.push(b as ChatBlock);
+    else if (__DEV__) cards.push({ type: 'UNSUPPORTED', originalType: type });
+  }
+  return cards;
+}
+
+// 개발 로그용: chat.done 에서 받은 그대로(모르는 type 포함) type 별 개수. 예: "PRODUCT_RECOMMEND_CARD(1), FX_SUMMARY_CARD(2)"
+export function blockSummary(raw: unknown): string {
+  const counts = new Map<string, number>();
+  if (Array.isArray(raw)) {
+    for (const b of raw) {
+      if (b && typeof b === 'object') counts.set(blockType(b), (counts.get(blockType(b)) ?? 0) + 1);
+    }
+  }
+  if (counts.size === 0) return 'none';
+  return [...counts].map(([type, n]) => `${type}(${n})`).join(', ');
 }
 
 async function realStream(
@@ -142,7 +166,7 @@ async function realStream(
 
   // ④ 조각 읽기 → 파서 → 이벤트 처리
   let done = false;
-  let blocks: ChatBlock[] = [];
+  let blocks: ChatCardBlock[] = [];
   let failed: ApiError | null = null;
   const parse = createSseParser(({ event, data }) => {
     const d = parseJson(data);
@@ -158,6 +182,7 @@ async function realStream(
       }
       case 'chat.done':
         done = true;
+        if (__DEV__) console.log(`[chat.done] blocks: ${blockSummary(d.blocks)}`); // 개발 빌드에서만 (Metro 터미널)
         blocks = parseBlocks(d.blocks); // 카드는 도구가 성공했을 때만 온다. 없으면 null
         break;
       case 'chat.error':

@@ -20,11 +20,11 @@ import {
   LANDING_SUGGESTIONS,
   MENU_GROUPS,
 } from '../../api/mock/chat';
-import { createChatSession, streamChatMessage } from '../../api/chat';
+import { createChatSession, streamChatMessage, type ChatCardBlock } from '../../api/chat';
 import { getMe } from '../../api/user';
 import { getFxAlerts } from '../../api/fx';
 import { hasUnseenIds } from '../../utils/fxAlertStorage';
-import type { ApiError, ChatBlock } from '../../types/api';
+import type { ApiError } from '../../types/api';
 import { useTransferStore } from '../../store/transferStore';
 import ChatBlocks from '../../features/chat/blocks/ChatBlocks';
 import AnswerText from '../../features/chat/AnswerText';
@@ -65,7 +65,7 @@ type ChatMessage = {
   statusTexts?: string[]; // 도구 완료 문구. 한 답변에 도구가 여러 번 돌 수 있어 줄마다 쌓는다
   errorMessage?: string; // 실패했을 때 보여 줄 문구
   question?: string;     // [다시 시도] 때 다시 보낼 질문
-  blocks?: ChatBlock[]; // 카드 (chat.done.blocks). 끝난 뒤에 붙는다
+  blocks?: ChatCardBlock[]; // 카드 (chat.done.blocks). 끝난 뒤에 붙는다. 개발 빌드에서는 모르는 카드 자리도 들어 있다
   suggestions?: SuggestionChip[];
   suggestionsLabel?: string;
 };
