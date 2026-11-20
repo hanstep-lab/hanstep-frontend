@@ -28,7 +28,8 @@ describe('영어 사용자(en·vi·zh): 카드 글자 전부 영어', () => {
 
     expect(screen.getAllByText('Savings')).toHaveLength(3);
     expect(screen.getAllByText('Ends before your stay expires')).toHaveLength(3);
-    expect(screen.getByText('Based on product descriptions · Mock recommendation, not an approval')).toBeTruthy();
+    expect(screen.getByText('Based on product descriptions.')).toBeTruthy(); // 각주
+    expect(screen.queryByText(/Mock recommendation|approval/)).toBeNull();
     expect(screen.getByText('Open product recommendations')).toBeTruthy();
     // 한글이 한 글자도 없다(상품 이름 nameKo 제외)
     const names = new Set(block.products.map((p) => p.nameKo));
@@ -58,6 +59,8 @@ describe('한국어 사용자(ko·모름): 카드 글자 전부 한국어', () =
     expect(screen.getByText('월 1,000–300,000원')).toBeTruthy();
     expect(screen.getByText('1–60개월')).toBeTruthy();
     expect(screen.getByText('월 10,000원부터')).toBeTruthy();
+    expect(screen.getByText('상품설명서 기준으로 작성되었습니다')).toBeTruthy(); // 각주
+    expect(screen.queryByText(/모의 추천|가입 승인/)).toBeNull();
     expect(screen.getByText('금융상품 추천 화면에서 보기')).toBeTruthy();
     expect(screen.queryByText(/months|Interest|Monthly|KRW|Savings/)).toBeNull();
     expect(screen.queryByText(/~/)).toBeNull();
