@@ -1,65 +1,80 @@
-import { productAmountLine, productRateLine, productTermLine } from '../productLines';
+import { cardLanguage, productAmountLine, productRateLine, productTermLine } from '../productLines';
 
 const base = (ratePct: number, asOf: string | null = '2026-10-01') => ({ ratePct, asOf, quote: '', page: 1 });
 const rate = (ratePct: number) => ({ ratePct, quote: '', page: 2 });
 
+describe('cardLanguage (users/me preferredLanguage → 카드 언어)', () => {
+  it('ko 와 모름은 한국어, 그 밖은 영어', () => {
+    expect(cardLanguage('ko')).toBe('ko');
+    expect(cardLanguage(null)).toBe('ko');
+    expect(cardLanguage('en')).toBe('en');
+    expect(cardLanguage('vi')).toBe('en');
+    expect(cardLanguage('zh')).toBe('en');
+  });
+});
+
 describe('기간 줄 (termMonths)', () => {
-  it('배열이면 나열', () => expect(productTermLine([6, 12])).toBe('6·12 months'));
-  it('{min,max} 같으면 하나', () => expect(productTermLine({ min: 12, max: 12 })).toBe('12 months'));
-  it('{min,max} 다르면 범위(en dash)', () => expect(productTermLine({ min: 1, max: 60 })).toBe('1–60 months'));
-  it('1개월 하나면 단수', () => {
-    expect(productTermLine({ min: 1, max: 1 })).toBe('1 month');
-    expect(productTermLine([1])).toBe('1 month');
+  it('en: 나열·하나·범위(en dash)·1개월 단수', () => {
+    expect(productTermLine([6, 12], 'en')).toBe('6·12 months');
+    expect(productTermLine({ min: 12, max: 12 }, 'en')).toBe('12 months');
+    expect(productTermLine({ min: 1, max: 60 }, 'en')).toBe('1–60 months');
+    expect(productTermLine({ min: 1, max: 1 }, 'en')).toBe('1 month');
+    expect(productTermLine([1], 'en')).toBe('1 month');
+  });
+  it('ko: 나열·하나·범위', () => {
+    expect(productTermLine([6, 12], 'ko')).toBe('6·12개월');
+    expect(productTermLine({ min: 12, max: 12 }, 'ko')).toBe('12개월');
+    expect(productTermLine({ min: 1, max: 60 }, 'ko')).toBe('1~60개월');
   });
   it('null·빈 배열이면 줄 숨김', () => {
-    expect(productTermLine(null)).toBeNull();
-    expect(productTermLine([])).toBeNull();
+    expect(productTermLine(null, 'en')).toBeNull();
+    expect(productTermLine([], 'ko')).toBeNull();
   });
 });
 
 describe('금리 줄 (baseRate ~ maxRate)', () => {
-  it('최고금리 있으면 Base · Up to, 작은 글씨에 기간 기준·기준일', () => {
-    expect(productRateLine(base(2.2), rate(3.7))).toEqual({
+  it('en: Base · Up to, 작은 글씨에 기간 기준·기준일', () => {
+    expect(productRateLine(base(2.2), rate(3.7), 'en')).toEqual({
       main: 'Base 2.2% · Up to 3.7% with preferential terms',
       note: 'for the shortest term · as of 2026-10-01',
     });
+    expect(productRateLine(base(2.2, null), null, 'en')).toEqual({ main: 'Base 2.2%', note: 'for the shortest term' });
+    expect(productRateLine(null, rate(3.8), 'en')).toEqual({ main: 'Up to 3.8% with preferential terms', note: null });
   });
-  it('최고금리 없으면 Base 만', () => {
-    expect(productRateLine(base(2.2, '2026-09-03'), null)).toEqual({
-      main: 'Base 2.2%',
-      note: 'for the shortest term · as of 2026-09-03',
+  it('ko: 기본 · 우대 조건 충족 시 최고, 작은 글씨에 기간 기준·기준일', () => {
+    expect(productRateLine(base(2.2), rate(3.7), 'ko')).toEqual({
+      main: '기본 2.2% · 우대 조건 충족 시 최고 3.7%',
+      note: '가장 짧은 기간 기준 · 2026-10-01 기준',
     });
+    expect(productRateLine(base(2.2, null), null, 'ko')).toEqual({ main: '기본 2.2%', note: '가장 짧은 기간 기준' });
+    expect(productRateLine(null, rate(3.8), 'ko')).toEqual({ main: '우대 조건 충족 시 최고 3.8%', note: null });
   });
-  it('기준일이 없으면 "as of" 를 빼고 기간 기준만', () => {
-    expect(productRateLine(base(1.8, null), null)?.note).toBe('for the shortest term');
+  it('둘 다 null 이면 줄 숨김', () => {
+    expect(productRateLine(null, null, 'en')).toBeNull();
+    expect(productRateLine(null, null, 'ko')).toBeNull();
   });
-  it('기본금리 없이 최고금리만 있으면 Up to 만, 작은 글씨 없음', () => {
-    expect(productRateLine(null, rate(3.8))).toEqual({ main: 'Up to 3.8% with preferential terms', note: null });
-  });
-  it('둘 다 null 이면 줄 숨김', () => expect(productRateLine(null, null)).toBeNull());
   it('받은 소수 그대로(반올림·자릿수 맞춤 없음)', () => {
-    expect(productRateLine(base(2.05), rate(3.125))?.main).toBe('Base 2.05% · Up to 3.125% with preferential terms');
-    expect(productRateLine(base(3), null)?.main).toBe('Base 3%');
+    expect(productRateLine(base(2.05), rate(3.125), 'en')?.main).toBe('Base 2.05% · Up to 3.125% with preferential terms');
+    expect(productRateLine(base(3), null, 'ko')?.main).toBe('기본 3%');
   });
 });
 
 describe('금액 줄', () => {
-  it('적금은 월 납입 범위', () => {
-    expect(productAmountLine('SAVINGS', { min: 1000, max: 300000 }, null)).toBe('Monthly KRW 1,000 – 300,000');
+  it('en: 적금 Monthly, 예금 Deposit, 상한 없음 from, 최소 없음 up to', () => {
+    expect(productAmountLine('SAVINGS', { min: 1000, max: 300000 }, null, 'en')).toBe('Monthly KRW 1,000 – 300,000');
+    expect(productAmountLine('DEPOSIT', null, { min: 500000, max: 20000000 }, 'en')).toBe('Deposit KRW 500,000 – 20,000,000');
+    expect(productAmountLine('DEPOSIT', null, { min: 500000, max: 'no limit' }, 'en')).toBe('from KRW 500,000');
+    expect(productAmountLine('SAVINGS', { min: null, max: 300000 }, null, 'en')).toBe('up to KRW 300,000');
   });
-  it('예금은 예치 범위', () => {
-    expect(productAmountLine('DEPOSIT', null, { min: 500000, max: 20000000 })).toBe('Deposit KRW 500,000 – 20,000,000');
-  });
-  it('max 가 "no limit" 이면 from', () => {
-    expect(productAmountLine('DEPOSIT', null, { min: 500000, max: 'no limit' })).toBe('Deposit from KRW 500,000');
-    expect(productAmountLine('SAVINGS', { min: 10000, max: 'no limit' }, null)).toBe('Monthly from KRW 10,000');
-  });
-  it('최소만 없으면 up to', () => {
-    expect(productAmountLine('SAVINGS', { min: null, max: 300000 }, null)).toBe('Monthly up to KRW 300,000');
+  it('ko: 적금 월, 예금 예치, 상한 없음 부터, 최소 없음 까지', () => {
+    expect(productAmountLine('SAVINGS', { min: 1000, max: 300000 }, null, 'ko')).toBe('월 1,000~300,000원');
+    expect(productAmountLine('DEPOSIT', null, { min: 500000, max: 20000000 }, 'ko')).toBe('예치 500,000~20,000,000원');
+    expect(productAmountLine('SAVINGS', { min: 10000, max: 'no limit' }, null, 'ko')).toBe('월 10,000원부터');
+    expect(productAmountLine('SAVINGS', { min: null, max: 300000 }, null, 'ko')).toBe('월 300,000원까지');
   });
   it('종류에 맞는 범위가 null 이거나 비었으면 줄 숨김', () => {
-    expect(productAmountLine('SAVINGS', null, { min: 500000, max: 20000000 })).toBeNull();
-    expect(productAmountLine('DEPOSIT', { min: 1000, max: 300000 }, null)).toBeNull();
-    expect(productAmountLine('SAVINGS', { min: null, max: null }, null)).toBeNull();
+    expect(productAmountLine('SAVINGS', null, { min: 500000, max: 20000000 }, 'en')).toBeNull();
+    expect(productAmountLine('DEPOSIT', { min: 1000, max: 300000 }, null, 'ko')).toBeNull();
+    expect(productAmountLine('SAVINGS', { min: null, max: null }, null, 'en')).toBeNull();
   });
 });

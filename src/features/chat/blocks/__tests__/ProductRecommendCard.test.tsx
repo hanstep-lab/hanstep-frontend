@@ -1,34 +1,70 @@
-// Mock 상품 카드(3개)로 상품별 기간·금리·금액 줄 확인
+// Mock 상품 카드(3개)·기권 카드로 사용자 언어별 카드 글자 확인
 import { render, screen } from '@testing-library/react-native';
 import ProductRecommendCard from '../ProductRecommendCard';
 import { getMockResponse } from '../../../../api/mock/chat';
 import type { ChatProductRecommendBlock } from '../../../../types/api';
 
 const block = getMockResponse('적금 추천해줘', 1).blocks![0] as ChatProductRecommendBlock;
+const abstainBlock = getMockResponse('매달 100만 원 넣을 적금 추천해줘', 1).blocks![0] as ChatProductRecommendBlock;
 
-it('상품마다 기간·금리·금액 줄, null 인 줄은 숨긴다', async () => {
-  await render(<ProductRecommendCard block={block} onAction={jest.fn()} />);
+describe('영어 사용자(en·vi·zh): 카드 글자 전부 영어', () => {
+  it('상품마다 기간·금리·금액 줄, null 인 줄은 숨긴다', async () => {
+    await render(<ProductRecommendCard block={block} userName="Mark" language="en" onAction={jest.fn()} />);
 
-  // 1위 신한 땡겨요 적금: 6개월, 최고금리 있음, 월 1,000~300,000
-  expect(screen.getByText('6 months')).toBeTruthy();
-  expect(screen.getByText('Base 2.2% · Up to 3.7% with preferential terms')).toBeTruthy();
-  expect(screen.getByText('for the shortest term · as of 2026-10-01')).toBeTruthy();
-  expect(screen.getByText('Monthly KRW 1,000 – 300,000')).toBeTruthy();
+    expect(screen.getByText('Recommended savings for Mark')).toBeTruthy();
+    expect(screen.getByText('Based on product descriptions')).toBeTruthy();
+    // 1위: 6개월, 최고금리 있음, 월 1,000~300,000
+    expect(screen.getByText('6 months')).toBeTruthy();
+    expect(screen.getByText('Base 2.2% · Up to 3.7% with preferential terms')).toBeTruthy();
+    expect(screen.getByText('for the shortest term · as of 2026-10-01')).toBeTruthy();
+    expect(screen.getByText('Monthly KRW 1,000 – 300,000')).toBeTruthy();
+    // 2위: 범위 기간, 최고금리 없음, 월 상한 없음
+    expect(screen.getByText('1–60 months')).toBeTruthy();
+    expect(screen.getByText('Base 2.2%')).toBeTruthy();
+    expect(screen.getByText('from KRW 10,000')).toBeTruthy();
+    // 3위: 금액 정보 없음 → 금액 줄 없음
+    expect(screen.getByText('1–12 months')).toBeTruthy();
+    expect(screen.getAllByText(/KRW/)).toHaveLength(2);
 
-  // 2위 정기적금: 1~60개월, 최고금리 없음, 월 상한 없음
-  expect(screen.getByText('1–60 months')).toBeTruthy();
-  expect(screen.getByText('Base 2.2%')).toBeTruthy();
-  expect(screen.getByText('Monthly from KRW 10,000')).toBeTruthy();
+    expect(screen.getAllByText('Savings')).toHaveLength(3);
+    expect(screen.getAllByText('Ends before your stay expires')).toHaveLength(3);
+    expect(screen.getByText('Based on product descriptions · Mock recommendation, not an approval')).toBeTruthy();
+    expect(screen.getByText('Open product recommendations')).toBeTruthy();
+    // 한글이 한 글자도 없다(상품 이름 nameKo 제외)
+    const names = new Set(block.products.map((p) => p.nameKo));
+    const texts = screen.getAllByText(/[가-힣]/).map((el) => String(el.props.children));
+    expect(texts.filter((t) => !names.has(t))).toEqual([]);
+  });
 
-  // 3위 한 달부터 적금: 금액 정보가 없어 금액 줄 없음 (금액 줄은 위 두 개뿐)
-  expect(screen.getByText('1–12 months')).toBeTruthy();
-  expect(screen.getAllByText(/^Monthly /)).toHaveLength(2);
-  expect(screen.queryByText(/정보 없음/)).toBeNull();
+  it('기권 카드도 영어 (상품이 없어 종류는 products)', async () => {
+    await render(<ProductRecommendCard block={abstainBlock} language="en" onAction={jest.fn()} />);
+    expect(screen.getByText('Recommended products')).toBeTruthy();
+    expect(screen.getByText('No products fit your conditions right now')).toBeTruthy();
+    expect(screen.getByText('The amount you want to put in each month is more than your monthly spare money.')).toBeTruthy();
+    expect(screen.getByText('Excluded products')).toBeTruthy();
+    expect(screen.getByText('Matures after your stay ends')).toBeTruthy();
+    expect(screen.queryByText(/[가-힣]/)).toBeNull();
+  });
 });
 
-it('이름·종류 문구는 그대로, 예전 큰 금리(최고 연 x.xx%)는 없다', async () => {
-  await render(<ProductRecommendCard block={block} onAction={jest.fn()} />);
-  expect(screen.getByText('신한 땡겨요 적금')).toBeTruthy();
-  expect(screen.getAllByText('적금').length).toBeGreaterThan(0);
-  expect(screen.queryByText(/최고 연|기본 연/)).toBeNull();
+describe('한국어 사용자(ko·모름): 카드 글자 전부 한국어', () => {
+  it('같은 규칙의 한국어 줄', async () => {
+    await render(<ProductRecommendCard block={block} userName="Mark" language="ko" onAction={jest.fn()} />);
+
+    expect(screen.getByText('Mark 님 맞춤 적금')).toBeTruthy();
+    expect(screen.getByText('6개월')).toBeTruthy();
+    expect(screen.getByText('기본 2.2% · 우대 조건 충족 시 최고 3.7%')).toBeTruthy();
+    expect(screen.getByText('가장 짧은 기간 기준 · 2026-10-01 기준')).toBeTruthy();
+    expect(screen.getByText('월 1,000~300,000원')).toBeTruthy();
+    expect(screen.getByText('1~60개월')).toBeTruthy();
+    expect(screen.getByText('월 10,000원부터')).toBeTruthy();
+    expect(screen.getByText('금융상품 추천 화면에서 보기')).toBeTruthy();
+    expect(screen.queryByText(/months|Base|Monthly|KRW|Savings/)).toBeNull();
+  });
+
+  it('language 를 주지 않으면 한국어', async () => {
+    await render(<ProductRecommendCard block={block} onAction={jest.fn()} />);
+    expect(screen.getByText('맞춤 적금')).toBeTruthy();
+    expect(screen.queryByText(/months/)).toBeNull();
+  });
 });

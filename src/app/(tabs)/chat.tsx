@@ -28,6 +28,7 @@ import type { ApiError } from '../../types/api';
 import { useTransferStore } from '../../store/transferStore';
 import ChatBlocks from '../../features/chat/blocks/ChatBlocks';
 import AnswerText from '../../features/chat/AnswerText';
+import { cardLanguage, type CardLanguage } from '../../features/chat/blocks/productLines';
 
 function openTransfer(amountKRW: number | null) {
   useTransferStore.getState().setInitialAmount(amountKRW);
@@ -100,6 +101,8 @@ export default function ChatScreen() {
   const [streaming, setStreaming] = useState(false); // 답하는 중이면 보내기 버튼을 막는다
   // 첫 인사·상품 카드 헤더의 이름 (users/me shortName). 못 받으면 null → 이름 없이 표시
   const [userName, setUserName] = useState<string | null>(null);
+  // 상품 추천 카드 글자 언어 (users/me preferredLanguage). 못 받으면 한국어
+  const [cardLang, setCardLang] = useState<CardLanguage>('ko');
   const scrollRef = useRef<ComponentRef<typeof ScrollView>>(null);
   // ref: 바뀌어도 화면을 다시 그리지 않는 값. 그리기와 상관없는 "기억"에 쓴다
   const sessionIdRef = useRef<number | null>(null);           // 대화방 id. 첫 질문 때 만들고 새 대화까지 재사용
@@ -178,11 +181,15 @@ export default function ChatScreen() {
   // 화면이 사라지면 연결을 끊는다 (return 한 함수는 화면이 없어질 때 실행된다)
   useEffect(() => () => abortRef.current?.abort(), []);
 
-  // 이름: 금융상품 추천 화면(products.ts)과 같은 방식으로 users/me shortName 을 쓴다
+  // 이름: 금융상품 추천 화면(products.ts)과 같은 방식으로 users/me shortName 을 쓴다. 언어도 같이 받는다
   useEffect(() => {
     let cancelled = false;
     getMe()
-      .then((me) => !cancelled && setUserName(me.shortName || null))
+      .then((me) => {
+        if (cancelled) return;
+        setUserName(me.shortName || null);
+        setCardLang(cardLanguage(me.preferredLanguage));
+      })
       .catch(() => {});
     return () => {
       cancelled = true;
@@ -250,6 +257,7 @@ export default function ChatScreen() {
                   onRetry={retry}
                   askedSet={askedSet}
                   userName={userName}
+                  cardLang={cardLang}
                 />
               ))}
             </>
@@ -364,12 +372,14 @@ function MessageItem({
   onRetry,
   askedSet,
   userName,
+  cardLang,
 }: {
   msg: ChatMessage;
   onSend: (t: string) => void;
   onRetry: (msg: ChatMessage) => void;
   askedSet: Set<string>;
   userName: string | null;
+  cardLang: CardLanguage;
 }) {
   if (msg.role === 'user') {
     return (
@@ -409,6 +419,7 @@ function MessageItem({
         <ChatBlocks
           blocks={msg.blocks}
           userName={userName}
+          language={cardLang}
           onAction={runAction}
           onOpenTransferPath={openTransferPath}
         />

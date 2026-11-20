@@ -40,31 +40,57 @@ const E74_STATUS_TEXT: Record<string, string> = {
 };
 export const e74StatusText = (status: string): string | null => E74_STATUS_TEXT[status] ?? null;
 
+// 상품 추천 카드는 사용자 언어로 보여 준다(ko → 한국어, 그 밖 → 영어. productLines.ts cardLanguage). 아래 두 표도 두 벌
+type ProductTextLanguage = 'ko' | 'en';
+
 // 상품 추천 기권 이유 (PRODUCT_RECOMMEND_CARD abstainReason). 코드 목록: hanstep-AI specs/chat/product_recommend_card_v1.md
-const PRODUCT_ABSTAIN_TEXT: Record<string, string> = {
-  REQUEST_EXCEEDS_SURPLUS: '매달 넣으려는 금액이 월 여유자금보다 많아요.',
-  STAY_TOO_SHORT: '남은 체류 기간 안에 만기가 끝나는 상품이 없어요.',
-  NO_MATCHING_PRODUCT: '지금 조건에 맞는 상품을 찾지 못했어요.',
+const PRODUCT_ABSTAIN_TEXT: Record<ProductTextLanguage, Record<string, string>> = {
+  ko: {
+    REQUEST_EXCEEDS_SURPLUS: '매달 넣으려는 금액이 월 여유자금보다 많아요.',
+    STAY_TOO_SHORT: '남은 체류 기간 안에 만기가 끝나는 상품이 없어요.',
+    NO_MATCHING_PRODUCT: '지금 조건에 맞는 상품을 찾지 못했어요.',
+  },
+  en: {
+    REQUEST_EXCEEDS_SURPLUS: 'The amount you want to put in each month is more than your monthly spare money.',
+    STAY_TOO_SHORT: 'No product matures within your remaining stay.',
+    NO_MATCHING_PRODUCT: "We couldn't find a product that fits your current conditions.",
+  },
 };
-export const productAbstainText = (code: string | null): string | null =>
-  code ? PRODUCT_ABSTAIN_TEXT[code] ?? null : null;
+export const productAbstainText = (code: string | null, lang: ProductTextLanguage = 'ko'): string | null =>
+  code ? PRODUCT_ABSTAIN_TEXT[lang][code] ?? null : null;
 
 // 상품 추천 제외 이유 (PRODUCT_RECOMMEND_CARD excludedSummary[].reason). 상품마다 처음 걸린 조건 하나로 센다.
 // 의미 기준: hanstep-AI ai/app/products/recommender.py check_product()·failed_condition()
-const PRODUCT_EXCLUDED_TEXT: Record<string, string> = {
-  recommendable: '추천 대상이 아닌 상품', // 조건표에서 추천 제외(recommendable=false)이거나 조건표에 없는 문서
-  kind: '찾는 종류(적금·예금)가 아닌 상품', // 요청 productType 과 다름
-  foreigner: '외국인이 가입할 수 없는 상품', // foreignerEligible=false
-  visa: '체류자격 조건이 맞지 않는 상품', // 사용자 비자가 상품 가입 비자 목록에 없음
-  age: '나이 조건이 맞지 않는 상품', // 가입 최소·최대 나이 밖
-  stayTerm: '체류 만료 뒤에 끝나는 상품', // 가장 짧은 계약 기간 > 남은 체류 개월
-  spare: '월 최소 납입액이 여유자금보다 큰 상품', // 적금만. 월 최소 납입액 > 여유자금
-  requestTerm: '원하는 기간에 맞지 않는 상품', // 가장 짧은 계약 기간 > 요청 최대 기간, 또는 기간 확인 불가
-  requestMonthly: '원하는 월 납입액으로 넣을 수 없는 상품', // 요청액 > 여유자금, 상품 월 납입 범위 밖, 또는 범위 확인 불가
-  savingType: '원하는 적립 방식이 아닌 상품', // 요청 accrual 과 다르거나 확인 불가
-  requireForeignerExplicit: '외국인 가입이 명시되지 않은 상품', // 외국인 명시 상품만 요청했는데 explicit 아님
+const PRODUCT_EXCLUDED_TEXT: Record<ProductTextLanguage, Record<string, string>> = {
+  ko: {
+    recommendable: '추천 대상이 아닌 상품', // 조건표에서 추천 제외(recommendable=false)이거나 조건표에 없는 문서
+    kind: '찾는 종류(적금·예금)가 아닌 상품', // 요청 productType 과 다름
+    foreigner: '외국인이 가입할 수 없는 상품', // foreignerEligible=false
+    visa: '체류자격 조건이 맞지 않는 상품', // 사용자 비자가 상품 가입 비자 목록에 없음
+    age: '나이 조건이 맞지 않는 상품', // 가입 최소·최대 나이 밖
+    stayTerm: '체류 만료 뒤에 끝나는 상품', // 가장 짧은 계약 기간 > 남은 체류 개월
+    spare: '월 최소 납입액이 여유자금보다 큰 상품', // 적금만. 월 최소 납입액 > 여유자금
+    requestTerm: '원하는 기간에 맞지 않는 상품', // 가장 짧은 계약 기간 > 요청 최대 기간, 또는 기간 확인 불가
+    requestMonthly: '원하는 월 납입액으로 넣을 수 없는 상품', // 요청액 > 여유자금, 상품 월 납입 범위 밖, 또는 범위 확인 불가
+    savingType: '원하는 적립 방식이 아닌 상품', // 요청 accrual 과 다르거나 확인 불가
+    requireForeignerExplicit: '외국인 가입이 명시되지 않은 상품', // 외국인 명시 상품만 요청했는데 explicit 아님
+  },
+  en: {
+    recommendable: 'Not eligible for recommendation',
+    kind: 'Not the type you asked for (savings or deposit)',
+    foreigner: 'Not open to foreigners',
+    visa: "Your visa type doesn't qualify",
+    age: 'Age requirement not met',
+    stayTerm: 'Matures after your stay ends',
+    spare: 'Minimum monthly payment is more than your spare money',
+    requestTerm: "Doesn't fit the term you want",
+    requestMonthly: "Can't take the monthly amount you want",
+    savingType: 'Not the saving method you want',
+    requireForeignerExplicit: "Doesn't explicitly allow foreigners",
+  },
 };
-export const productExcludedText = (reason: string): string | null => PRODUCT_EXCLUDED_TEXT[reason] ?? null;
+export const productExcludedText = (reason: string, lang: ProductTextLanguage = 'ko'): string | null =>
+  PRODUCT_EXCLUDED_TEXT[lang][reason] ?? null;
 
 // 송금 카드 버튼은 transferPath 로 이동한다. 서버 값이라 송금 화면 주소일 때만 연다
 export const isTransferPath = (path: string): boolean => path === '/transfer' || path.startsWith('/transfer?');

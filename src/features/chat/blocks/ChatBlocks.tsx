@@ -9,15 +9,17 @@ import FxSummaryCard from './FxSummaryCard';
 import E74ScoreCard from './E74ScoreCard';
 import MissingInputsCard from './MissingInputsCard';
 import ProductRecommendCard from './ProductRecommendCard';
+import type { CardLanguage } from './productLines';
 
 type Props = {
   blocks: ChatCardBlock[];
   userName?: string | null; // 상품 추천 카드 헤더 이름 (users/me shortName)
+  language?: CardLanguage; // 상품 추천 카드 글자 언어 (users/me preferredLanguage 기준)
   onAction: (action: ChatAction) => void;
   onOpenTransferPath: (path: string) => void;
 };
 
-export default function ChatBlocks({ blocks, userName, onAction, onOpenTransferPath }: Props) {
+export default function ChatBlocks({ blocks, userName, language, onAction, onOpenTransferPath }: Props) {
   if (blocks.length === 0) return null;
   return (
     <View style={s.wrap}>
@@ -33,7 +35,9 @@ export default function ChatBlocks({ blocks, userName, onAction, onOpenTransferP
           case 'MISSING_INPUTS':
             return <MissingInputsCard key={key} block={b} />;
           case 'PRODUCT_RECOMMEND_CARD':
-            return <ProductRecommendCard key={key} block={b} userName={userName} onAction={onAction} />;
+            return (
+              <ProductRecommendCard key={key} block={b} userName={userName} language={language} onAction={onAction} />
+            );
           case 'UNSUPPORTED':
             return __DEV__ ? (
               <View key={key} style={s.unsupported}>
