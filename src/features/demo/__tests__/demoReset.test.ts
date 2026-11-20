@@ -2,8 +2,6 @@ import { File } from 'expo-file-system';
 import { resetDemoAccount } from '../demoReset';
 import { entry } from '../../../api/auth';
 import { resetDemo } from '../../../api/demo';
-import { getOnboarding } from '../../../api/onboarding';
-import { getMe } from '../../../api/user';
 import { useAuthStore } from '../../../store/authStore';
 import { useOnboardingStore } from '../../../store/onboardingStore';
 import { useTransferStore } from '../../../store/transferStore';
@@ -14,13 +12,9 @@ jest.mock('expo-file-system', () => {
 });
 jest.mock('../../../api/auth', () => ({ entry: jest.fn() }));
 jest.mock('../../../api/demo', () => ({ resetDemo: jest.fn() }));
-jest.mock('../../../api/onboarding', () => ({ getOnboarding: jest.fn() }));
-jest.mock('../../../api/user', () => ({ getMe: jest.fn() }));
 
 const mockEntry = entry as jest.Mock;
 const mockResetDemo = resetDemo as jest.Mock;
-const mockGetOnboarding = getOnboarding as jest.Mock;
-const mockGetMe = getMe as jest.Mock;
 const mockFileDelete = (jest.requireMock('expo-file-system') as { __delete: jest.Mock }).__delete;
 
 const apiError = (code: string) => ({ code, message: 'server message' });
@@ -50,18 +44,19 @@ beforeEach(() => {
   seedState();
   mockEntry.mockResolvedValue({ accessToken: 'jwt-1' });
   mockResetDemo.mockResolvedValue({ languageRestored: true });
-  mockGetMe.mockResolvedValue({ preferredLanguage: 'en' });
-  mockGetOnboarding.mockResolvedValue({ profile: { residencePurpose: 'WORK' } });
 });
 
 describe('resetDemoAccount 성공', () => {
-  it('서버가 지운 등록증 상태를 비우고, 언어·거주 목적은 서버 값으로 다시 맞춘다', async () => {
+  it('onboardingStore.reset() 으로 언어·거주 목적·등록증 사진·문서 id 를 모두 비우고 사진 파일도 지운다', async () => {
+    const resetSpy = jest.spyOn(useOnboardingStore.getState(), 'reset');
+
     await expect(resetDemoAccount()).resolves.toEqual({ status: 'done' });
 
     expect(mockResetDemo).toHaveBeenCalledTimes(1);
+    expect(resetSpy).toHaveBeenCalledTimes(1);
     expect(File).toHaveBeenCalledWith('file:///cache/id-front.jpg');
     expect(mockFileDelete).toHaveBeenCalledTimes(1);
-    expect(snapshot().onboarding).toEqual({ language: 'en', purpose: 'WORK', idCardFrontUri: null, idDocumentId: null });
+    expect(snapshot().onboarding).toEqual({ language: null, purpose: null, idCardFrontUri: null, idDocumentId: null });
   });
 
   it('서버 범위 밖인 송금 화면 값은 그대로 둔다', async () => {
@@ -77,12 +72,6 @@ describe('resetDemoAccount 성공', () => {
     mockEntry.mockClear();
     await resetDemoAccount();
     expect(mockEntry).not.toHaveBeenCalled();
-  });
-
-  it('초기화 뒤 언어·거주 목적 불러오기가 실패하면 그 값만 비우고 성공으로 끝낸다', async () => {
-    mockGetMe.mockRejectedValue(apiError('NETWORK'));
-    await expect(resetDemoAccount()).resolves.toEqual({ status: 'done' });
-    expect(snapshot().onboarding).toEqual({ language: null, purpose: 'WORK', idCardFrontUri: null, idDocumentId: null });
   });
 });
 
