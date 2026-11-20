@@ -32,13 +32,14 @@ export function getVisaDday(): number {
 
 export const LANDING_SUGGESTIONS = [
   '한국에서 오래 살고 싶은데 어떻게 해요?',
-  '필리핀에 50만 원 보내면 얼마 받아요?',
+  '본국에 50만 원 보내면 얼마 받아요?',
   '이번 달 얼마까지 저축할 수 있어요?',
   '비자 만료까지 얼마나 남았어요?',
 ];
 
-// action 이 없는 메뉴는 "준비 중" (설정)
-export type MenuItem = { label: string; desc: string; action?: ChatAction };
+// action 이 없는 메뉴는 "준비 중" (설정). hidden 이면 메뉴 목록에 보이지 않는다(항목·화면 코드는 남겨 둠)
+// desc 가 없으면 설명 줄을 그리지 않는다
+export type MenuItem = { label: string; desc?: string; action?: ChatAction; hidden?: boolean };
 
 export const MENU_GROUPS: { section: string; items: MenuItem[] }[] = [
   {
@@ -46,7 +47,7 @@ export const MENU_GROUPS: { section: string; items: MenuItem[] }[] = [
     items: [
       { label: '환율 정보', desc: '오늘 기준환율·추이·기간별 평균', action: 'fx' },
       { label: '목표 환율 알림', desc: '원하는 기준환율이 되면 알림', action: 'fx_alert' },
-      { label: '해외송금', desc: 'BDO ****5566', action: 'transfer' },
+      { label: '해외송금', action: 'transfer' },
     ],
   },
   {
@@ -63,8 +64,9 @@ export const MENU_GROUPS: { section: string; items: MenuItem[] }[] = [
   {
     section: '설정',
     items: [
-      { label: '내 정보 수정', desc: '온보딩 답변 다시 입력' },
-      { label: '화면 언어', desc: '한국어·English·Filipino·中文' },
+      // 시연 범위 밖이라 목록에서만 숨김 (#54)
+      { label: '내 정보 수정', desc: '온보딩 답변 다시 입력', hidden: true },
+      { label: '화면 언어', desc: '한국어·English·Filipino·中文', hidden: true },
     ],
   },
 ];
@@ -185,6 +187,115 @@ const MOCK_E74_BLOCKS: ChatBlock[] = [
   },
 ];
 
+// 금융상품 추천 카드(PRODUCT_RECOMMEND_CARD). hanstep-AI specs/chat/product_recommend_card_v1.md 예시 1(성공)·예시 2(기권) 그대로.
+// 서버가 카드를 보내기 전(AI 머지 + 운영 v4.5 전환 전)에 화면을 확인하려고 둔다
+const MOCK_PRODUCT_BLOCK: ChatBlock = {
+  type: 'PRODUCT_RECOMMEND_CARD',
+  asOf: '2026-11-20',
+  remainingStayMonths: 10,
+  abstainReason: null,
+  products: [
+    {
+      productId: 'doc-de733331abd3',
+      nameKo: '신한 땡겨요 적금',
+      kind: 'SAVINGS',
+      termMonths: { min: 6, max: 6 },
+      monthlyAmountKrw: { min: 1000, max: 300000 },
+      depositAmountKrw: null,
+      accrual: 'FLEXIBLE',
+      foreignerEligible: 'inferred',
+      notChecked: ['visa', 'age'],
+      stayFits: true,
+      baseRate: { ratePct: 2.2, asOf: '2026-10-01', quote: '기본이자율 (2026.10.01 현재, 세전) 연 2.20%', page: 1 },
+      maxRate: { ratePct: 3.7, quote: '최고이자율 (2026.10.01 현재, 세전) 최고 연 3.70%', page: 2 },
+      feature: {
+        quote:
+          '신한은행 배달앱 “땡겨요” 서비스를 이용하거나 주단위 적금 납입 미션 달성 고객에게 우대금리를 제공하는 적립식 상품',
+        page: 1,
+      },
+      evidence: [
+        { about: 'term', quote: '계약기간 6개월', page: 1 },
+        { about: 'amount', quote: '최소 1천원 이상 월 30만원 이하', page: 1 },
+        { about: 'accrual', quote: '상품유형 자유적립식', page: 1 },
+        { about: 'foreigners', quote: '가입대상 실명의 개인 및 개인사업자', page: 1 },
+      ],
+    },
+    {
+      productId: 'doc-ad95d3f72e39',
+      nameKo: '정기적금',
+      kind: 'SAVINGS',
+      termMonths: { min: 1, max: 60 },
+      monthlyAmountKrw: { min: 10000, max: 'no limit' },
+      depositAmountKrw: null,
+      accrual: 'FIXED',
+      foreignerEligible: 'inferred',
+      notChecked: ['visa', 'age'],
+      stayFits: true,
+      baseRate: {
+        ratePct: 2.2,
+        asOf: '2026-09-03',
+        quote:
+          '기본이자율 (2026.09.03 현재, 세전) 가입기간 1개월이상 3개월미만 3개월이상 6개월미만 6개월이상 12개월미만 12개월이상 24개월미만 정기적립식 연 2.20% 연 2.25% 연 2.30% 연 2.45% 가입기간 24개월이상 36개월미만 36개월 37개월이상 60개월이하 정기적립식 연 2.55% 연 2.55% 연 2.70%',
+        page: 1,
+      },
+      maxRate: null,
+      feature: {
+        quote: '일정 기간 후에 일정 금액을 지급할 것을 미리 약정하고 월 1회 일정한 일자에 일정금액을 수입하는 예금',
+        page: 1,
+      },
+      evidence: [
+        { about: 'term', quote: '1개월 이상 60개월 이하(월단위)', page: 3 },
+        { about: 'amount', quote: '최저가입금액 1만원 이상', page: 5 },
+        { about: 'accrual', quote: '상품유형 정기적립식', page: 3 },
+        { about: 'foreigners', quote: '가입대상 제한없음', page: 5 },
+      ],
+    },
+    {
+      productId: 'doc-a5851b226169',
+      nameKo: '한 달부터 적금',
+      kind: 'SAVINGS',
+      termMonths: { min: 1, max: 12 },
+      monthlyAmountKrw: null,
+      depositAmountKrw: null,
+      accrual: 'FLEXIBLE',
+      foreignerEligible: 'inferred',
+      notChecked: ['visa', 'age', 'spareMoney'],
+      stayFits: true,
+      baseRate: { ratePct: 1.8, asOf: '2026-09-03', quote: '기본이자율 (2026.09.03 현재, 세전) 연 1.80%', page: 2 },
+      maxRate: { ratePct: 3.8, quote: '최고이자율 (2026.09.03 현재, 세전) 연 3.80%', page: 2 },
+      feature: {
+        quote:
+          '1 개월 이상 12 개월 이내 가입 가능한 상품으로, 납입 주기에 따른 총 납입 회차에 대해 일정 회차 이상 납입 시 우대이자율을 제공하는 적립식 예금',
+        page: 1,
+      },
+      evidence: [
+        { about: 'term', quote: '계약기간 1개월 이상 12개월 이하', page: 1 },
+        { about: 'accrual', quote: '상품유형 자유적립식', page: 1 },
+        { about: 'foreigners', quote: '가입대상 실명의 개인 및 개인사업자', page: 1 },
+      ],
+    },
+  ],
+  excludedSummary: [
+    { reason: 'recommendable', count: 1 },
+    { reason: 'kind', count: 4 },
+    { reason: 'stayTerm', count: 5 },
+  ],
+};
+
+const MOCK_PRODUCT_ABSTAIN_BLOCK: ChatBlock = {
+  type: 'PRODUCT_RECOMMEND_CARD',
+  asOf: '2026-11-20',
+  remainingStayMonths: 10,
+  abstainReason: 'REQUEST_EXCEEDS_SURPLUS',
+  products: [],
+  excludedSummary: [
+    { reason: 'recommendable', count: 1 },
+    { reason: 'kind', count: 4 },
+    { reason: 'stayTerm', count: 5 },
+    { reason: 'requestMonthly', count: 3 },
+  ],
+};
+
 const MOCK: Record<string, MockChatResponse> = {
   remitCalc: {
     text: '어머니 BDO 계좌로 50만 원을 보내면\n약 23,521 PHP를 받아요.',
@@ -207,6 +318,14 @@ const MOCK: Record<string, MockChatResponse> = {
       { label: '이번 달 지출 현황 보여줘' },
     ],
     suggestionsLabel: '연관 질문',
+  },
+  products: {
+    text: '체류 만료 전에 끝나고 월 여유자금 안에서 넣을 수 있는 적금 3개를 찾았어요.',
+    blocks: [MOCK_PRODUCT_BLOCK],
+  },
+  productsAbstain: {
+    text: '매달 100만 원은 월 여유자금보다 많아서 조건에 맞는 적금을 찾지 못했어요.',
+    blocks: [MOCK_PRODUCT_ABSTAIN_BLOCK],
   },
   visaRoadmap: {
     text: `E-9 비자에서 장기 체류로 가는 가장 현실적인 방법은 E-7-4(숙련기능인력) 비자예요.\n\n현재 근무 기간, 소득, 한국어 점수를 합산해요. ${USER_NAME}님의 모의 사전진단 결과를 아래에서 확인해 보세요.`,
@@ -241,7 +360,12 @@ export function getMockResponse(input: string, callCount: number): MockChatRespo
   const t = input.trim();
   const lower = t.toLowerCase();
 
-  if (lower.includes('얼마 받아') || lower.includes('보내면 얼마') || lower.includes('필리핀에')) {
+  if (
+    lower.includes('얼마 받아') ||
+    lower.includes('보내면 얼마') ||
+    lower.includes('필리핀에') ||
+    lower.includes('본국에')
+  ) {
     return MOCK.remitCalc;
   }
   if (
@@ -254,6 +378,10 @@ export function getMockResponse(input: string, callCount: number): MockChatRespo
     return MOCK.remitCalc; // 의도 확인 칩(remit_confirm)은 없앴다. 서버처럼 바로 송금 카드
   }
   if (lower.includes('환율')) return MOCK.rateInfo;
+  // 상품 추천 카드. '저축 계좌 추천해줘' 칩도 여기로 오도록 '저축' 검사보다 먼저 본다. 100만 원이면 기권 카드
+  if (lower.includes('적금') || lower.includes('예금') || lower.includes('상품') || lower.includes('추천')) {
+    return lower.includes('100만') ? MOCK.productsAbstain : MOCK.products;
+  }
   if (lower.includes('저축') || lower.includes('얼마까지') || lower.includes('여유자금')) {
     return MOCK.budget;
   }

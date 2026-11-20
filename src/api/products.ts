@@ -5,7 +5,7 @@ import { client } from './client';
 import { USE_MOCK, mockDelay } from './config';
 import { mockProductRecommendation } from './mock/products';
 import { getMe } from './user';
-import { getLatestAnalysis } from './finance';
+import { getOnboardingSummary } from './onboarding';
 import { fmtWon } from '../utils/format';
 import type {
   ProductAbstainReason,
@@ -108,8 +108,9 @@ export async function getProductsScreen(): Promise<ProductsScreenData> {
     getMe()
       .then((me) => me.shortName || null)
       .catch(() => null),
-    getLatestAnalysis()
-      .then((a) => a.spare)
+    // 월 여유자금: ONB-04 balance.spare (직접 입력한 지출을 반영한 값). 분석 전이면 balance 가 null
+    getOnboardingSummary()
+      .then((s) => s.balance?.spare ?? null)
       .catch(() => null),
   ]);
 

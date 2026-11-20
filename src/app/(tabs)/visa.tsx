@@ -2,7 +2,7 @@
 // 데이터는 src/api/visa.ts 에서만 받고, 점수·D-day·신청 가능일은 서버(Mock) 값을 그대로 보여준다.
 // 화면은 GET 만 한다. 저장된 로드맵이 없으면(404) 안내와 [로드맵 만들기] 버튼 → POST → GET 다시.
 import { useCallback, useEffect, useState } from 'react';
-import { View, Text, ScrollView, Pressable, StyleSheet, Alert } from 'react-native';
+import { View, Text, ScrollView, StyleSheet } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { router, type Href } from 'expo-router';
@@ -13,10 +13,6 @@ import StepCard, { STEP_NUMBER_SIZE, STEP_NUMBER_TOP } from '../../components/St
 import { colors, typography, spacing, radius, fonts, shadow } from '../../constants/theme';
 import { createRoadmap, getVisaScreen, type VisaScreenData, type VisaScreenView } from '../../api/visa';
 import type { ApiError } from '../../types/api';
-
-function preparingAlert() {
-  Alert.alert('준비 중', '곧 사용할 수 있어요.');
-}
 
 function StatusCard({ status }: { status: VisaScreenView['status'] }) {
   return (
@@ -199,20 +195,9 @@ export default function VisaScreen() {
   return (
     <SafeAreaView style={s.safe} edges={['top']}>
       <View style={s.header}>
-        <Pressable style={s.headerTitle} onPress={preparingAlert}>
+        {/* 제목만 표시. 화살표·새 대화·히스토리·메뉴 버튼은 "준비 중"만 띄워서 뺐다 (#54) */}
+        <View style={s.headerTitle}>
           <Text style={s.headerTitleText}>신한걸음</Text>
-          <Ionicons name="chevron-down" size={16} color={colors.primary} />
-        </Pressable>
-        <View style={s.headerRight}>
-          <Pressable onPress={preparingAlert} style={s.headerBtn} accessibilityLabel="새 대화">
-            <Ionicons name="create-outline" size={22} color={colors.text.strong} />
-          </Pressable>
-          <Pressable onPress={preparingAlert} style={s.headerBtn} accessibilityLabel="히스토리">
-            <Ionicons name="time-outline" size={22} color={colors.text.strong} />
-          </Pressable>
-          <Pressable onPress={preparingAlert} style={s.avatar} accessibilityLabel="메뉴">
-            <Ionicons name="person" size={14} color={colors.text.inverse} />
-          </Pressable>
         </View>
       </View>
 
@@ -277,17 +262,6 @@ const s = StyleSheet.create({
   },
   headerTitle: { flexDirection: 'row', alignItems: 'center', gap: spacing.xs, minHeight: 44 },
   headerTitleText: { ...typography.h3, fontFamily: fonts.medium, color: colors.text.strong },
-  headerRight: { flexDirection: 'row', alignItems: 'center', gap: spacing.xs },
-  headerBtn: { width: 44, height: 44, alignItems: 'center', justifyContent: 'center' },
-  avatar: {
-    width: 32,
-    height: 32,
-    marginLeft: spacing.xs,
-    borderRadius: radius.full,
-    backgroundColor: colors.primary,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
 
   content: { paddingHorizontal: spacing.xl, paddingTop: spacing.xs, paddingBottom: spacing.xxl, gap: spacing.xl },
 

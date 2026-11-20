@@ -7,7 +7,7 @@ import { fetch } from 'expo/fetch';
 import { randomUUID } from 'expo-crypto';
 import type { ApiError, ChatBlock } from '../types/api';
 import { useAuthStore } from '../store/authStore';
-import { client } from './client';
+import { client, refreshAccessToken } from './client';
 import { API_URL, USE_MOCK, mockDelay } from './config';
 import { createSseParser } from './sse';
 import { getMockResponse, type SuggestionChip } from './mock/chat';
@@ -84,6 +84,7 @@ const KNOWN_BLOCK_TYPES: ReadonlySet<string> = new Set<ChatBlock['type']>([
   'FX_SUMMARY_CARD',
   'E74_SCORE_CARD',
   'MISSING_INPUTS',
+  'PRODUCT_RECOMMEND_CARD',
 ]);
 
 // chat.done 의 blocks → 카드 배열. null·배열 아님은 빈 배열, 아는 type 만 남긴다.
@@ -102,30 +103,44 @@ async function realStream(
   { onDelta, onStatus, signal }: ChatStreamHandlers,
 ): Promise<ChatStreamResult> {
   // ① 요청. client(axios)를 못 쓰니 주소·토큰을 직접 붙인다
-  const token = useAuthStore.getState().accessToken;
-  let res: Awaited<ReturnType<typeof fetch>>;
-  try {
-    res = await fetch(`${API_URL}/api/v1/chat/sessions/${sessionId}/messages/stream`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        // 꼭 넣는다. 없으면 Android 개발 모드의 네트워크 감시 기능이 응답을 끝까지 모았다가 넘길 수 있다
-        Accept: 'text/event-stream',
-        ...(token ? { Authorization: `Bearer ${token}` } : {}),
-      },
-      // 보낼 때마다 새 uuid. 같은 값으로 다시 보내면 409 DUPLICATE_REQUEST
-      body: JSON.stringify({ clientMessageId: randomUUID(), content }),
-      signal,
-    });
-  } catch (e) {
-    throw signal?.aborted ? aborted() : networkError(e);
+  // 질문마다 새 uuid. 같은 값으로 다시 보내면 409 DUPLICATE_REQUEST (401 재요청은 처리 전이라 같은 값을 쓴다)
+  const body = JSON.stringify({ clientMessageId: randomUUID(), content });
+  const open = async (token: string | null) => {
+    try {
+      return await fetch(`${API_URL}/api/v1/chat/sessions/${sessionId}/messages/stream`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          // 꼭 넣는다. 없으면 Android 개발 모드의 네트워크 감시 기능이 응답을 끝까지 모았다가 넘길 수 있다
+          Accept: 'text/event-stream',
+          ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        },
+        body,
+        signal,
+      });
+    } catch (e) {
+      throw signal?.aborted ? aborted() : networkError(e);
+    }
+  };
+  let res = await open(useAuthStore.getState().accessToken);
+
+  // ② 스트림 시작 전 401: client.ts 와 같은 갱신(공유)으로 토큰을 새로 받아 1번만 다시 요청.
+  //    갱신이 실패하거나 다시 401 이면 아래에서 기존 오류로 처리한다. 스트림이 시작된 뒤의 오류는 그대로
+  if (res.status === 401) {
+    let token: string | null = null;
+    try {
+      token = await refreshAccessToken();
+    } catch {
+      // 갱신 실패: 원래 401 오류를 보여 준다
+    }
+    if (token) res = await open(token);
   }
 
-  // ② 스트림 시작 전 오류(400·401·404·409)는 일반 JSON 오류로 온다
+  // ③ 스트림 시작 전 오류(400·401·404·409)는 일반 JSON 오류로 온다
   if (!res.ok) throw await httpError(res);
   if (!res.body) throw networkError(new Error('응답 본문이 없어요'));
 
-  // ③ 조각 읽기 → 파서 → 이벤트 처리
+  // ④ 조각 읽기 → 파서 → 이벤트 처리
   let done = false;
   let blocks: ChatBlock[] = [];
   let failed: ApiError | null = null;
@@ -164,7 +179,7 @@ async function realStream(
     throw signal?.aborted ? aborted() : networkError(e);
   }
 
-  // ④ 끝 판단. 연결이 닫힌 것만으로는 성공이 아니다 (서버가 죽어도 닫힌다)
+  // ⑤ 끝 판단. 연결이 닫힌 것만으로는 성공이 아니다 (서버가 죽어도 닫힌다)
   if (failed) throw failed;
   if (done) return { blocks };
   throw { code: 'STREAM_INTERRUPTED', message: '답변이 중간에 끊겼어요.' } satisfies ApiError;

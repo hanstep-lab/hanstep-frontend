@@ -145,14 +145,6 @@ export default function LanguageScreen() {
           ))}
         </View>
       </View>
-
-      {/* 안내 문구 */}
-      <View style={styles.infoBox}>
-        <Ionicons name="information-circle-outline" size={16} color={colors.text.sub} />
-        <Text style={styles.infoText}>
-          {'언어와 체류 유형은 언제든지\n\'내 정보 수정\'에서 바꿀 수 있어요.'}
-        </Text>
-      </View>
     </Screen>
   );
 }
@@ -223,17 +215,6 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   checkSmActive: { backgroundColor: colors.primary },
-
-  // 안내 문구 박스
-  infoBox: {
-    flexDirection: 'row',
-    gap: 10,
-    backgroundColor: colors.background,
-    borderRadius: radius.lg,
-    padding: 14,
-    alignItems: 'flex-start',
-  },
-  infoText: { ...typography.body, color: colors.text.sub, flex: 1 },
 
   // 푸터
   footerInner: { gap: spacing.sm },
