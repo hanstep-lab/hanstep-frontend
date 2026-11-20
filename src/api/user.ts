@@ -6,11 +6,12 @@ import type { Language, UserMeResponse } from '../types/api';
 import { DEMO_USER } from './mock/demoUser';
 
 // Mock: 명세 example 기준. 온보딩 미완료 상태라 currentStep 이 LANGUAGE.
+// 언어는 ko: Mock 채팅 답변(mock/chat.ts)이 모두 한국어라, 같은 언어를 따르는 채팅 상품 카드도 한국어로 맞춘다
 const MOCK_ME: UserMeResponse = {
   id: 1,
   displayName: DEMO_USER.nameEn,
   shortName: DEMO_USER.firstName,
-  preferredLanguage: 'en',
+  preferredLanguage: 'ko',
   status: 'ACTIVE',
   onboarding: { completed: false, currentStep: 'LANGUAGE' },
 };

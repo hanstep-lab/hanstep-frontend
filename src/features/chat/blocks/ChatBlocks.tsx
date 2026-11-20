@@ -1,23 +1,25 @@
 // AI 답변 아래 카드들 (CHT-04 chat.done.blocks). 한 메시지에 여러 장이 올 수 있어 받은 순서대로 모두 그린다.
-// chat.ts 가 아는 type 만 남기지만, 여기서도 모르는 type 은 그리지 않는다.
-import { View, StyleSheet } from 'react-native';
-import { spacing } from '../../../constants/theme';
+// 앱이 모르는 카드는 개발 빌드(__DEV__)에서만 "Unsupported card: {type}" 회색 칸으로 보여 주고, 운영 빌드에서는 그리지 않는다.
+import { View, Text, StyleSheet } from 'react-native';
+import { colors, radius, spacing, typography } from '../../../constants/theme';
 import type { ChatAction } from '../../../api/mock/chat';
-import type { ChatBlock } from '../../../types/api';
+import type { ChatCardBlock } from '../../../api/chat';
 import RemittanceConfirmCard from './RemittanceConfirmCard';
 import FxSummaryCard from './FxSummaryCard';
 import E74ScoreCard from './E74ScoreCard';
 import MissingInputsCard from './MissingInputsCard';
 import ProductRecommendCard from './ProductRecommendCard';
+import type { CardLanguage } from './productLines';
 
 type Props = {
-  blocks: ChatBlock[];
+  blocks: ChatCardBlock[];
   userName?: string | null; // 상품 추천 카드 헤더 이름 (users/me shortName)
+  language?: CardLanguage; // 상품 추천 카드 글자 언어 (users/me preferredLanguage 기준)
   onAction: (action: ChatAction) => void;
   onOpenTransferPath: (path: string) => void;
 };
 
-export default function ChatBlocks({ blocks, userName, onAction, onOpenTransferPath }: Props) {
+export default function ChatBlocks({ blocks, userName, language, onAction, onOpenTransferPath }: Props) {
   if (blocks.length === 0) return null;
   return (
     <View style={s.wrap}>
@@ -33,7 +35,15 @@ export default function ChatBlocks({ blocks, userName, onAction, onOpenTransferP
           case 'MISSING_INPUTS':
             return <MissingInputsCard key={key} block={b} />;
           case 'PRODUCT_RECOMMEND_CARD':
-            return <ProductRecommendCard key={key} block={b} userName={userName} onAction={onAction} />;
+            return (
+              <ProductRecommendCard key={key} block={b} userName={userName} language={language} onAction={onAction} />
+            );
+          case 'UNSUPPORTED':
+            return __DEV__ ? (
+              <View key={key} style={s.unsupported}>
+                <Text style={s.unsupportedText}>{`Unsupported card: ${b.originalType}`}</Text>
+              </View>
+            ) : null;
           default:
             return null;
         }
@@ -44,4 +54,6 @@ export default function ChatBlocks({ blocks, userName, onAction, onOpenTransferP
 
 const s = StyleSheet.create({
   wrap: { gap: spacing.xs },
+  unsupported: { backgroundColor: colors.tagBg, borderRadius: radius.lg, padding: spacing.md },
+  unsupportedText: { ...typography.caption, color: colors.text.sub },
 });
