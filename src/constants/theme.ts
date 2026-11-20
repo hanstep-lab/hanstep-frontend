@@ -9,6 +9,7 @@ export const colors = {
     default: '#24272D', // 본문
     sub: '#666666',     // 설명, 보조 문구
     muted: '#666666',   // 흐린 라벨
+    placeholder: '#A0A7B1', // 입력칸이 비었을 때 안내 글자 (값과 구분되게 흐리게)
     inverse: '#FFFFFF', // 파란 배경 위 글자
   },
 

@@ -2,7 +2,7 @@
 // 다음: PUT /goals(목돈 금액·시점) → PUT /commitments(고정·변동 지출, 송금) → POST /steps/GOAL_DETAILS
 // 목돈 섹션은 "목돈 마련", 송금 섹션은 "본국 송금"을 골랐을 때만 보인다. 고정·변동 지출은 여유자금 계산에 필요해서 항상 보인다.
 
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState, type ComponentRef } from 'react';
 import { View, Text, Pressable, StyleSheet, TextInput, Alert, ActivityIndicator } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import Screen from '../../components/Screen';
@@ -75,6 +75,35 @@ function initials(displayName: string): string {
   const words = displayName.trim().split(/\s+/);
   const last = words.length > 1 ? words[words.length - 1] : '';
   return ((words[0]?.[0] ?? '') + (last ? last[0] : '')).toUpperCase();
+}
+
+// 만원 단위 금액 입력칸 (목돈 직접 입력·고정 생활비·변동 지출 공통).
+// 빈 칸: 흐린 "0"(Medium), 값: 진한 숫자(Bold). 글자 크기는 같아서 입력해도 칸 크기가 그대로.
+// 키패드는 numeric: 서버 값이 13.5 만원처럼 소수로 올 수 있어 소수점 키가 필요하다
+function AmountField({ value, onChangeText }: { value: string; onChangeText: (text: string) => void }) {
+  const inputRef = useRef<ComponentRef<typeof TextInput>>(null);
+  const [focused, setFocused] = useState(false);
+  return (
+    // 칸 어디를 눌러도("만원" 포함) 입력 시작
+    <Pressable
+      style={[styles.amountBadge, focused && styles.amountBadgeFocused]}
+      onPress={() => inputRef.current?.focus()}
+    >
+      <TextInput
+        ref={inputRef}
+        style={[styles.amountInput, value === '' && styles.amountInputEmpty]}
+        value={value}
+        onChangeText={onChangeText}
+        onFocus={() => setFocused(true)}
+        onBlur={() => setFocused(false)}
+        placeholder="0"
+        placeholderTextColor={colors.text.placeholder}
+        keyboardType="numeric"
+        maxLength={6}
+      />
+      <Text style={styles.amountUnit}>만원</Text>
+    </Pressable>
+  );
 }
 
 export default function QuestionsScreen() {
@@ -364,18 +393,7 @@ export default function QuestionsScreen() {
                     <View style={styles.expenseLeft}>
                       <Text style={styles.expenseLabel}>모으고 싶은 금액</Text>
                     </View>
-                    <View style={styles.amountBadge}>
-                      <TextInput
-                        style={styles.amountInput}
-                        value={customAmount}
-                        onChangeText={(t) => setCustomAmount(onlyNumber(t))}
-                        placeholder="입력"
-                        placeholderTextColor={colors.text.sub}
-                        keyboardType="numeric"
-                        maxLength={6}
-                      />
-                      <Text style={styles.amountUnit}>만원</Text>
-                    </View>
+                    <AmountField value={customAmount} onChangeText={(t) => setCustomAmount(onlyNumber(t))} />
                   </View>
                 ) : null}
                 {visa ? (
@@ -389,12 +407,17 @@ export default function QuestionsScreen() {
               <View style={styles.section}>
                 <View style={styles.sectionHeader}>
                   <Text style={styles.goalLabel}>{nextNo()}</Text>
-                  <Text style={styles.sectionQ}>{'이전 송금 이력을 분석했어요.\n이 지출이 맞나요?'}</Text>
+                  {/* 이력이 없으면 "찾아봤어요"가 아래 안내와 안 맞아서 질문 한 줄만 */}
+                  <Text style={styles.sectionQ}>
+                    {candidates.length > 0
+                      ? '매달 보내는 송금이 있으신가요?\n자주 보낸 곳을 찾아봤어요'
+                      : '매달 보내는 송금이 있으신가요?'}
+                  </Text>
                 </View>
                 {candidates.length > 0 ? (
                   <>
                     <View style={styles.mydataBadge}>
-                      <Text style={styles.mydataBadgeText}>마이데이터 신한 해외송금 Top 3</Text>
+                      <Text style={styles.mydataBadgeText}>최근 12개월 신한 해외송금 기준</Text>
                     </View>
                     <View style={styles.remitList}>
                       {candidates.map((c) => {
@@ -425,7 +448,7 @@ export default function QuestionsScreen() {
                     </View>
                   </>
                 ) : (
-                  <Text style={styles.helperText}>마이데이터를 연결하면 송금 이력을 분석해 드려요.</Text>
+                  <Text style={styles.helperText}>마이데이터를 연결하면 자주 보낸 곳을 찾아 드려요.</Text>
                 )}
                 <Pressable style={styles.remitEditBtn} onPress={preparing}>
                   <Ionicons name="add-circle-outline" size={15} color={colors.primary} />
@@ -447,18 +470,7 @@ export default function QuestionsScreen() {
                       <Text style={styles.expenseLabel}>{row.label}</Text>
                       <Text style={styles.expenseSub}>{row.sub}</Text>
                     </View>
-                    <View style={styles.amountBadge}>
-                      <TextInput
-                        style={styles.amountInput}
-                        value={row.value}
-                        onChangeText={(t) => setFixedValue(row.key, t)}
-                        placeholder="입력"
-                        placeholderTextColor={colors.text.sub}
-                        keyboardType="numeric"
-                        maxLength={6}
-                      />
-                      <Text style={styles.amountUnit}>만원</Text>
-                    </View>
+                    <AmountField value={row.value} onChangeText={(t) => setFixedValue(row.key, t)} />
                   </View>
                 ))}
               </View>
@@ -490,18 +502,7 @@ export default function QuestionsScreen() {
                     <Text style={styles.expenseLabel}>변동 지출</Text>
                     <Text style={styles.expenseSub}>식비 · 교통 · 여가 등</Text>
                   </View>
-                  <View style={styles.amountBadge}>
-                    <TextInput
-                      style={styles.amountInput}
-                      value={varExpense}
-                      onChangeText={(t) => setVarExpense(onlyNumber(t))}
-                      placeholder="입력"
-                      placeholderTextColor={colors.text.sub}
-                      keyboardType="numeric"
-                      maxLength={6}
-                    />
-                    <Text style={styles.amountUnit}>만원</Text>
-                  </View>
+                  <AmountField value={varExpense} onChangeText={(t) => setVarExpense(onlyNumber(t))} />
                 </View>
               </View>
               <Text style={styles.helperText}>
@@ -643,7 +644,11 @@ const styles = StyleSheet.create({
     borderRadius: radius.md,
     paddingHorizontal: 12,
     paddingVertical: 6,
+    // 테두리는 항상 같은 두께(평소 투명) → 포커스로 색만 바뀌어도 칸 크기가 그대로
+    borderWidth: 1.5,
+    borderColor: 'transparent',
   },
+  amountBadgeFocused: { borderColor: colors.primary },
   amountNum: { ...typography.body, fontFamily: fonts.bold, color: colors.text.strong },
   amountUnit: { ...typography.badge, color: colors.text.sub },
   amountInput: {
@@ -654,6 +659,8 @@ const styles = StyleSheet.create({
     padding: 0,
     textAlign: 'right' as const,
   },
+  // 빈 칸: placeholder 는 입력칸 글꼴을 그대로 써서 Medium 으로 낮춘다 (크기는 같음)
+  amountInputEmpty: { fontFamily: fonts.medium },
 
   autoTransferBox: {
     flexDirection: 'row',
