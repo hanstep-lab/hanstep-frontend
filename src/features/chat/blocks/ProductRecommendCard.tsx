@@ -50,7 +50,7 @@ const TEXT: Record<CardLanguage, CardText> = {
     title: (word, name) => (name ? `${name} 님 맞춤 ${word}` : `맞춤 ${word}`),
     source: '상품설명서 기준',
     footnote: '상품설명서 기준으로 작성되었습니다',
-    stayFits: '체류 만료 전에 끝나요',
+    stayFits: '상품 만기가 체류 만료 전에 끝나요',
     abstainTitle: (word) => `지금 조건에 맞는 ${word}이 없어요`,
     excludedTitle: '제외된 상품',
     count: (n) => `${n}개`,
