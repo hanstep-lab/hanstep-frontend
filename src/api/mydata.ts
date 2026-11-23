@@ -169,6 +169,8 @@ export function connectErrorText(e: ApiError): string {
       return '연결을 처리하고 있어요. 잠시 후 다시 시도해 주세요.';
     case 'NETWORK':
       return '네트워크 연결을 확인하고 다시 시도해 주세요.';
+    case 'TIMEOUT':
+      return '응답이 늦어지고 있어요. 잠시 후 다시 시도해 주세요.';
     default:
       return '금융 데이터를 연결하지 못했어요. 잠시 후 다시 시도해 주세요.';
   }

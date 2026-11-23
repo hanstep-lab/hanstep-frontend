@@ -14,6 +14,7 @@ import OnboardingProgress from '../../components/OnboardingProgress';
 import { TOTAL_STAGES, stageOf } from '../../constants/onboardingSteps';
 import { ocrTimeMark, ocrTimeStart } from '../../utils/ocrTiming';
 import { useIdDocument } from '../../hooks/useIdDocument';
+import type { ApiError } from '../../types/api';
 
 // "직접 정보 입력하기" 버튼. 사진 없이 체류 정보를 저장하는 화면(id-manual, PUT /visa/profile)으로 간다
 const SHOW_MANUAL_ENTRY = true;
@@ -114,6 +115,8 @@ export default function IdCardScreen() {
     capturingRef.current = true;
     setIsCapturing(true);
     let uploading = false; // 어느 단계에서 실패했는지 구분해 안내 문구를 다르게
+    let uploadStartedAt = 0;
+    let retried = false; // 응답 없이 끊겨 1번 다시 보냈는지 (uploadIdCard 가 알려 줌)
     try {
       ocrTimeStart('촬영 버튼');
       const photo = await cameraRef.current.takePictureAsync();
@@ -130,16 +133,25 @@ export default function IdCardScreen() {
       setIdCardFrontUri(resized.uri);
 
       uploading = true;
-      const doc = await uploadIdCard(resized.uri); // 저장 + OCR 작업 등록. 결과는 이 화면에서 멈춘 사진 위로 기다림
+      uploadStartedAt = Date.now();
+      // 저장 + OCR 작업 등록. 결과는 이 화면에서 멈춘 사진 위로 기다림
+      const doc = await uploadIdCard(resized.uri, { onRetry: () => { retried = true; } });
       ocrTimeMark(`업로드 응답 ${doc.status}/${doc.ocrJob?.status ?? '-'}`);
       setIdDocumentId(doc.documentId);
       setWaitingDocId(doc.documentId);
     } catch (e) {
-      console.warn('[ON-002] 촬영·업로드 실패', e);
-      unfreeze();
+      unfreeze(); // 실패하면 멈춘 미리보기를 풀어 다시 찍을 수 있게
       if (uploading) {
+        // 원인 구분용 한 줄(TIMEOUT·NETWORK·서버 code). 토큰·사진 경로는 남기지 않는다.
+        // message 는 응답이 없으면 axios 원래 문구(Network Error·timeout of 30000ms exceeded), 있으면 서버 message
+        const err = e as Partial<ApiError> | null;
+        console.warn(
+          `[ON-002] 업로드 실패 code=${err?.code ?? '-'} message=${err?.message ?? '-'}` +
+            ` elapsedMs=${Date.now() - uploadStartedAt} retried=${retried}`,
+        );
         Alert.alert('사진을 보내지 못했어요', errorText(e, '잠시 후 다시 시도해 주세요.'));
       } else {
+        console.warn('[ON-002] 촬영 실패', e);
         Alert.alert('촬영하지 못했어요', '잠시 후 다시 시도해 주세요.');
       }
     } finally {

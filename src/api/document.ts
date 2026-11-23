@@ -4,14 +4,34 @@
 import { client } from './client';
 import { USE_MOCK, mockDelay } from './config';
 import { mockConfirm, mockGet, mockUpdateFields, mockUpload } from './mock/document';
-import type { DocumentFieldUpdateItem, DocumentResponse } from '../types/api';
+import type { ApiError, DocumentFieldUpdateItem, DocumentResponse } from '../types/api';
+
+// 업로드가 응답 없이 끊겼을 때(NETWORK) 다시 보내기 전에 기다리는 시간
+export const UPLOAD_RETRY_DELAY_MS = 1500;
 
 // DOC-01: 앞면 사진 업로드 → OCR 작업 등록(202). 같은 사진이면 기존 문서(200)
-export async function uploadIdCard(frontUri: string): Promise<DocumentResponse> {
+// 응답 없이 끊기면(NETWORK) 잠시 뒤 같은 파일로 1번만 다시 보낸다. 첫 요청이 서버에 닿아 저장됐더라도
+// 서버가 같은 사진으로 보고 기존 문서를 200 으로 주므로 문서가 두 번 생기지 않는다.
+// 시간 초과(TIMEOUT)·4xx·5xx 는 다시 보내지 않는다(기다림이 길어지거나 다시 보내도 결과가 같음)
+export async function uploadIdCard(
+  frontUri: string,
+  options: { onRetry?: () => void } = {},
+): Promise<DocumentResponse> {
   if (USE_MOCK) {
     await mockDelay(800);
     return mockUpload();
   }
+  try {
+    return await postIdCard(frontUri);
+  } catch (e) {
+    if ((e as Partial<ApiError> | null)?.code !== 'NETWORK') throw e;
+    options.onRetry?.();
+    await new Promise<void>((resolve) => setTimeout(resolve, UPLOAD_RETRY_DELAY_MS));
+    return postIdCard(frontUri);
+  }
+}
+
+async function postIdCard(frontUri: string): Promise<DocumentResponse> {
   const form = new FormData();
   // RN 의 FormData 는 파일을 { uri, name, type } 객체로 넣는다(브라우저의 Blob 대신)
   form.append('front', { uri: frontUri, name: 'front.jpg', type: 'image/jpeg' } as any);
