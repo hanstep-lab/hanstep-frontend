@@ -81,14 +81,12 @@ export default function IdCardScreen() {
   const canCapture = hasPermission && isCameraReady && !isCapturing && !frozen;
 
   const isFocused = useIsFocused();
-  const [torchOn, setTorchOn] = useState(false);
 
-  // 화면이 가려질 때: 플래시 끄고, 카메라 준비 상태 초기화(돌아오면 다시 onCameraReady를 기다림)
+  // 화면이 가려질 때: 카메라 준비 상태 초기화(돌아오면 다시 onCameraReady를 기다림)
   // 멈춤 상태도 풀어서, 돌아오면(뒤로가기·확인 화면의 '다시 촬영') 살아 있는 카메라로 시작한다
   useFocusEffect(
     useCallback(() => {
       return () => {
-        setTorchOn(false);
         setIsCameraReady(false);
         setFrozen(false);
         setWaitingDocId(null);
@@ -122,7 +120,6 @@ export default function IdCardScreen() {
       ocrTimeMark(`촬영 ${photo.width}x${photo.height}`);
       // 찍은 장면에서 미리보기를 멈춘다(촬영이 끝난 뒤에 멈춰야 한다: 멈춘 상태에서는 촬영하지 말 것, expo-camera 문서)
       setFrozen(true);
-      setTorchOn(false);
       cameraRef.current?.pausePreview().catch(() => {});
       const resized = await prepareIdCardPhoto(photo, {
         viewWidth: viewSize.current.width,
@@ -160,17 +157,6 @@ export default function IdCardScreen() {
           <OnboardingProgress current={stageOf('ID_DOCUMENT')} total={TOTAL_STAGES} sub="등록증 촬영" />
         </View>
 
-        <View style={styles.row}>
-          <Pressable
-            style={[styles.chip, !hasPermission && styles.chipDisabled]}
-            onPress={() => setTorchOn((on) => !on)}
-            disabled={!hasPermission}
-          >
-            <Ionicons name={torchOn ? 'flash' : 'flash-off'} size={16} color={colors.text.strong} />
-            <Text style={styles.chipText}>{torchOn ? '플래시 켜짐' : '플래시 꺼짐'}</Text>
-          </Pressable>
-        </View>
-
         <View style={styles.px}>
           <View style={styles.infoCard}>
             <View style={styles.infoCardTop}>
@@ -197,7 +183,6 @@ export default function IdCardScreen() {
                     ref={cameraRef}
                     style={StyleSheet.absoluteFill}
                     facing="back"
-                    enableTorch={torchOn}
                     onCameraReady={() => setIsCameraReady(true)}
                   />
                 )}
@@ -314,17 +299,6 @@ const styles = StyleSheet.create({
   progressWrap: { paddingHorizontal: spacing.xl, paddingTop: spacing.md },
   row: { flexDirection: 'row', paddingHorizontal: spacing.xl, paddingVertical: spacing.sm },
 
-  chip: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.xs,
-    backgroundColor: colors.background,
-    paddingHorizontal: 14,
-    paddingVertical: spacing.xs,
-    borderRadius: radius.full,
-  },
-  chipDisabled: { opacity: 0.4 },
-  chipText: { ...typography.body, fontFamily: fonts.bold, color: colors.text.strong },
 
   infoCard: {
     backgroundColor: colors.surface,
