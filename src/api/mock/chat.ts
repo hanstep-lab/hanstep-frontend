@@ -188,6 +188,12 @@ const MOCK_E74_BLOCKS: ChatBlock[] = [
   },
 ];
 
+// get_visa_roadmap (프롬프트 v4.7, hanstep-AI #127 로컬 측정 Reyes 값). 로드맵 카드 뒤에 E-7-4와 같은 재질의 카드가 붙는다
+const MOCK_ROADMAP_BLOCKS: ChatBlock[] = [
+  { type: 'VISA_ROADMAP_LINK', roadmapId: 1, stepCount: 3, applicableFrom: '2026-12-05', ruleStatus: 'APPROVED' },
+  MOCK_E74_BLOCKS[1],
+];
+
 // 금융상품 추천 카드(PRODUCT_RECOMMEND_CARD). hanstep-AI specs/chat/product_recommend_card_v1.md 예시 1(성공)·예시 2(기권) 그대로.
 // 서버가 카드를 보내기 전(AI 머지 + 운영 v4.5 전환 전)에 화면을 확인하려고 둔다
 const MOCK_PRODUCT_BLOCK: ChatBlock = {
@@ -340,6 +346,11 @@ const MOCK: Record<string, MockChatResponse> = {
     ],
     suggestionsLabel: '연관 질문',
   },
+  // 전환 방법·준비 순서·로드맵 질문 (v4.7). 답변 문장은 hanstep-AI #127 로컬 측정 답변을 줄였다
+  visaRoadmapLink: {
+    text: `**지금은 신청할 수 없고, 2026-12-05부터 E-7-4 전환 신청을 할 수 있어요.**\n\n1. 고용기업 추천서 제출 (필수, +50점)\n2. TOPIK 4급 취득 (+40점)\n3. E-7-4 전환 신청 (2027-10-04 전까지)\n\n2026-11-23 기준이에요. 전체 로드맵은 카드에서 볼 수 있어요. 이 결과는 사전 점검이며 비자 심사 결과가 아니에요.`,
+    blocks: MOCK_ROADMAP_BLOCKS,
+  },
 };
 
 function getVisaDdayResponse(): MockChatResponse {
@@ -396,12 +407,11 @@ export function getMockResponse(input: string, callCount: number): MockChatRespo
   ) {
     return getVisaDdayResponse();
   }
-  if (
-    lower.includes('오래 살') ||
-    lower.includes('장기') ||
-    lower.includes('e-7') ||
-    lower.includes('로드맵')
-  ) {
+  // 로드맵 카드(v4.7): 전환 방법·준비 순서·로드맵 질문. 'e-7' 점수 질문보다 먼저 본다
+  if (lower.includes('로드맵') || lower.includes('승급') || lower.includes('뭐부터') || lower.includes('roadmap')) {
+    return MOCK.visaRoadmapLink;
+  }
+  if (lower.includes('오래 살') || lower.includes('장기') || lower.includes('e-7')) {
     return MOCK.visaRoadmap;
   }
 

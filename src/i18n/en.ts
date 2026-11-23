@@ -198,6 +198,14 @@ const en: Translation = {
       note: 'A mock check for reference, based on what you entered. Actual results may differ.',
       visaTab: 'See details in the Visa tab',
     },
+    roadmap: {
+      title: 'E-7-4 roadmap',
+      steps: 'Steps to prepare: {{n}}',
+      applicableFrom: 'You can apply from {{date}}',
+      applicableUnknown: "We can't tell when you can apply yet",
+      note: 'A mock check for reference, based on what you entered. Actual results may differ.',
+      visaTab: 'See the roadmap in the Visa tab',
+    },
     missing: {
       title: 'More info needed for the check',
       more: '+{{n}} more',

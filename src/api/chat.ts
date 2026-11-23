@@ -93,6 +93,7 @@ const KNOWN_BLOCK_TYPES: ReadonlySet<string> = new Set<ChatBlock['type']>([
   'REMITTANCE_CONFIRM',
   'FX_SUMMARY_CARD',
   'E74_SCORE_CARD',
+  'VISA_ROADMAP_LINK',
   'MISSING_INPUTS',
   'PRODUCT_RECOMMEND_CARD',
 ]);
