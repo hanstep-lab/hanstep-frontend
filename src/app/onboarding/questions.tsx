@@ -37,9 +37,9 @@ const AMOUNT_OPTIONS = [
 
 // 고정 생활비 기본 줄 (Figma). 같은 유형 여러 줄 가능해서 이름(label)으로 구분
 const DEFAULT_FIXED = [
-  { type: 'RENT' as CommitmentType, label: '월세', sub: '원룸 자동이체 연결' },
+  { type: 'RENT' as CommitmentType, label: '월세', sub: '' },
   { type: 'UTILITY' as CommitmentType, label: '공과금', sub: '도시가스, 건물 관리비 등' },
-  { type: 'UTILITY' as CommitmentType, label: '전기 / 수도세', sub: '계절별 평균 지출액' },
+  { type: 'UTILITY' as CommitmentType, label: '전기 / 수도세', sub: '월별 평균 지출액' },
 ];
 
 // 고정 생활비로 묶이는 유형 (서버 totals.fixedLiving 기준과 같음)
@@ -468,7 +468,7 @@ export default function QuestionsScreen() {
                   <View key={row.key} style={styles.expenseRow}>
                     <View style={styles.expenseLeft}>
                       <Text style={styles.expenseLabel}>{row.label}</Text>
-                      <Text style={styles.expenseSub}>{row.sub}</Text>
+                      {row.sub ? <Text style={styles.expenseSub}>{row.sub}</Text> : null}
                     </View>
                     <AmountField value={row.value} onChangeText={(t) => setFixedValue(row.key, t)} />
                   </View>
