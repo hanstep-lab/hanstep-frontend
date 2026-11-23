@@ -6,6 +6,7 @@
 
 import { Platform } from 'react-native';
 import * as Notifications from 'expo-notifications';
+import i18n from '../i18n';
 
 const CHANNEL_ID = 'fx-alert';
 const SCREEN_KEY = 'fx_alert'; // 알림 data 에 넣어서, 누르면 목표 환율 알림 화면으로 간다
@@ -26,7 +27,7 @@ if (SUPPORTED) {
 async function ensureChannel(): Promise<void> {
   if (Platform.OS !== 'android') return;
   await Notifications.setNotificationChannelAsync(CHANNEL_ID, {
-    name: '목표 환율 알림',
+    name: i18n.t('fx.noticeTitle'),
     importance: Notifications.AndroidImportance.HIGH,
   });
 }

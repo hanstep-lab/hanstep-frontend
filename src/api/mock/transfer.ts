@@ -3,6 +3,7 @@
 // 견적 금액만 입력에 따라 명세(RemittanceProductQuote) 설명의 공식으로 다시 계산한다. 700,000원·4,700원이면 실서버 응답과 같은 값이 나온다.
 // USD 5,000 를 넘는 구간(쏠편한 수수료 10,000원·상한, 쏠빠른 건당 한도)은 흉내 내지 않는다.
 
+import i18n from '../../i18n';
 import type {
   ApiError,
   AppliedRate,
@@ -241,6 +242,6 @@ export function mockSubmit(
     receiveAmount: quote.receiveAmount,
     usdAppliedRate: main?.usdAppliedRate ?? null,
     recipient,
-    guide: '처리 완료까지 1-2 영업일이 소요돼요.',
+    guide: i18n.t('transfer.complete.guide'),
   };
 }

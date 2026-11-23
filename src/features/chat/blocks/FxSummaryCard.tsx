@@ -11,7 +11,7 @@ import Button from '../../../components/Button';
 import Tag from '../../../components/Tag';
 import { colors, typography, spacing, radius, fonts } from '../../../constants/theme';
 import { fmtDate, fmtPercent, fmtRate } from '../../../utils/format';
-import { changeTrend, fmtFxRateByCurrency, FX_STALE_TEXT, type FxTrend } from '../../../api/fx';
+import { changeTrend, fmtFxRateByCurrency, fxStaleText, type FxTrend } from '../../../api/fx';
 import type { ChatAction } from '../../../api/mock/chat';
 import type { ChatFxSummaryBlock, ChatFxSummaryCurrency } from '../../../types/api';
 import { currencySymbol, currencyWithName, fxSourceText } from './labels';
@@ -92,7 +92,7 @@ export default function FxSummaryCard({ block, onAction }: Props) {
                     </Text>
                     {/* stale 이면 기준일을 강조하고 안내를 붙인다 */}
                     <Text style={[s.itemSub, c.stale && s.staleText]}>{sourceDateText(c)}</Text>
-                    {c.stale && <Text style={[s.itemSub, s.staleText]}>{FX_STALE_TEXT}</Text>}
+                    {c.stale && <Text style={[s.itemSub, s.staleText]}>{fxStaleText()}</Text>}
                   </View>
                 </View>
                 <View style={s.itemRight}>
