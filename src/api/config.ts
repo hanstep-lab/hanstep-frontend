@@ -9,5 +9,10 @@ export const ENTRY_TOKEN = process.env.EXPO_PUBLIC_ENTRY_TOKEN ?? 'demo-e9-ph-re
 // Mock 스위치. 기본 true (명세 example 로 동작). 'false' 일 때만 실제 서버 호출.
 export const USE_MOCK = process.env.EXPO_PUBLIC_USE_MOCK !== 'false';
 
+// Mock 등록증 OCR 실패 재현 (USE_MOCK 일 때만). 값이 있으면 조회 2번째에 실패한다.
+//   OCR 실패 코드(예: OCR_FAILED, SPRING_UNAVAILABLE) → 그 코드로 FAILED
+//   LOAD_ERROR → 조회 요청 자체를 한 번 실패시킴 (다시 시도하면 정상 진행)
+export const MOCK_OCR_FAILURE = process.env.EXPO_PUBLIC_MOCK_OCR_FAILURE ?? '';
+
 // Mock 이 네트워크처럼 보이게 하는 짧은 지연. 로딩 화면 확인용.
 export const mockDelay = (ms = 400) => new Promise<void>((resolve) => setTimeout(resolve, ms));

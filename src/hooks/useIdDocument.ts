@@ -2,8 +2,9 @@
 // 화면은 phase 만 보고 로딩·결과·실패를 그리면 된다.
 //   waiting : 업로드됨, OCR 처리 중 (UPLOADED)
 //   ready   : OCR 결과 도착 (PENDING_CONFIRMATION) 또는 이미 확정(CONFIRMED)
-//   failed  : OCR 실패 (FAILED) 또는 조회 오류
-//   timeout : 너무 오래 걸림. retry 로 다시 기다리기
+//   ocrFailed  : OCR 이 실패로 끝남 (FAILED). failureCode 로 안내 종류를 고른다. 같은 문서는 다시 돌릴 수 없어 다시 찍기
+//   loadFailed : 조회 요청 자체가 실패 (네트워크 등). error 문구, retry 로 다시 조회
+//   timeout    : 너무 오래 걸림. retry 로 다시 기다리기
 
 import { useCallback, useEffect, useState } from 'react';
 import { getDocument, retryOcr } from '../api/document';
@@ -16,7 +17,7 @@ const INTERVAL_MS = 1000;
 // 1초 × 60 = 약 1분. 11/23 운영 기준선: 업로드 → 결과까지 중앙값 약 3.8초, 최대 약 7.7초
 const MAX_TRIES = 60;
 
-type Phase = 'waiting' | 'ready' | 'failed' | 'timeout';
+type Phase = 'waiting' | 'ready' | 'ocrFailed' | 'loadFailed' | 'timeout';
 
 export function useIdDocument(documentId: number | null) {
   const [doc, setDoc] = useState<DocumentResponse | null>(null);
@@ -64,15 +65,15 @@ export function useIdDocument(documentId: number | null) {
           return;
         }
         if (res.status === 'FAILED') {
-          ocrTimeMark(`실패 ${res.failureCode ?? res.ocrJob?.errorCode ?? ''}`);
-          setPhase('failed');
+          ocrTimeMark(`실패 ${failureCodeOf(res) ?? ''}`);
+          setPhase('ocrFailed');
           return;
         }
       } catch (e) {
         if (cancelled) return;
         ocrTimeMark('조회 오류');
         setError(errorText(e, i18n.t('onboarding.idConfirm.loadError')));
-        setPhase('failed');
+        setPhase('loadFailed');
         return;
       }
 
@@ -94,5 +95,13 @@ export function useIdDocument(documentId: number | null) {
 
   const retry = useCallback(() => setRound((r) => r + 1), []);
 
-  return { doc, setDoc, phase, error, retry };
+  // OCR 실패 코드. 안내 종류 판단(다시 찍기·일시적 문제 등)은 화면이 constants/ocrFailure 로 한다
+  const failureCode = phase === 'ocrFailed' && doc ? failureCodeOf(doc) : null;
+
+  return { doc, setDoc, phase, error, failureCode, retry };
+}
+
+// 문서의 failureCode 가 비어 있으면 OCR 작업의 errorCode 를 쓴다 (서버는 둘을 같은 값으로 준다)
+function failureCodeOf(doc: DocumentResponse): string | null {
+  return doc.failureCode ?? doc.ocrJob?.errorCode ?? null;
 }

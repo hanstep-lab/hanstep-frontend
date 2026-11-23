@@ -15,6 +15,7 @@ import OnboardingProgress from '../../components/OnboardingProgress';
 import { TOTAL_STAGES, stageOf } from '../../constants/onboardingSteps';
 import { ocrTimeMark, ocrTimeStart } from '../../utils/ocrTiming';
 import { useIdDocument } from '../../hooks/useIdDocument';
+import { ocrFailureGuide } from '../../constants/ocrFailure';
 import type { ApiError } from '../../types/api';
 
 // "직접 정보 입력하기" 버튼. 사진 없이 체류 정보를 저장하는 화면(id-manual, PUT /visa/profile)으로 간다
@@ -77,9 +78,11 @@ export default function IdCardScreen() {
   const [frozen, setFrozen] = useState(false);
   // 이 화면에서 OCR 결과를 기다리는 문서. 결과가 오면 확인 화면으로 넘어간다 (확인 화면도 같은 훅이라 바로 결과를 보여 줌)
   const [waitingDocId, setWaitingDocId] = useState<number | null>(null);
-  const { phase: ocrPhase, error: ocrError, retry: retryOcrWait } = useIdDocument(waitingDocId);
-  const ocrFailed = waitingDocId != null && ocrPhase === 'failed';
+  const { phase: ocrPhase, error: ocrError, failureCode, retry: retryOcrWait } = useIdDocument(waitingDocId);
+  const ocrFailed = waitingDocId != null && ocrPhase === 'ocrFailed'; // OCR 실패 → 코드별 안내 + 다시 찍기
+  const loadFailed = waitingDocId != null && ocrPhase === 'loadFailed'; // 조회 실패 → 다시 시도(같은 문서 재조회)
   const ocrTimeout = waitingDocId != null && ocrPhase === 'timeout';
+  const failureGuide = ocrFailureGuide(failureCode);
 
   const canCapture = hasPermission && isCameraReady && !isCapturing && !frozen;
 
@@ -206,15 +209,21 @@ export default function IdCardScreen() {
                 <CornerGuide pos="br" />
                 {frozen && (
                   <View style={styles.scanOverlay}>
-                    {ocrFailed || ocrTimeout ? (
+                    {ocrFailed || loadFailed || ocrTimeout ? (
                       <>
                         <Text style={styles.scanTitle}>
-                          {ocrFailed ? t('onboarding.idCard.readFailed') : t('onboarding.idCard.slow')}
+                          {ocrFailed
+                            ? t(`onboarding.ocrFailure.${failureGuide}.title`)
+                            : loadFailed
+                              ? t('onboarding.ocrFailure.loadFailedTitle')
+                              : t('onboarding.idCard.slow')}
                         </Text>
                         <Text style={styles.scanDesc}>
                           {ocrFailed
-                            ? ocrError ?? t('onboarding.idCard.readFailedDesc')
-                            : t('onboarding.idCard.slowDesc')}
+                            ? t(`onboarding.ocrFailure.${failureGuide}.desc`)
+                            : loadFailed
+                              ? ocrError
+                              : t('onboarding.idCard.slowDesc')}
                         </Text>
                         <View style={styles.scanBtnRow}>
                           {ocrTimeout && (
@@ -222,8 +231,15 @@ export default function IdCardScreen() {
                               <Text style={styles.scanBtnText}>{t('onboarding.idCard.keepWaiting')}</Text>
                             </Pressable>
                           )}
+                          {loadFailed && (
+                            <Pressable style={styles.scanBtn} onPress={retryOcrWait}>
+                              <Text style={styles.scanBtnText}>{t('onboarding.ocrFailure.retryButton')}</Text>
+                            </Pressable>
+                          )}
                           <Pressable style={styles.scanBtn} onPress={unfreeze}>
-                            <Text style={styles.scanBtnText}>{t('common.retake')}</Text>
+                            <Text style={styles.scanBtnText}>
+                              {ocrFailed ? t('onboarding.ocrFailure.retakeButton') : t('common.retake')}
+                            </Text>
                           </Pressable>
                         </View>
                       </>
