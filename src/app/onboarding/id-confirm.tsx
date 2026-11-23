@@ -282,7 +282,7 @@ export default function IdConfirmScreen() {
               field={fieldOf('nationality')}
               value={values.nationality}
               onChange={(t) => setValue('nationality')(t.toUpperCase())}
-              placeholder="PHL"
+              placeholder="ABC"
               autoCapitalize="characters"
             />
           </View>

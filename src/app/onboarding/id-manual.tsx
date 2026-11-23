@@ -39,7 +39,7 @@ const FIELDS: {
   {
     key: 'nationality',
     label: '국적 (Nationality)',
-    placeholder: 'PHL',
+    placeholder: 'ABC',
     hint: '여권에 적힌 영문 3자리 국가 코드 (예: PHL, VNM, CHN)',
     maxLength: 3,
   },
