@@ -3,7 +3,7 @@
 // 목돈 섹션은 "목돈 마련", 송금 섹션은 "본국 송금"을 골랐을 때만 보인다. 고정·변동 지출은 여유자금 계산에 필요해서 항상 보인다.
 
 import { useCallback, useEffect, useRef, useState, type ComponentRef } from 'react';
-import { View, Text, Pressable, StyleSheet, TextInput, Alert, ActivityIndicator } from 'react-native';
+import { View, Text, Pressable, StyleSheet, TextInput, ActivityIndicator } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import Screen from '../../components/Screen';
 import Button from '../../components/Button';
@@ -60,7 +60,6 @@ function parseMan(text: string): number | null {
 }
 
 // 서버 API 가 없는 기능(송금처 추가·수정, 자동이체 등록)
-const preparing = () => Alert.alert('준비 중', '곧 사용할 수 있어요.');
 
 // 숫자와 소수점만 남김
 const onlyNumber = (t: string) => t.replace(/[^\d.]/g, '');
@@ -450,10 +449,6 @@ export default function QuestionsScreen() {
                 ) : (
                   <Text style={styles.helperText}>마이데이터를 연결하면 자주 보낸 곳을 찾아 드려요.</Text>
                 )}
-                <Pressable style={styles.remitEditBtn} onPress={preparing}>
-                  <Ionicons name="add-circle-outline" size={15} color={colors.primary} />
-                  <Text style={styles.remitEditText}>송금처 추가 / 수정</Text>
-                </Pressable>
               </View>
             ) : null}
 
@@ -475,19 +470,6 @@ export default function QuestionsScreen() {
                 ))}
               </View>
               <Text style={styles.helperText}>비워 두면 저장하지 않아요.</Text>
-              {/* 자동이체 등록 API 없음: 토글은 꺼진 상태로 두고 누르면 "준비 중" (움직이기만 하면 등록된 것으로 오해함) */}
-              <Pressable style={styles.autoTransferBox} onPress={preparing}>
-                <View style={styles.autoTransferLeft}>
-                  <Ionicons name="swap-horizontal-outline" size={18} color={colors.text.inverse} />
-                  <View>
-                    <Text style={styles.autoTransferTitle}>신한 계좌 자동이체 등록</Text>
-                    <Text style={styles.autoTransferSub}>납부일 연체 방지 알림</Text>
-                  </View>
-                </View>
-                <View style={styles.toggleTrack}>
-                  <View style={styles.toggleThumb} />
-                </View>
-              </Pressable>
             </View>
 
             {/* 변동 지출 (항상) */}
@@ -661,34 +643,6 @@ const styles = StyleSheet.create({
   },
   // 빈 칸: placeholder 는 입력칸 글꼴을 그대로 써서 Medium 으로 낮춘다 (크기는 같음)
   amountInputEmpty: { fontFamily: fonts.medium },
-
-  autoTransferBox: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    backgroundColor: colors.primary,
-    borderRadius: radius.lg,
-    padding: 14,
-  },
-  autoTransferLeft: { flexDirection: 'row', alignItems: 'center', gap: 10 },
-  autoTransferTitle: { ...typography.body, fontFamily: fonts.bold, color: colors.text.inverse },
-  autoTransferSub: { ...typography.badge, color: colors.onColor.sub },
-
-  toggleTrack: {
-    width: 44,
-    height: 24,
-    borderRadius: 12,
-    backgroundColor: colors.onColor.fillStrong,
-    justifyContent: 'center',
-    padding: 2,
-  },
-  toggleThumb: {
-    width: 20,
-    height: 20,
-    borderRadius: 10,
-    backgroundColor: colors.surface,
-    alignSelf: 'flex-start' as const,
-  },
 
   helperText: { ...typography.caption, color: colors.text.sub },
 
