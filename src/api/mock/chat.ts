@@ -52,7 +52,7 @@ export const MENU_GROUPS: { section: string; items: MenuItem[] }[] = [
     items: [
       { label: '환율 정보', desc: '환율 / 환율 추이', action: 'fx' },
       { label: '목표 환율 알림', desc: '원하는 환율이 되면 알림', action: 'fx_alert' },
-      { label: '해외송금', action: 'transfer' },
+      { label: '해외송금', desc: '본국 계좌 송금 · 수수료 확인', action: 'transfer' },
     ],
   },
   {
