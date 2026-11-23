@@ -68,6 +68,7 @@ const CREATE_ERROR_TEXT = {
   PROFILE_REJECTED: '저장된 정보 중 다시 확인이 필요한 값이 있어 로드맵을 만들지 못했어요. 잠시 후 다시 시도해 주세요.',
   INVALID_STATE: '지금은 적용할 점수표 기준이 준비되지 않았어요. 잠시 후 다시 시도해 주세요.',
   AI_UPSTREAM_ERROR: '로드맵을 만드는 중 문제가 생겼어요. 잠시 후 다시 시도해 주세요.',
+  TIMEOUT: '응답이 늦어지고 있어요. 잠시 후 다시 시도해 주세요.',
   DEFAULT: '로드맵을 만들지 못했어요. 다시 시도해 주세요.',
 } as const;
 
@@ -98,8 +99,10 @@ export async function createRoadmap(): Promise<VisaRoadmapResponse> {
       { timeout: ROADMAP_POST_TIMEOUT_MS, validateStatus: () => true },
     );
   } catch (e) {
-    // 네트워크 끊김·시간 초과
-    const err: ApiError = { code: (e as ApiError).code ?? 'NETWORK', message: CREATE_ERROR_TEXT.DEFAULT };
+    // 응답 없음: 시간 초과(TIMEOUT)는 늦어진다는 문구, 네트워크 끊김(NETWORK) 등은 기본 문구
+    const code = (e as ApiError).code ?? 'NETWORK';
+    const message = code === 'TIMEOUT' ? CREATE_ERROR_TEXT.TIMEOUT : CREATE_ERROR_TEXT.DEFAULT;
+    const err: ApiError = { code, message };
     throw err;
   }
   if (res.status === 200 || res.status === 201) return res.data as VisaRoadmapResponse;
