@@ -20,9 +20,6 @@ import {
 import { fmtNumber, fmtRate, fmtDate } from '../../utils/format';
 import type { ApiError, TransferContext, TransferQuote } from '../../types/api';
 
-function preparingAlert() {
-  Alert.alert('준비 중', '곧 사용할 수 있어요.');
-}
 
 // 주소의 amount(원). 숫자만 1~9자리(입력칸과 같은 한도)이고 0보다 클 때만 쓴다. 아니면 null
 function parseAmountParam(v: string | undefined): number | null {
@@ -135,10 +132,6 @@ export default function TransferScreen() {
       <View style={s.section}>
         <View style={s.sectionHead}>
           <Text style={s.sectionLabel}>받는 분 (해외)</Text>
-          <Pressable style={s.linkRow} onPress={preparingAlert} hitSlop={8}>
-            <Text style={s.linkText}>최근/즐겨찾기</Text>
-            <Ionicons name="chevron-forward" size={10} color={colors.primary} />
-          </Pressable>
         </View>
         <View style={[s.card, s.row]}>
           <View style={s.recipientLeft}>
@@ -159,9 +152,6 @@ export default function TransferScreen() {
               </Text>
             </View>
           </View>
-          <Pressable style={s.pillBtn} onPress={preparingAlert}>
-            <Text style={s.pillBtnText}>변경</Text>
-          </Pressable>
         </View>
       </View>
 
@@ -248,24 +238,22 @@ export default function TransferScreen() {
       {/* 출금 계좌 */}
       <View style={s.section}>
         <Text style={s.sectionLabel}>출금 계좌</Text>
-        <Pressable style={[s.card, s.row]} onPress={preparingAlert}>
+        <View style={[s.card, s.row]}>
           {/* 상품명이 없으면 마스킹된 계좌번호를 이름 자리에 한 번만 보여 준다 */}
           <View>
             <Text style={s.accountName}>{account.name ?? account.number}</Text>
             {account.name ? <Text style={s.subText}>{account.number}</Text> : null}
           </View>
-          <Ionicons name="chevron-down" size={16} color={colors.primary} />
-        </Pressable>
+        </View>
       </View>
 
       {/* 송금 목적 */}
-      <Pressable style={[s.card, s.row]} onPress={preparingAlert}>
+      <View style={[s.card, s.row]}>
         <Text style={s.purposeLabel}>송금 목적</Text>
         <View style={s.purposeRight}>
           <Text style={s.purposeValue}>{purpose.label}</Text>
-          <Ionicons name="pencil" size={12} color={colors.text.strong} />
         </View>
-      </Pressable>
+      </View>
     </Screen>
   );
 }
@@ -287,8 +275,6 @@ const s = StyleSheet.create({
     color: colors.text.sub,
     paddingHorizontal: spacing.xs,
   },
-  linkRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.xs },
-  linkText: { ...typography.badge, color: colors.primary },
 
   card: {
     backgroundColor: colors.surface,
@@ -320,14 +306,6 @@ const s = StyleSheet.create({
   },
   countryBadgeText: { ...typography.badge, color: colors.primary },
   recipientName: { ...typography.h3, color: colors.text.strong },
-  pillBtn: {
-    backgroundColor: colors.background,
-    borderRadius: radius.full,
-    paddingHorizontal: spacing.md,
-    paddingVertical: spacing.xs,
-  },
-  pillBtnText: { ...typography.badge, color: colors.text.sub },
-
   amountCard: { gap: spacing.md },
   amountRow: { flex: 1, flexDirection: 'row', alignItems: 'baseline', gap: spacing.xs },
   amountInput: { ...typography.h2, color: colors.primary, padding: 0, minWidth: 24 },
