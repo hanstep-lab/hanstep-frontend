@@ -22,6 +22,7 @@ import {
 import { saveConsents, MYDATA_CONSENTS } from '../../api/consents';
 import type { ApiError } from '../../types/api';
 import { colors, typography, spacing, radius, fonts } from '../../constants/theme';
+import { FadeIn, Skeleton, SkeletonGroup } from '../../components/Skeleton';
 
 // 필수 두 건은 MYDATA·MYDATA_TERMS 로 저장한다(consents.ts MYDATA_CONSENTS).
 // 선택 동의는 맞는 consentType 이 정해지지 않아 서버에 보내지 않는다.
@@ -98,9 +99,18 @@ export default function MydataScreen() {
         {/* 금융기관 카드 */}
         <View style={styles.cardList}>
           {!institutions ? (
-            <Text style={styles.stateText}>{loadError ?? '연결할 금융기관을 불러오는 중이에요.'}</Text>
+            loadError ? (
+              <Text style={styles.stateText}>{loadError}</Text>
+            ) : (
+              <SkeletonGroup gap={spacing.md}>
+                <Skeleton height={76} round={radius.lg} />
+                <Skeleton height={76} round={radius.lg} />
+                <Skeleton height={76} round={radius.lg} />
+              </SkeletonGroup>
+            )
           ) : (
-            institutions.map((inst) => {
+            <FadeIn style={{ gap: spacing.md }}>
+            {institutions.map((inst) => {
               const on = selectedIds.includes(inst.id);
               return (
                 <Pressable
@@ -131,7 +141,8 @@ export default function MydataScreen() {
                   )}
                 </Pressable>
               );
-            })
+            })}
+            </FadeIn>
           )}
 
           <View style={styles.instCardDefault}>

@@ -14,6 +14,7 @@ import StepBadge from '../../components/StepBadge';
 import Pill from '../../components/Pill';
 import Button from '../../components/Button';
 import { colors, typography, spacing, radius, fonts, shadow } from '../../constants/theme';
+import { Skeleton, SkeletonCard, SkeletonGroup } from '../../components/Skeleton';
 import {
   ALT_CREDIT_TEXT as T,
   LEVEL_BADGE,
@@ -147,8 +148,20 @@ export default function AltCreditScreen() {
 
   if (!data) {
     return (
-      <Screen>
-        <Text style={s.stateText}>{error ?? T.loading}</Text>
+      <Screen loading={!error}>
+        {error ? (
+          <Text style={s.stateText}>{error}</Text>
+        ) : (
+          <SkeletonGroup>
+            <SkeletonGroup gap={spacing.sm}>
+              <Skeleton width="85%" height={26} />
+              <Skeleton width="60%" height={14} />
+            </SkeletonGroup>
+            <SkeletonCard lines={2} block={56} />
+            <SkeletonCard lines={3} />
+            <SkeletonCard lines={3} />
+          </SkeletonGroup>
+        )}
       </Screen>
     );
   }

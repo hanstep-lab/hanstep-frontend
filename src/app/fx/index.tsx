@@ -18,6 +18,7 @@ import Screen from '../../components/Screen';
 import Button from '../../components/Button';
 import RateChart from '../../components/RateChart';
 import { colors, typography, spacing, radius, fonts, shadow } from '../../constants/theme';
+import { FadeIn, Skeleton, SkeletonCard, SkeletonGroup } from '../../components/Skeleton';
 import {
   getFxRate,
   getFxHistory,
@@ -200,8 +201,20 @@ export default function FxScreen() {
   // 첫 응답 전에는 칩 목록도 없어서 안내 문구만
   if (chips.length === 0) {
     return (
-      <Screen title="환율 정보">
-        <Text style={s.stateText}>{rateError ?? '환율 정보를 불러오는 중이에요.'}</Text>
+      <Screen title="환율 정보" loading={!rateError}>
+        {rateError ? (
+          <Text style={s.stateText}>{rateError}</Text>
+        ) : (
+          <SkeletonGroup>
+            <View style={{ flexDirection: 'row', gap: spacing.sm }}>
+              <Skeleton width={96} height={36} round={radius.full} />
+              <Skeleton width={96} height={36} round={radius.full} />
+              <Skeleton width={96} height={36} round={radius.full} />
+            </View>
+            <SkeletonCard lines={2} block={40} />
+            <SkeletonCard lines={1} block={180} />
+          </SkeletonGroup>
+        )}
       </Screen>
     );
   }
@@ -239,9 +252,20 @@ export default function FxScreen() {
   // 통화를 바꾼 직후 새 응답이 오기 전
   if (!rate) {
     return (
-      <Screen title="환율 정보" footer={<Button title="해외송금하기" showArrow onPress={goTransfer} />}>
+      <Screen
+        title="환율 정보"
+        loading={!rateError}
+        footer={<Button title="해외송금하기" showArrow onPress={goTransfer} />}
+      >
         {chipList}
-        <Text style={s.stateText}>{rateError ?? '환율 정보를 불러오는 중이에요.'}</Text>
+        {rateError ? (
+          <Text style={s.stateText}>{rateError}</Text>
+        ) : (
+          <SkeletonGroup>
+            <SkeletonCard lines={2} block={40} />
+            <SkeletonCard lines={1} block={180} />
+          </SkeletonGroup>
+        )}
       </Screen>
     );
   }
@@ -354,7 +378,7 @@ export default function FxScreen() {
         </View>
 
         {chart ? (
-          <>
+          <FadeIn style={{ gap: spacing.sm }}>
             {/* 통화·기간이 바뀌면 새로 그려서 이전 선택(말풍선)이 남지 않게 */}
             <TrendChart
               key={`${chart.currency}-${chart.period}`}
@@ -372,9 +396,14 @@ export default function FxScreen() {
               </Text>
               <Text style={[s.statText, s.statCurrent]}>현재 {fmtRate(chart.current, { digits })}</Text>
             </View>
-          </>
+          </FadeIn>
+        ) : historyError ? (
+          <Text style={s.stateText}>{historyError}</Text>
         ) : (
-          <Text style={s.stateText}>{historyError ?? '차트를 불러오는 중이에요.'}</Text>
+          <SkeletonGroup gap={spacing.sm}>
+            <Skeleton height={180} round={radius.md} />
+            <Skeleton width="70%" height={12} />
+          </SkeletonGroup>
         )}
       </View>
 

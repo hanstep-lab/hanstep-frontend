@@ -10,6 +10,7 @@ import Screen from '../../components/Screen';
 import Button from '../../components/Button';
 import Pill from '../../components/Pill';
 import { colors, typography, spacing, radius, fonts, shadow } from '../../constants/theme';
+import { Skeleton, SkeletonCard, SkeletonGroup } from '../../components/Skeleton';
 import {
   LOAN_TEXT as T,
   LIMIT_REASON_TEXT,
@@ -58,8 +59,19 @@ export default function GlobalLoanScreen() {
 
   if (!loan) {
     return (
-      <Screen>
-        <Text style={s.stateText}>{error ?? T.loading}</Text>
+      <Screen loading={!error}>
+        {error ? (
+          <Text style={s.stateText}>{error}</Text>
+        ) : (
+          <SkeletonGroup>
+            <SkeletonGroup gap={spacing.sm}>
+              <Skeleton width="80%" height={26} />
+              <Skeleton width="55%" height={14} />
+            </SkeletonGroup>
+            <SkeletonCard lines={2} block={56} />
+            <SkeletonCard lines={3} />
+          </SkeletonGroup>
+        )}
       </Screen>
     );
   }

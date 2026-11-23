@@ -6,6 +6,7 @@ import { router, type Href } from 'expo-router';
 import Screen from '../../components/Screen';
 import Button from '../../components/Button';
 import { colors, typography, spacing, radius, fonts, shadow } from '../../constants/theme';
+import { FadeIn, SkeletonCard, SkeletonGroup } from '../../components/Skeleton';
 import { getProductsScreen, type ProductsScreenData, type ProductView } from '../../api/products';
 import type { ApiError } from '../../types/api';
 
@@ -71,9 +72,18 @@ export default function ProductsScreen() {
       </View>
 
       {!data ? (
-        <Text style={s.stateText}>{error ?? '추천 상품을 불러오는 중이에요.'}</Text>
+        error ? (
+          <Text style={s.stateText}>{error}</Text>
+        ) : (
+          <SkeletonGroup>
+            <SkeletonCard lines={3} />
+            <SkeletonCard lines={2} />
+            <SkeletonCard lines={2} />
+            <SkeletonCard lines={2} />
+          </SkeletonGroup>
+        )
       ) : (
-        <>
+        <FadeIn style={{ gap: spacing.lg }}>
           {/* 추천 기준 */}
           {criteria.length > 0 && (
             <View style={[s.card, s.criteriaCard]}>
@@ -135,7 +145,7 @@ export default function ProductsScreen() {
           <View style={s.actions}>
             <Button title="신한걸음에 물어보기" onPress={() => router.push('/(tabs)/chat' as Href)} />
           </View>
-        </>
+        </FadeIn>
       )}
     </Screen>
   );

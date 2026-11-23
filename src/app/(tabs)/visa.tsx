@@ -11,6 +11,7 @@ import Pill from '../../components/Pill';
 import ScoreRow from '../../components/ScoreRow';
 import StepCard, { STEP_NUMBER_SIZE, STEP_NUMBER_TOP } from '../../components/StepCard';
 import { colors, typography, spacing, radius, fonts, shadow } from '../../constants/theme';
+import { FadeIn, SkeletonCard, SkeletonGroup } from '../../components/Skeleton';
 import { createRoadmap, getVisaScreen, type VisaScreenData, type VisaScreenView } from '../../api/visa';
 import type { ApiError } from '../../types/api';
 
@@ -211,11 +212,19 @@ export default function VisaScreen() {
         </View>
 
         {!data ? (
-          <Text style={s.stateText}>{error ?? '로드맵을 불러오는 중이에요.'}</Text>
+          error ? (
+            <Text style={s.stateText}>{error}</Text>
+          ) : (
+            <SkeletonGroup gap={spacing.xl}>
+              <SkeletonCard lines={2} block={44} />
+              <SkeletonCard lines={3} block={72} />
+              <SkeletonCard lines={3} />
+            </SkeletonGroup>
+          )
         ) : data.kind === 'empty' ? (
           <EmptyCard creating={creating} error={createError ?? error} onCreate={onCreate} />
         ) : (
-          <>
+          <FadeIn style={{ gap: spacing.xl }}>
             <StatusCard status={data.view.status} />
             <View style={s.scoreBlock}>
               <ScoreCard score={data.view.score} />
@@ -239,7 +248,7 @@ export default function VisaScreen() {
             <RoadmapSection steps={data.view.steps} />
             <SummaryCard summary={data.view.summary} />
             <Button title="신한걸음에 물어보기" onPress={() => router.push('/(tabs)/chat' as Href)} />
-          </>
+          </FadeIn>
         )}
       </ScrollView>
     </SafeAreaView>

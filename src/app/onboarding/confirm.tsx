@@ -3,7 +3,7 @@
 // 다음: POST /steps/SUMMARY_CONFIRM
 
 import { useCallback, useEffect, useState } from 'react';
-import { View, Text, ScrollView, StyleSheet, ActivityIndicator, Pressable } from 'react-native';
+import { View, Text, ScrollView, StyleSheet, Pressable } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
@@ -13,6 +13,7 @@ import { useOnboardingStep } from '../../hooks/useOnboardingStep';
 import OnboardingProgress from '../../components/OnboardingProgress';
 import { getOnboardingSummary } from '../../api/onboarding';
 import { colors, typography, spacing, radius, fonts } from '../../constants/theme';
+import { Skeleton, SkeletonGroup } from '../../components/Skeleton';
 import { languageName } from '../../constants/languages';
 import { goalLabel } from '../../constants/goals';
 import { fmtNumber, fmtWon } from '../../utils/format';
@@ -120,7 +121,14 @@ export default function ConfirmScreen() {
                 </Pressable>
               </>
             ) : (
-              <ActivityIndicator color={colors.primary} />
+              <View style={{ alignSelf: 'stretch' }}>
+                <SkeletonGroup gap={spacing.md}>
+                  <Skeleton width="40%" height={16} />
+                  <Skeleton height={12} />
+                  <Skeleton width="82%" height={12} />
+                  <Skeleton width="64%" height={12} />
+                </SkeletonGroup>
+              </View>
             )}
           </View>
         ) : (

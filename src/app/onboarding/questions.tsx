@@ -3,7 +3,7 @@
 // 목돈 섹션은 "목돈 마련", 송금 섹션은 "본국 송금"을 골랐을 때만 보인다. 고정·변동 지출은 여유자금 계산에 필요해서 항상 보인다.
 
 import { useCallback, useEffect, useRef, useState, type ComponentRef } from 'react';
-import { View, Text, Pressable, StyleSheet, TextInput, ActivityIndicator } from 'react-native';
+import { View, Text, Pressable, StyleSheet, TextInput } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import Screen from '../../components/Screen';
 import Button from '../../components/Button';
@@ -13,6 +13,7 @@ import { getGoals, saveGoals } from '../../api/goals';
 import { getCommitments, getRemittanceCandidates, saveCommitments } from '../../api/commitments';
 import { getOnboardingSummary } from '../../api/onboarding';
 import { colors, typography, spacing, radius, fonts } from '../../constants/theme';
+import { Skeleton, SkeletonGroup } from '../../components/Skeleton';
 import { fmtDate, fmtNumber } from '../../utils/format';
 import type {
   CommitmentResponse,
@@ -356,7 +357,13 @@ export default function QuestionsScreen() {
                 </Pressable>
               </>
             ) : (
-              <ActivityIndicator color={colors.primary} />
+              <SkeletonGroup gap={spacing.md}>
+                <Skeleton width="60%" height={20} />
+                <Skeleton height={48} round={radius.md} />
+                <Skeleton height={48} round={radius.md} />
+                <Skeleton width="50%" height={20} />
+                <Skeleton height={48} round={radius.md} />
+              </SkeletonGroup>
             )}
           </View>
         ) : (

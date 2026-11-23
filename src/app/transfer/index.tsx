@@ -8,6 +8,7 @@ import { router, useLocalSearchParams, type Href } from 'expo-router';
 import Screen from '../../components/Screen';
 import Button from '../../components/Button';
 import { colors, typography, spacing, radius, fonts, shadow } from '../../constants/theme';
+import { SkeletonCard, SkeletonGroup } from '../../components/Skeleton';
 import { useTransferStore } from '../../store/transferStore';
 import {
   getTransferContext,
@@ -103,8 +104,17 @@ export default function TransferScreen() {
 
   if (!ctx) {
     return (
-      <Screen title="해외송금">
-        <Text style={s.stateText}>{ctxError ?? '송금 정보를 불러오는 중이에요.'}</Text>
+      <Screen title="해외송금" loading={!ctxError}>
+        {ctxError ? (
+          <Text style={s.stateText}>{ctxError}</Text>
+        ) : (
+          <SkeletonGroup>
+            <SkeletonCard lines={2} />
+            <SkeletonCard lines={1} block={48} />
+            <SkeletonCard lines={3} />
+            <SkeletonCard lines={3} />
+          </SkeletonGroup>
+        )}
       </Screen>
     );
   }
