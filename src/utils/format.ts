@@ -1,4 +1,5 @@
 // 표시 형식만 바꾸는 함수 모음. 값을 계산하지 않는다.
+import i18n from '../i18n';
 
 const MAN = 10_000;
 const EOK = 100_000_000;
@@ -11,6 +12,8 @@ function fmtUnderEok(n: number): string {
 
 // 원 단위 금액 표시: 1억 원 / 1억 5,000만 원 / 30만 원 / 15,000원
 export function fmtWon(n: number): string {
+  // 영어 화면은 만·억 단위 없이 ₩300,000 (한국어 화면은 아래 그대로)
+  if (i18n.language !== 'ko') return n < 0 ? `-₩${fmtNumber(-n)}` : `₩${fmtNumber(n)}`;
   if (n < EOK) return fmtUnderEok(n);
   const eok = Math.floor(n / EOK);
   const rest = n % EOK;

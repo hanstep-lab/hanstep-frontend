@@ -2,6 +2,7 @@
 // current·total 은 useOnboardingStep 의 stage·totalStages 를 넘긴다(화면에 숫자를 직접 쓰지 않음).
 // sub: 1단계처럼 한 단계에 화면이 여러 개일 때, 아래 줄에 지금 세부 화면 이름 + 작은 점(지나온·지금·남은)을 보여 준다.
 import { Fragment } from 'react';
+import { useTranslation } from 'react-i18next';
 import { View, Text, StyleSheet } from 'react-native';
 import { colors, fonts, typography, radius, spacing } from '../constants/theme';
 import { STAGE1_SUBSTEPS, type Stage1SubStep } from '../constants/onboardingSteps';
@@ -9,6 +10,7 @@ import { STAGE1_SUBSTEPS, type Stage1SubStep } from '../constants/onboardingStep
 type OnboardingProgressProps = { current: number; total: number; sub?: Stage1SubStep };
 
 export default function OnboardingProgress({ current, total, sub }: OnboardingProgressProps) {
+  const { t } = useTranslation();
   const subIndex = sub ? STAGE1_SUBSTEPS.indexOf(sub) : -1;
 
   return (
@@ -34,13 +36,13 @@ export default function OnboardingProgress({ current, total, sub }: OnboardingPr
         </View>
         <View style={styles.pill}>
           <Text style={styles.num}>{current}</Text>
-          <Text style={styles.total}> / {total} 단계</Text>
+          <Text style={styles.total}>{t('onboarding.progressTotal', { total })}</Text>
         </View>
       </View>
 
       {sub ? (
         <View style={styles.subRow}>
-          <Text style={styles.subLabel}>{sub}</Text>
+          <Text style={styles.subLabel}>{t(`onboarding.substep.${sub}`)}</Text>
           <View style={styles.subDots}>
             {STAGE1_SUBSTEPS.map((name, i) => (
               <View key={name} style={[styles.subDot, i <= subIndex ? styles.on : styles.off]} />

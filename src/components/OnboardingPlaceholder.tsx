@@ -1,3 +1,4 @@
+import { useTranslation } from 'react-i18next';
 import Screen from './Screen';
 import Button from './Button';
 import OnboardingProgress from './OnboardingProgress';
@@ -7,15 +8,19 @@ import { useOnboardingStep } from '../hooks/useOnboardingStep';
 
 export default function OnboardingPlaceholder() {
   const { step, stage, totalStages, isFirst, isLast, goNext } = useOnboardingStep();
+  const { t } = useTranslation();
 
   return (
     <Screen
     showBack={!isFirst}
-      footer={<Button title={isLast ? '신한걸음 시작하기' : '다음'} onPress={goNext} showArrow />}
+      footer={<Button title={isLast ? t('onboarding.placeholder.start') : t('onboarding.placeholder.next')} onPress={goNext} showArrow />}
     >
       <OnboardingProgress current={stage} total={totalStages} />
-      <StepBadge label={step.badge} />
-      <ScreenTitle title={step.title} description={`${step.id} 화면 준비 중`} />
+      <StepBadge label={t(`onboarding.steps.${step.stepCode}.badge`)} />
+      <ScreenTitle
+        title={t(`onboarding.steps.${step.stepCode}.title`)}
+        description={t('onboarding.placeholder.preparing', { id: step.id })}
+      />
     </Screen>
   );
 }

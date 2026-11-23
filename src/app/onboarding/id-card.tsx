@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { View, Text, Pressable, ScrollView, StyleSheet, Linking, Alert, ActivityIndicator } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
@@ -43,6 +44,7 @@ function CornerGuide({ pos }: { pos: 'tl' | 'tr' | 'bl' | 'br' }) {
 }
 
 export default function IdCardScreen() {
+  const { t } = useTranslation();
   const goToManual = () => router.push('/onboarding/id-manual' as Href);
 
   const [permission, requestPermission] = useCameraPermissions();
@@ -149,10 +151,10 @@ export default function IdCardScreen() {
           `[ON-002] 업로드 실패 code=${err?.code ?? '-'} message=${err?.message ?? '-'}` +
             ` elapsedMs=${Date.now() - uploadStartedAt} retried=${retried}`,
         );
-        Alert.alert('사진을 보내지 못했어요', errorText(e, '잠시 후 다시 시도해 주세요.'));
+        Alert.alert(t('onboarding.idCard.uploadFailed'), errorText(e, t('common.retryLater')));
       } else {
         console.warn('[ON-002] 촬영 실패', e);
-        Alert.alert('촬영하지 못했어요', '잠시 후 다시 시도해 주세요.');
+        Alert.alert(t('onboarding.idCard.captureFailed'), t('common.retryLater'));
       }
     } finally {
       capturingRef.current = false;
@@ -162,20 +164,20 @@ export default function IdCardScreen() {
 
   return (
     <SafeAreaView style={styles.safe} edges={['top', 'bottom']}>
-      <Header title="외국인등록증 촬영" showBack />
+      <Header title={t('onboarding.idCard.header')} showBack />
 
       <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
         <View style={styles.progressWrap}>
-          <OnboardingProgress current={stageOf('ID_DOCUMENT')} total={TOTAL_STAGES} sub="등록증 촬영" />
+          <OnboardingProgress current={stageOf('ID_DOCUMENT')} total={TOTAL_STAGES} sub="idCapture" />
         </View>
 
         <View style={styles.px}>
           <View style={styles.infoCard}>
             <View style={styles.infoCardTop}>
-              <Text style={styles.infoCardTitle}>외국인등록증 앞면 인식</Text>
+              <Text style={styles.infoCardTitle}>{t('onboarding.idCard.infoTitle')}</Text>
             </View>
             <Text style={styles.infoCardDesc}>
-              {'빛 반사에 유의하여 카드를 어두운 배경에 올려놓고\n사각형 가이드라인에 맞춰주세요.'}
+              {t('onboarding.idCard.infoDesc')}
             </Text>
           </View>
         </View>
@@ -207,29 +209,29 @@ export default function IdCardScreen() {
                     {ocrFailed || ocrTimeout ? (
                       <>
                         <Text style={styles.scanTitle}>
-                          {ocrFailed ? '등록증을 읽지 못했어요' : '인식이 오래 걸리고 있어요'}
+                          {ocrFailed ? t('onboarding.idCard.readFailed') : t('onboarding.idCard.slow')}
                         </Text>
                         <Text style={styles.scanDesc}>
                           {ocrFailed
-                            ? ocrError ?? '밝은 곳에서 빛 반사 없이 다시 촬영해 주세요.'
-                            : '조금 더 기다리거나 다시 촬영해 주세요.'}
+                            ? ocrError ?? t('onboarding.idCard.readFailedDesc')
+                            : t('onboarding.idCard.slowDesc')}
                         </Text>
                         <View style={styles.scanBtnRow}>
                           {ocrTimeout && (
                             <Pressable style={styles.scanBtn} onPress={retryOcrWait}>
-                              <Text style={styles.scanBtnText}>계속 기다리기</Text>
+                              <Text style={styles.scanBtnText}>{t('onboarding.idCard.keepWaiting')}</Text>
                             </Pressable>
                           )}
                           <Pressable style={styles.scanBtn} onPress={unfreeze}>
-                            <Text style={styles.scanBtnText}>다시 촬영</Text>
+                            <Text style={styles.scanBtnText}>{t('common.retake')}</Text>
                           </Pressable>
                         </View>
                       </>
                     ) : (
                       <>
                         <ActivityIndicator color={colors.text.inverse} />
-                        <Text style={styles.scanTitle}>등록증을 인식하고 있어요</Text>
-                        <Text style={styles.scanDesc}>1~2분 정도 걸릴 수 있어요</Text>
+                        <Text style={styles.scanTitle}>{t('onboarding.idCard.recognizing')}</Text>
+                        <Text style={styles.scanDesc}>{t('onboarding.idCard.mayTake')}</Text>
                       </>
                     )}
                   </View>
@@ -238,11 +240,11 @@ export default function IdCardScreen() {
             ) : permission ? (
               <View style={styles.permissionBox}>
                 <Ionicons name="camera-outline" size={28} color={colors.text.inverse} />
-                <Text style={styles.permissionTitle}>카메라 권한이 필요해요</Text>
-                <Text style={styles.permissionDesc}>등록증을 촬영하려면 카메라 접근을 허용해 주세요.</Text>
+                <Text style={styles.permissionTitle}>{t('onboarding.idCard.permissionTitle')}</Text>
+                <Text style={styles.permissionDesc}>{t('onboarding.idCard.permissionDesc')}</Text>
                 <Pressable style={styles.permissionBtn} onPress={handlePermissionPress}>
                   <Text style={styles.permissionBtnText}>
-                    {permission.canAskAgain ? '권한 다시 요청하기' : '설정에서 권한 허용하기'}
+                    {permission.canAskAgain ? t('onboarding.idCard.permissionAskAgain') : t('onboarding.idCard.permissionSettings')}
                   </Text>
                 </Pressable>
               </View>
@@ -253,19 +255,19 @@ export default function IdCardScreen() {
         <View style={[styles.row, { justifyContent: 'center' }]}>
           <View style={styles.hintChip}>
             <Text style={styles.hintChipText}>
-              {frozen ? '인식이 끝나면 다음 화면으로 넘어가요' : '가이드라인에 맞춘 뒤 촬영 버튼을 눌러 주세요'}
+              {frozen ? t('onboarding.idCard.hintFrozen') : t('onboarding.idCard.hintIdle')}
             </Text>
           </View>
         </View>
 
         <View style={[styles.px, styles.tipRow]}>
           {[
-            { title: '조명 조절', sub: '빛 반사 피하기' },
-            { title: '수평 유지', sub: '프레임 채우기' },
-          ].map((t) => (
-            <View key={t.title} style={styles.tipCard}>
-              <Text style={styles.tipTitle}>{t.title}</Text>
-              <Text style={styles.tipSub}>{t.sub}</Text>
+            { title: t('onboarding.idCard.tipLightTitle'), sub: t('onboarding.idCard.tipLightSub') },
+            { title: t('onboarding.idCard.tipLevelTitle'), sub: t('onboarding.idCard.tipLevelSub') },
+          ].map((tip) => (
+            <View key={tip.title} style={styles.tipCard}>
+              <Text style={styles.tipTitle}>{tip.title}</Text>
+              <Text style={styles.tipSub}>{tip.sub}</Text>
             </View>
           ))}
         </View>
@@ -288,9 +290,9 @@ export default function IdCardScreen() {
 
           {SHOW_MANUAL_ENTRY && (
             <View style={styles.manualWrap}>
-              <Text style={styles.manualHint}>인식이 잘 되지 않나요?</Text>
+              <Text style={styles.manualHint}>{t('onboarding.idCard.manualHint')}</Text>
               <Pressable style={styles.manualBtn} onPress={goToManual}>
-                <Text style={styles.manualBtnText}>직접 정보 입력하기</Text>
+                <Text style={styles.manualBtnText}>{t('onboarding.idCard.manualButton')}</Text>
                 <Ionicons name="chevron-forward" size={12} color={colors.primary} />
               </Pressable>
             </View>

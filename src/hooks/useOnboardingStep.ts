@@ -7,6 +7,7 @@ import { router, usePathname, Href } from 'expo-router';
 import { ONBOARDING_STEPS, TOTAL_STAGES, getRouteFromStepCode } from '../constants/onboardingSteps';
 import { updateStep } from '../api/onboarding';
 import { errorText } from '../utils/errorText';
+import i18n from '../i18n';
 
 export function useOnboardingStep() {
   const [isNavigating, setIsNavigating] = useState(false);
@@ -41,7 +42,7 @@ export function useOnboardingStep() {
         router.replace('/chat');
       }
     } catch (e: any) {
-      setNavError(errorText(e, '다음 단계로 이동할 수 없어요. 다시 시도해 주세요.'));
+      setNavError(errorText(e, i18n.t('common.navError')));
     } finally {
       setIsNavigating(false);
     }
@@ -69,7 +70,7 @@ export function useOnboardingStep() {
         router.replace('/chat');
       }
     } catch (e: any) {
-      setNavError(errorText(e, '다음 단계로 이동할 수 없어요. 다시 시도해 주세요.'));
+      setNavError(errorText(e, i18n.t('common.navError')));
     } finally {
       setIsNavigating(false);
     }

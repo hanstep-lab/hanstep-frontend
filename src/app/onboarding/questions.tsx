@@ -3,6 +3,7 @@
 // 목돈 섹션은 "목돈 마련", 송금 섹션은 "본국 송금"을 골랐을 때만 보인다. 고정·변동 지출은 여유자금 계산에 필요해서 항상 보인다.
 
 import { useCallback, useEffect, useRef, useState, type ComponentRef } from 'react';
+import { useTranslation } from 'react-i18next';
 import { View, Text, Pressable, StyleSheet, TextInput } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import Screen from '../../components/Screen';
@@ -25,28 +26,31 @@ import type {
   SummaryVisa,
 } from '../../types/api';
 import { errorText } from '../../utils/errorText';
+import { commitmentLabel } from '../../utils/commitmentLabel';
 
 const MAN = 10_000;
 
-// 목돈 금액 칩. key 는 만 원 단위
+// 목돈 금액 칩. key 는 만 원 단위, label 은 i18n onboarding.questions.<label>
 const AMOUNT_OPTIONS = [
-  { key: '200', label: '200만원' },
-  { key: '400', label: '400만원' },
-  { key: '600', label: '600만원' },
-  { key: 'custom', label: '직접 입력' },
-];
+  { key: '200', label: 'amount200' },
+  { key: '400', label: 'amount400' },
+  { key: '600', label: 'amount600' },
+  { key: 'custom', label: 'custom' },
+] as const;
 
-// 고정 생활비 기본 줄 (Figma). 같은 유형 여러 줄 가능해서 이름(label)으로 구분
-const DEFAULT_FIXED = [
-  { type: 'RENT' as CommitmentType, label: '월세', sub: '' },
-  { type: 'UTILITY' as CommitmentType, label: '공과금', sub: '도시가스, 건물 관리비 등' },
-  { type: 'UTILITY' as CommitmentType, label: '전기 / 수도세', sub: '월별 평균 지출액' },
+// 고정 생활비 기본 줄 (Figma). 같은 유형 여러 줄 가능해서 이름(label)으로 구분.
+// label 은 서버에 저장·비교하는 값이라 한국어 그대로 두고, 화면에는 commitmentLabel 로 바꿔 보여 준다. sub 는 i18n 키
+const DEFAULT_FIXED: { type: CommitmentType; label: string; sub: FixedSub }[] = [
+  { type: 'RENT', label: '월세', sub: null },
+  { type: 'UTILITY', label: '공과금', sub: 'utilitySub' },
+  { type: 'UTILITY', label: '전기 / 수도세', sub: 'powerSub' },
 ];
 
 // 고정 생활비로 묶이는 유형 (서버 totals.fixedLiving 기준과 같음)
 const FIXED_TYPES: CommitmentType[] = ['RENT', 'UTILITY', 'TELECOM', 'LIVING_MINIMUM', 'OTHER'];
 
-type ExpenseRow = { key: string; type: CommitmentType; label: string; sub: string; value: string };
+type FixedSub = 'utilitySub' | 'powerSub' | 'savedSub' | null; // i18n onboarding.questions.<sub>
+type ExpenseRow = { key: string; type: CommitmentType; label: string; sub: FixedSub; value: string };
 
 // 서버 금액(원) → 입력칸 글자(만 원). 520000 → "52"
 const toManText = (won: number) => String(won / MAN);
@@ -83,6 +87,7 @@ function initials(displayName: string): string {
 function AmountField({ value, onChangeText }: { value: string; onChangeText: (text: string) => void }) {
   const inputRef = useRef<ComponentRef<typeof TextInput>>(null);
   const [focused, setFocused] = useState(false);
+  const { t } = useTranslation();
   return (
     // 칸 어디를 눌러도("만원" 포함) 입력 시작
     <Pressable
@@ -101,13 +106,14 @@ function AmountField({ value, onChangeText }: { value: string; onChangeText: (te
         keyboardType="numeric"
         maxLength={6}
       />
-      <Text style={styles.amountUnit}>만원</Text>
+      <Text style={styles.amountUnit}>{t('onboarding.questions.unit')}</Text>
     </Pressable>
   );
 }
 
 export default function QuestionsScreen() {
   const { goNext, isNavigating, navError, stage, totalStages } = useOnboardingStep();
+  const { t } = useTranslation();
 
   // 서버에서 불러온 값
   const [goals, setGoals] = useState<GoalResponse[]>([]);
@@ -180,7 +186,7 @@ export default function QuestionsScreen() {
               key: `saved-${it.id}`,
               type: it.commitmentType,
               label: it.label ?? '기타 고정비',
-              sub: '이전에 입력한 항목',
+              sub: 'savedSub',
               value: toManText(it.amount.amount),
             });
           });
@@ -213,8 +219,8 @@ export default function QuestionsScreen() {
 
         setLoaded(true);
       })
-      .catch((e) => setLoadError(errorText(e, '입력하신 정보를 불러오지 못했어요.')));
-  }, []);
+      .catch((e) => setLoadError(errorText(e, t('common.loadInputError'))));
+  }, [t]);
 
   useEffect(() => {
     load();
@@ -239,7 +245,7 @@ export default function QuestionsScreen() {
       let amount: number | null = lump?.targetAmount?.amount ?? null;
       if (savingsTarget === 'custom') {
         amount = parseMan(customAmount);
-        if (amount == null) throw new Error('모으고 싶은 금액을 만 원 단위 숫자로 입력해 주세요.');
+        if (amount == null) throw new Error(t('onboarding.questions.amountRequired'));
       } else if (savingsTarget) {
         amount = Number(savingsTarget) * MAN;
       }
@@ -294,13 +300,19 @@ export default function QuestionsScreen() {
 
   // 보이는 섹션 순서대로 "목표 01" 번호를 다시 매김
   let sectionNo = 0;
-  const nextNo = () => `목표 ${String(++sectionNo).padStart(2, '0')}`;
+  const nextNo = () => t('onboarding.questions.goalNo', { no: String(++sectionNo).padStart(2, '0') });
 
   const footer = (
     <>
       {navError ? <Text style={styles.navError}>{navError}</Text> : null}
       <Button
-        title={isNavigating ? '처리 중...' : !loaded ? '불러오는 중...' : '세부 설정 완료하고 요약 확인하기'}
+        title={
+          isNavigating
+            ? t('common.processing')
+            : !loaded
+              ? t('onboarding.questions.loading')
+              : t('onboarding.questions.submit')
+        }
         showArrow={!isNavigating && loaded}
         onPress={() => goNext(save)}
         disabled={!loaded || isNavigating}
@@ -310,16 +322,18 @@ export default function QuestionsScreen() {
 
   // Screen 이 키보드 회피(KeyboardAvoidingView)·스크롤·하단 footer 를 공통으로 처리한다
   return (
-    <Screen title="신한걸음" footer={footer} contentStyle={styles.content}>
+    <Screen footer={footer} contentStyle={styles.content}>
         {/* 단계 진행: 도트+선 방식, 현재 3단계 */}
         <View style={styles.progressWrap}>
           <OnboardingProgress current={stage} total={totalStages} />
         </View>
 
         <View style={styles.titleArea}>
-          <Text style={styles.title}>{'선택하신 목표에 대한\n맞춤 질문이에요'}</Text>
+          <Text style={styles.title}>{t('onboarding.questions.title')}</Text>
           <Text style={styles.subtitle}>
-            {`${user ? `${firstName(user.displayName)}님` : '회원님'}의 상황에 맞춰\n지출·저축 루틴을 제안해 드릴게요.`}
+            {user
+              ? t('onboarding.questions.subtitleUser', { name: firstName(user.displayName) })
+              : t('onboarding.questions.subtitleGuest')}
           </Text>
         </View>
 
@@ -331,7 +345,7 @@ export default function QuestionsScreen() {
             </View>
             <View style={styles.userInfo}>
               <View style={styles.userNameRow}>
-                <Text style={styles.userName}>{user.displayName} 님</Text>
+                <Text style={styles.userName}>{t('onboarding.questions.userName', { name: user.displayName })}</Text>
                 {user.nationalityCode ? (
                   <View style={styles.countryTag}>
                     <Text style={styles.countryTagText}>{user.nationalityCode}</Text>
@@ -340,7 +354,7 @@ export default function QuestionsScreen() {
               </View>
               {visa ? (
                 <Text style={styles.userSub}>
-                  {`체류 만료 ${fmtDate(visa.stayExpiresOn)}${visa.monthsRemaining != null ? ` · 약 ${visa.monthsRemaining}개월 남음` : ''} (${visa.visaTypeCode})`}
+                  {`${t('onboarding.questions.stayExpiry', { date: fmtDate(visa.stayExpiresOn) })}${visa.monthsRemaining != null ? t('onboarding.questions.monthsLeft', { months: visa.monthsRemaining }) : ''} (${visa.visaTypeCode})`}
                 </Text>
               ) : null}
             </View>
@@ -353,7 +367,7 @@ export default function QuestionsScreen() {
               <>
                 <Text style={styles.helperText}>{loadError}</Text>
                 <Pressable style={styles.remitEditBtn} onPress={load}>
-                  <Text style={styles.remitEditText}>다시 불러오기</Text>
+                  <Text style={styles.remitEditText}>{t('common.reload')}</Text>
                 </Pressable>
               </>
             ) : (
@@ -373,7 +387,7 @@ export default function QuestionsScreen() {
               <View style={styles.section}>
                 <View style={styles.sectionHeader}>
                   <Text style={styles.goalLabel}>{nextNo()}</Text>
-                  <Text style={styles.sectionQ}>{'한국에서 얼마를 모으고\n싶으신가요?'}</Text>
+                  <Text style={styles.sectionQ}>{t('onboarding.questions.lumpQ')}</Text>
                 </View>
                 <View style={styles.chipGrid}>
                   {[0, 2].map((rowStart) => (
@@ -387,7 +401,7 @@ export default function QuestionsScreen() {
                             onPress={() => setSavingsTarget(opt.key)}
                           >
                             {on && <Ionicons name="checkmark" size={13} color={colors.text.inverse} />}
-                            <Text style={[styles.chipText, on && styles.chipTextOn]}>{opt.label}</Text>
+                            <Text style={[styles.chipText, on && styles.chipTextOn]}>{t(`onboarding.questions.${opt.label}`)}</Text>
                           </Pressable>
                         );
                       })}
@@ -397,13 +411,15 @@ export default function QuestionsScreen() {
                 {savingsTarget === 'custom' ? (
                   <View style={styles.expenseRow}>
                     <View style={styles.expenseLeft}>
-                      <Text style={styles.expenseLabel}>모으고 싶은 금액</Text>
+                      <Text style={styles.expenseLabel}>{t('onboarding.questions.lumpAmount')}</Text>
                     </View>
                     <AmountField value={customAmount} onChangeText={(t) => setCustomAmount(onlyNumber(t))} />
                   </View>
                 ) : null}
                 {visa ? (
-                  <Text style={styles.helperText}>체류 만료일({fmtDate(visa.stayExpiresOn)})까지 모으는 목표로 저장돼요.</Text>
+                  <Text style={styles.helperText}>
+                    {t('onboarding.questions.lumpHelper', { date: fmtDate(visa.stayExpiresOn) })}
+                  </Text>
                 ) : null}
               </View>
             ) : null}
@@ -416,14 +432,14 @@ export default function QuestionsScreen() {
                   {/* 이력이 없으면 "찾아봤어요"가 아래 안내와 안 맞아서 질문 한 줄만 */}
                   <Text style={styles.sectionQ}>
                     {candidates.length > 0
-                      ? '매달 보내는 송금이 있으신가요?\n자주 보낸 곳을 찾아봤어요'
-                      : '매달 보내는 송금이 있으신가요?'}
+                      ? t('onboarding.questions.remitQFound')
+                      : t('onboarding.questions.remitQ')}
                   </Text>
                 </View>
                 {candidates.length > 0 ? (
                   <>
                     <View style={styles.mydataBadge}>
-                      <Text style={styles.mydataBadgeText}>최근 12개월 신한 해외송금 기준</Text>
+                      <Text style={styles.mydataBadgeText}>{t('onboarding.questions.remitBadge')}</Text>
                     </View>
                     <View style={styles.remitList}>
                       {candidates.map((c) => {
@@ -432,7 +448,9 @@ export default function QuestionsScreen() {
                           <Pressable key={c.lastTransactionId} style={styles.remitCard} onPress={() => toggleRemit(c.lastTransactionId)}>
                             <View style={styles.remitLeft}>
                               <View style={styles.remitNameRow}>
-                                <Text style={styles.remitName}>{c.sameNameAsUser ? '본인 명의 계좌' : c.counterpartyName}</Text>
+                                <Text style={styles.remitName}>
+                                  {c.sameNameAsUser ? t('commitmentLabels.ownAccount') : c.counterpartyName}
+                                </Text>
                                 {c.counterpartyBank ? (
                                   <View style={styles.bankTag}>
                                     <Text style={styles.bankTagText}>{c.counterpartyBank}</Text>
@@ -440,7 +458,10 @@ export default function QuestionsScreen() {
                                 ) : null}
                               </View>
                               <Text style={styles.remitDesc}>
-                                {`최근 ${c.monthsSent}개월 송금 · 월 평균 ${fmtNumber(c.avgMonthlyAmount.amount)}원`}
+                                {t('onboarding.questions.remitDesc', {
+                                  months: c.monthsSent,
+                                  amount: fmtNumber(c.avgMonthlyAmount.amount),
+                                })}
                               </Text>
                             </View>
                             <Ionicons
@@ -454,7 +475,7 @@ export default function QuestionsScreen() {
                     </View>
                   </>
                 ) : (
-                  <Text style={styles.helperText}>마이데이터를 연결하면 자주 보낸 곳을 찾아 드려요.</Text>
+                  <Text style={styles.helperText}>{t('onboarding.questions.remitNoData')}</Text>
                 )}
               </View>
             ) : null}
@@ -463,40 +484,38 @@ export default function QuestionsScreen() {
             <View style={styles.section}>
               <View style={styles.sectionHeader}>
                 <Text style={styles.goalLabel}>{nextNo()}</Text>
-                <Text style={styles.sectionQ}>{'매달 고정 생활비를\n알려주세요'}</Text>
+                <Text style={styles.sectionQ}>{t('onboarding.questions.fixedQ')}</Text>
               </View>
               <View style={styles.expenseList}>
                 {fixedRows.map((row) => (
                   <View key={row.key} style={styles.expenseRow}>
                     <View style={styles.expenseLeft}>
-                      <Text style={styles.expenseLabel}>{row.label}</Text>
-                      {row.sub ? <Text style={styles.expenseSub}>{row.sub}</Text> : null}
+                      <Text style={styles.expenseLabel}>{commitmentLabel(row.label)}</Text>
+                      {row.sub ? <Text style={styles.expenseSub}>{t(`onboarding.questions.${row.sub}`)}</Text> : null}
                     </View>
                     <AmountField value={row.value} onChangeText={(t) => setFixedValue(row.key, t)} />
                   </View>
                 ))}
               </View>
-              <Text style={styles.helperText}>비워 두면 저장하지 않아요.</Text>
+              <Text style={styles.helperText}>{t('onboarding.questions.fixedHelper')}</Text>
             </View>
 
             {/* 변동 지출 (항상) */}
             <View style={styles.section}>
               <View style={styles.sectionHeader}>
                 <Text style={styles.goalLabel}>{nextNo()}</Text>
-                <Text style={styles.sectionQ}>{'매달 변동 지출은\n대략 얼마인가요?'}</Text>
+                <Text style={styles.sectionQ}>{t('onboarding.questions.varQ')}</Text>
               </View>
               <View style={styles.expenseList}>
                 <View style={styles.expenseRow}>
                   <View style={styles.expenseLeft}>
-                    <Text style={styles.expenseLabel}>변동 지출</Text>
-                    <Text style={styles.expenseSub}>식비 · 교통 · 여가 등</Text>
+                    <Text style={styles.expenseLabel}>{t('onboarding.questions.varLabel')}</Text>
+                    <Text style={styles.expenseSub}>{t('onboarding.questions.varSub')}</Text>
                   </View>
                   <AmountField value={varExpense} onChangeText={(t) => setVarExpense(onlyNumber(t))} />
                 </View>
               </View>
-              <Text style={styles.helperText}>
-                거래 내역이 있으면 지출 범위(최소~최대)를 자동으로 계산해 드려요.
-              </Text>
+              <Text style={styles.helperText}>{t('onboarding.questions.varHelper')}</Text>
             </View>
           </>
         )}

@@ -3,6 +3,7 @@
 // 다음: POST /steps/SUMMARY_CONFIRM
 
 import { useCallback, useEffect, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { View, Text, ScrollView, StyleSheet, Pressable } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
@@ -19,6 +20,8 @@ import { goalLabel } from '../../constants/goals';
 import { fmtNumber, fmtWon } from '../../utils/format';
 import type { CommitmentType, OnboardingSummaryResponse } from '../../types/api';
 import { errorText } from '../../utils/errorText';
+import { commitmentLabel } from '../../utils/commitmentLabel';
+import i18n from '../../i18n';
 
 // 고정 생활비로 묶이는 항목 (서버 totals.fixedLiving 과 같은 기준)
 const FIXED_TYPES: CommitmentType[] = ['RENT', 'UTILITY', 'TELECOM', 'LIVING_MINIMUM', 'OTHER'];
@@ -43,13 +46,13 @@ function buildGoalRows(s: OnboardingSummaryResponse): GoalRow[] {
   const lump = s.goals.find((g) => g.goalType === 'LUMP_SUM');
   if (lump) {
     const subs: string[] = [];
-    if (lump.targetDate) subs.push(`${yearMonth(lump.targetDate)}까지`);
-    if (lump.monthlyRequired) subs.push(`월 ${fmtWon(lump.monthlyRequired.amount)}씩`);
+    if (lump.targetDate) subs.push(i18n.t('onboarding.confirm.until', { ym: yearMonth(lump.targetDate) }));
+    if (lump.monthlyRequired) subs.push(i18n.t('onboarding.confirm.monthlyEach', { amount: fmtWon(lump.monthlyRequired.amount) }));
     rows.push({
-      label: '목돈 마련 플랜',
-      amount: lump.targetAmount ? fmtWon(lump.targetAmount.amount) : '금액 미입력',
+      label: i18n.t('onboarding.confirm.lumpLabel'),
+      amount: lump.targetAmount ? fmtWon(lump.targetAmount.amount) : i18n.t('onboarding.confirm.noAmount'),
       amountBlue: true,
-      sub: subs.join(' · ') || '목표 금액과 시점을 정하면 월 저축액을 알려 드려요',
+      sub: subs.join(' · ') || i18n.t('onboarding.confirm.lumpHint'),
     });
   }
 
@@ -57,20 +60,20 @@ function buildGoalRows(s: OnboardingSummaryResponse): GoalRow[] {
   const remitItems = items.filter((i) => i.commitmentType === 'REMITTANCE');
   if (remitItems.length > 0) {
     rows.push({
-      label: '본국 정기 송금',
-      amount: `월 ${fmtWon(totals.remittance.amount)}`,
+      label: i18n.t('onboarding.confirm.remitLabel'),
+      amount: i18n.t('money.perMonth', { amount: fmtWon(totals.remittance.amount) }),
       amountBlue: false,
-      sub: remitItems.map((i) => i.label ?? '송금').join(' · '),
+      sub: remitItems.map((i) => commitmentLabel(i.label ?? '송금')).join(' · '),
     });
   }
 
   const fixedItems = items.filter((i) => FIXED_TYPES.includes(i.commitmentType));
   if (fixedItems.length > 0) {
     rows.push({
-      label: '고정 생활비',
-      amount: `월 ${fmtWon(totals.fixedLiving.amount)}`,
+      label: i18n.t('onboarding.confirm.fixedLabel'),
+      amount: i18n.t('money.perMonth', { amount: fmtWon(totals.fixedLiving.amount) }),
       amountBlue: false,
-      sub: fixedItems.map((i) => `${i.label ?? '기타'} ${fmtWon(i.amount.amount)}`).join(' · '),
+      sub: fixedItems.map((i) => `${commitmentLabel(i.label ?? '기타')} ${fmtWon(i.amount.amount)}`).join(' · '),
     });
   }
 
@@ -79,6 +82,7 @@ function buildGoalRows(s: OnboardingSummaryResponse): GoalRow[] {
 
 export default function ConfirmScreen() {
   const { goNext, isNavigating, navError, stage, totalStages } = useOnboardingStep();
+  const { t } = useTranslation();
   const [summary, setSummary] = useState<OnboardingSummaryResponse | null>(null);
   const [loadError, setLoadError] = useState<string | null>(null);
 
@@ -86,8 +90,8 @@ export default function ConfirmScreen() {
     setLoadError(null);
     getOnboardingSummary()
       .then(setSummary)
-      .catch((e) => setLoadError(errorText(e, '입력하신 정보를 불러오지 못했어요.')));
-  }, []);
+      .catch((e) => setLoadError(errorText(e, t('common.loadInputError'))));
+  }, [t]);
 
   useEffect(() => {
     load();
@@ -98,7 +102,7 @@ export default function ConfirmScreen() {
 
   return (
     <SafeAreaView style={styles.safe} edges={['top', 'bottom']}>
-      <Header title="신한걸음" showBack />
+      <Header title={t('common.appName')} showBack />
 
       <ScrollView style={styles.scroll} contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
 
@@ -107,8 +111,8 @@ export default function ConfirmScreen() {
         </View>
 
         <View style={styles.titleArea}>
-          <Text style={styles.title}>입력하신 정보가 맞나요?</Text>
-          <Text style={styles.subtitle}>입력하신 정보로 금융 분석을 시작해요.</Text>
+          <Text style={styles.title}>{t('onboarding.confirm.title')}</Text>
+          <Text style={styles.subtitle}>{t('onboarding.confirm.subtitle')}</Text>
         </View>
 
         {!summary ? (
@@ -117,7 +121,7 @@ export default function ConfirmScreen() {
               <>
                 <Text style={styles.stateText}>{loadError}</Text>
                 <Pressable style={styles.retryBtn} onPress={load}>
-                  <Text style={styles.retryText}>다시 불러오기</Text>
+                  <Text style={styles.retryText}>{t('common.reload')}</Text>
                 </Pressable>
               </>
             ) : (
@@ -159,28 +163,28 @@ export default function ConfirmScreen() {
               <View style={styles.cardDivider} />
               <View style={styles.infoBoxRow}>
                 <View style={styles.infoBox}>
-                  <Text style={styles.infoBoxLabel}>체류 자격</Text>
+                  <Text style={styles.infoBoxLabel}>{t('onboarding.confirm.visaLabel')}</Text>
                   {visa ? (
                     <View style={styles.visaRow}>
                       <Text style={styles.infoBoxValue}>{visa.visaTypeCode}</Text>
                       <Text style={styles.infoBoxValueSub} numberOfLines={2}>{visa.visaTypeName}</Text>
                     </View>
                   ) : (
-                    <Text style={styles.infoBoxValueSub}>등록증 확인 전</Text>
+                    <Text style={styles.infoBoxValueSub}>{t('onboarding.confirm.beforeId')}</Text>
                   )}
                 </View>
                 <View style={styles.infoBox}>
-                  <Text style={styles.infoBoxLabel}>체류 유효기간</Text>
+                  <Text style={styles.infoBoxLabel}>{t('onboarding.confirm.validity')}</Text>
                   {visa ? (
                     <Text style={[styles.infoBoxValue, { color: colors.primary }]}>
                       {visa.monthsRemaining != null
-                        ? `잔여 약 ${visa.monthsRemaining}개월`
+                        ? t('onboarding.confirm.monthsLeft', { months: visa.monthsRemaining })
                         : visa.daysRemaining < 0
-                          ? '만료됨'
-                          : `잔여 ${visa.daysRemaining}일`}
+                          ? t('onboarding.confirm.expired')
+                          : t('onboarding.confirm.daysLeft', { days: visa.daysRemaining })}
                     </Text>
                   ) : (
-                    <Text style={styles.infoBoxValueSub}>등록증 확인 전</Text>
+                    <Text style={styles.infoBoxValueSub}>{t('onboarding.confirm.beforeId')}</Text>
                   )}
                 </View>
               </View>
@@ -188,11 +192,11 @@ export default function ConfirmScreen() {
 
             {/* 금융 목표 요약 카드 */}
             <View style={styles.card}>
-              <Text style={styles.cardTitle}>설정한 금융 목표 요약</Text>
+              <Text style={styles.cardTitle}>{t('onboarding.confirm.goalsTitle')}</Text>
               {goals && goals.length > 0 ? (
                 <Text style={styles.goalNames}>{goals.map((g) => goalLabel(g.goalType)).join(' · ')}</Text>
               ) : (
-                <Text style={styles.goalSub}>선택한 목표가 없어요</Text>
+                <Text style={styles.goalSub}>{t('onboarding.confirm.noGoals')}</Text>
               )}
               {goalRows.length > 0 ? (
                 <View style={styles.goalList}>
@@ -213,17 +217,21 @@ export default function ConfirmScreen() {
 
             {/* 예상 월 금융 밸런스 리포트 */}
             <View style={styles.card}>
-              <Text style={styles.cardTitle}>예상 월 금융 밸런스 리포트</Text>
+              <Text style={styles.cardTitle}>{t('onboarding.confirm.balanceTitle')}</Text>
               {balance ? (
                 <>
                   <View style={styles.incomeBox}>
-                    <Text style={styles.incomeLabel}>예상 월 수입</Text>
-                    <Text style={styles.incomeAmount}>약 {fmtNumber(balance.avgMonthlyIncome.amount)}원</Text>
+                    <Text style={styles.incomeLabel}>{t('onboarding.confirm.monthlyIncome')}</Text>
+                    <Text style={styles.incomeAmount}>
+                      {t('money.approxWon', { amount: fmtNumber(balance.avgMonthlyIncome.amount) })}
+                    </Text>
                   </View>
                   <View style={styles.distSection}>
                     <View style={styles.distLabelRow}>
-                      <Text style={styles.distLabel}>자금 배분 비율</Text>
-                      <Text style={styles.distLabel}>합계 {fmtNumber(balance.avgMonthlyIncome.amount)}원</Text>
+                      <Text style={styles.distLabel}>{t('onboarding.confirm.distribution')}</Text>
+                      <Text style={styles.distLabel}>
+                        {t('onboarding.confirm.total', { amount: fmtNumber(balance.avgMonthlyIncome.amount) })}
+                      </Text>
                     </View>
                     {/* 막대 길이는 서버 금액을 그대로 비율로 사용 (여유자금이 음수면 막대 없음) */}
                     <View style={styles.distBar}>
@@ -235,10 +243,10 @@ export default function ConfirmScreen() {
                   </View>
                   <View style={styles.legendList}>
                     {[
-                      { color: colors.primary, label: '고정 지출', amount: `${fmtNumber(balance.fixedLiving.amount)}원`, blue: false },
-                      { color: colors.primary, label: '본국 송금', amount: `${fmtNumber(balance.remittance.amount)}원`, blue: false },
-                      { color: colors.disabled, label: '변동 지출 (식비·교통 등)', amount: `약 ${fmtNumber(balance.variableExpense.amount)}원`, blue: false },
-                      { color: colors.primary, label: '여유자금 (사용 가능 자금)', amount: `약 ${fmtNumber(balance.spare.amount)}원`, blue: true },
+                      { color: colors.primary, label: t('onboarding.confirm.legendFixed'), amount: t('money.won', { amount: fmtNumber(balance.fixedLiving.amount) }), blue: false },
+                      { color: colors.primary, label: t('onboarding.confirm.legendRemit'), amount: t('money.won', { amount: fmtNumber(balance.remittance.amount) }), blue: false },
+                      { color: colors.disabled, label: t('onboarding.confirm.legendVariable'), amount: t('money.approxWon', { amount: fmtNumber(balance.variableExpense.amount) }), blue: false },
+                      { color: colors.primary, label: t('onboarding.confirm.legendSpare'), amount: t('money.approxWon', { amount: fmtNumber(balance.spare.amount) }), blue: true },
                     ].map((row) => (
                       <View key={row.label} style={styles.legendRow}>
                         <View style={styles.legendLeft}>
@@ -251,7 +259,7 @@ export default function ConfirmScreen() {
                   </View>
                 </>
               ) : (
-                <Text style={styles.goalSub}>금융 분석 준비 중이에요. 마이데이터 연결 후 보여 드려요.</Text>
+                <Text style={styles.goalSub}>{t('onboarding.confirm.balancePending')}</Text>
               )}
             </View>
           </>
@@ -261,13 +269,13 @@ export default function ConfirmScreen() {
         <View style={styles.btnBlock}>
           {navError ? <Text style={styles.navError}>{navError}</Text> : null}
           <Button
-            title={isNavigating ? '처리 중...' : '네, 맞아요! 신한걸음 시작하기'}
+            title={isNavigating ? t('common.processing') : t('onboarding.confirm.start')}
             showArrow={!isNavigating}
             onPress={() => goNext()}
             disabled={isNavigating}
           />
           <Button
-            title="정보 수정하기"
+            title={t('onboarding.confirm.edit')}
             variant="secondary"
             icon="pencil-outline"
             onPress={() => router.back()}

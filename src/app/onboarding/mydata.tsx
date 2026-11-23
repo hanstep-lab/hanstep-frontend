@@ -2,6 +2,7 @@
 // 기관 목록은 서버(MYD-01) 값, 동의 저장(CNS-02)·연결(MYD-02)은 src/api 에서만 부른다.
 // 확인하고 연결: POST consents → POST mydata/connections → 단계 COMPLETED / 나중에 연결할게요: 단계 SKIPPED
 import { useEffect, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { View, Text, Pressable, ScrollView, StyleSheet, Modal } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
@@ -16,7 +17,7 @@ import {
   scopeText,
   connectErrorText,
   LOOKBACK_MONTHS,
-  MYDATA_LOAD_ERROR,
+  mydataLoadError,
   type InstitutionView,
 } from '../../api/mydata';
 import { saveConsents, MYDATA_CONSENTS } from '../../api/consents';
@@ -26,14 +27,16 @@ import { FadeIn, Skeleton, SkeletonGroup } from '../../components/Skeleton';
 
 // 필수 두 건은 MYDATA·MYDATA_TERMS 로 저장한다(consents.ts MYDATA_CONSENTS).
 // 선택 동의는 맞는 consentType 이 정해지지 않아 서버에 보내지 않는다.
+// 문구는 i18n onboarding.mydata.<label>
 const CONSENTS = [
-  { label: '[필수] 개인신용정보 전송요구 및 수집·이용 동의', required: true },
-  { label: '[필수] 마이데이터 서비스 이용약관',              required: true },
-  { label: '[선택] 금융 진단 활용 동의',                    required: false },
-];
+  { label: 'consentRequired1', required: true },
+  { label: 'consentRequired2', required: true },
+  { label: 'consentOptional',  required: false },
+] as const;
 
 export default function MydataScreen() {
   const { goNext, skip, isNavigating, navError, stage, totalStages } = useOnboardingStep();
+  const { t } = useTranslation();
   // Modal 은 별도 창이라 화면의 SafeAreaView 하단 여백이 안 먹는다. 시트에 시스템 내비게이션 바 높이를 더한다
   const insets = useSafeAreaInsets();
   const [checks, setChecks] = useState([false, false, false]);
@@ -48,7 +51,7 @@ export default function MydataScreen() {
         setInstitutions(list);
         setSelectedIds(list.map((inst) => inst.id)); // 처음에는 모두 선택
       })
-      .catch(() => setLoadError(MYDATA_LOAD_ERROR));
+      .catch(() => setLoadError(mydataLoadError()));
   }, []);
 
   const allChecked  = checks.every(Boolean);
@@ -78,22 +81,20 @@ export default function MydataScreen() {
 
   return (
     <SafeAreaView style={styles.safe} edges={['top', 'bottom']}>
-      <Header title="신한걸음" showBack />
+      <Header title={t('common.appName')} showBack />
 
       <ScrollView style={styles.scroll} contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
         <View style={styles.progressWrap}>
-          <OnboardingProgress current={stage} total={totalStages} sub="마이데이터 연결" />
+          <OnboardingProgress current={stage} total={totalStages} sub="mydata" />
         </View>
 
         {/* 배지 + 제목 */}
         <View style={styles.titleArea}>
           <View style={styles.badge}>
-            <Text style={styles.badgeText}>마이데이터 연결</Text>
+            <Text style={styles.badgeText}>{t('onboarding.mydata.badge')}</Text>
           </View>
-          <Text style={styles.title}>{'금융 데이터를\n연결할까요?'}</Text>
-          <Text style={styles.subtitle}>
-            계좌·거래내역을 불러와 소득·지출 분석과 비자 소득 점수 추정에 사용해요.
-          </Text>
+          <Text style={styles.title}>{t('onboarding.mydata.title')}</Text>
+          <Text style={styles.subtitle}>{t('onboarding.mydata.subtitle')}</Text>
         </View>
 
         {/* 금융기관 카드 */}
@@ -147,8 +148,8 @@ export default function MydataScreen() {
 
           <View style={styles.instCardDefault}>
             <View style={styles.instCardLeft}>
-              <Text style={styles.instNameDark}>다른 금융기관</Text>
-              <Text style={styles.instDescDark}>연결 후 설정에서 추가할 수 있어요</Text>
+              <Text style={styles.instNameDark}>{t('onboarding.mydata.otherInstitution')}</Text>
+              <Text style={styles.instDescDark}>{t('onboarding.mydata.otherInstitutionDesc')}</Text>
             </View>
             <View style={styles.instAdd}>
               <Ionicons name="add" size={16} color={colors.text.sub} />
@@ -162,7 +163,7 @@ export default function MydataScreen() {
             <View style={[styles.checkCircle, allChecked && styles.checkCircleOn]}>
               {allChecked && <Ionicons name="checkmark" size={14} color={colors.text.inverse} />}
             </View>
-            <Text style={styles.agreeAllText}>약관 전체 동의</Text>
+            <Text style={styles.agreeAllText}>{t('onboarding.mydata.agreeAll')}</Text>
           </Pressable>
 
           {CONSENTS.map((item, i) => (
@@ -170,7 +171,7 @@ export default function MydataScreen() {
               <View style={[styles.checkCircleSm, checks[i] && styles.checkCircleSmOn]}>
                 {checks[i] && <Ionicons name="checkmark" size={12} color={colors.text.inverse} />}
               </View>
-              <Text style={styles.consentLabel}>{item.label}</Text>
+              <Text style={styles.consentLabel}>{t(`onboarding.mydata.${item.label}`)}</Text>
               <Ionicons name="chevron-forward" size={16} color={colors.text.sub} />
             </Pressable>
           ))}
@@ -180,13 +181,13 @@ export default function MydataScreen() {
       <View style={styles.footer}>
         {navError ? <Text style={styles.navError}>{navError}</Text> : null}
         <Button
-          title={isNavigating ? '처리 중...' : '동의하고 연결하기'}
+          title={isNavigating ? t('common.processing') : t('onboarding.mydata.agreeConnect')}
           showArrow={!isNavigating}
           onPress={() => setShowModal(true)}
           disabled={!canConnect || isNavigating}
         />
         <Pressable onPress={() => skip()} disabled={isNavigating}>
-          <Text style={styles.skipText}>나중에 연결할게요</Text>
+          <Text style={styles.skipText}>{t('onboarding.mydata.later')}</Text>
         </Pressable>
       </View>
       <Modal visible={showModal} transparent animationType="slide" onRequestClose={() => setShowModal(false)}>
@@ -196,16 +197,16 @@ export default function MydataScreen() {
             <View style={styles.handle} />
 
             <View style={styles.sheetTitleArea}>
-              <Text style={styles.sheetTitle}>금융 데이터를 연결할게요</Text>
-              <Text style={styles.sheetSubtitle}>아래 내용으로 마이데이터 연결을 진행해요.</Text>
+              <Text style={styles.sheetTitle}>{t('onboarding.mydata.sheetTitle')}</Text>
+              <Text style={styles.sheetSubtitle}>{t('onboarding.mydata.sheetSubtitle')}</Text>
             </View>
 
             <View style={styles.summaryBox}>
               {[
-                { label: '연결 기관',  value: selected.map((inst) => inst.name).join(', ') },
-                { label: '불러올 정보', value: scopeText(scopes) },
-                { label: '조회 기간',  value: `최근 ${LOOKBACK_MONTHS}개월` },
-                { label: '이용 목적',  value: '소득·지출 분석, 금융 진단' },
+                { label: t('onboarding.mydata.rowInstitutions'), value: selected.map((inst) => inst.name).join(', ') },
+                { label: t('onboarding.mydata.rowScopes'), value: scopeText(scopes) },
+                { label: t('onboarding.mydata.rowPeriod'), value: t('onboarding.mydata.period', { months: LOOKBACK_MONTHS }) },
+                { label: t('onboarding.mydata.rowPurpose'), value: t('onboarding.mydata.purpose') },
               ].map((row) => (
                 <View key={row.label} style={styles.summaryRow}>
                   <Text style={styles.summaryLabel}>{row.label}</Text>
@@ -216,7 +217,7 @@ export default function MydataScreen() {
 
             <View style={styles.sheetActions}>
               <Pressable style={styles.cancelBtn} onPress={() => setShowModal(false)}>
-                <Text style={styles.cancelText}>취소</Text>
+                <Text style={styles.cancelText}>{t('common.cancel')}</Text>
               </Pressable>
               <Pressable
                 style={[styles.confirmBtn, isNavigating && { opacity: 0.7 }]}
@@ -224,7 +225,7 @@ export default function MydataScreen() {
                 disabled={isNavigating}
               >
                 <Text style={styles.confirmText}>
-                  {isNavigating ? '처리 중...' : '확인하고 연결'}
+                  {isNavigating ? t('common.processing') : t('onboarding.mydata.confirmConnect')}
                 </Text>
               </Pressable>
             </View>

@@ -1,4 +1,5 @@
 import { ReactNode, useLayoutEffect, useRef } from 'react';
+import { useTranslation } from 'react-i18next';
 import { View, ScrollView, StyleSheet, KeyboardAvoidingView, Animated, type StyleProp, type ViewStyle } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Header from './Header';
@@ -7,13 +8,14 @@ import { colors, spacing } from '../constants/theme';
 type ScreenProps = {
   children: ReactNode; // 태그 사이에 넣은 내용
   footer?: ReactNode;  // 하단 고정 영역
-  title?: string;
+  title?: string; // 없으면 앱 이름(신한걸음 / Shinhan Step)
   showBack?: boolean; //뒤로가기를 위한 boolean
   contentStyle?: StyleProp<ViewStyle>; // 스크롤 내용 여백·간격을 화면별로 덮어쓸 때
   loading?: boolean; // 스켈레톤을 보여 주는 중이면 true. false 로 바뀌는 순간 불러온 내용이 서서히 나타난다
 };
 
-export default function Screen({ children, footer, title = '신한걸음', showBack = true, contentStyle, loading = false }: ScreenProps) {
+export default function Screen({ children, footer, title, showBack = true, contentStyle, loading = false }: ScreenProps) {
+  const { t } = useTranslation();
   // 로딩 → 내용으로 바뀔 때만 내용 영역을 0.25초 동안 서서히 보이게 (그려지기 전에 투명하게 해 두려고 LayoutEffect)
   const fade = useRef(new Animated.Value(1)).current;
   const wasLoading = useRef(loading);
@@ -27,7 +29,7 @@ export default function Screen({ children, footer, title = '신한걸음', showB
 
   return (
     <SafeAreaView style={styles.safe} edges={['top', 'bottom']}>
-      <Header title={title} showBack={showBack} />
+      <Header title={title ?? t('common.appName')} showBack={showBack} />
       {/* 키보드가 올라오면 스크롤 영역과 footer 를 키보드 높이만큼 위로 올린다(입력칸·하단 버튼이 가려지지 않게).
           iOS 는 원래 안 올려 주고, Android 도 edge-to-edge(SDK 54~)라 시스템이 화면을 줄여 주지 않아서 둘 다 padding.
           입력칸이 없는 화면은 키보드가 안 뜨므로 영향 없음 */}

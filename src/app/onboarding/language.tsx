@@ -3,6 +3,7 @@
 // 다음: PATCH /users/me(언어) → PUT /onboarding/profile(거주목적) → POST /steps/LANGUAGE
 
 import { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { View, Text, Pressable, StyleSheet } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import Screen from '../../components/Screen';
@@ -22,11 +23,8 @@ import type { Language, ResidencePurpose } from '../../types/api';
 // ── 데이터 ──────────────────────────────────────────────────────────────
 // 언어 목록은 constants/languages.ts (최종 확인 화면 언어 칩과 공유)
 
-const PURPOSES: { code: ResidencePurpose; label: string; sub: string }[] = [
-  { code: 'WORK',   label: '취업 및 비즈니스',     sub: 'E-9, E-7, D-8 등 전문·비전문 취업' },
-  { code: 'STUDY',  label: '유학 및 어학연수',     sub: 'D-2 학위과정, D-4 일반연수' },
-  { code: 'FAMILY', label: '가족 동반 및 영주·거주', sub: 'F-2 거주, F-5 영주, F-6 결혼이민' },
-];
+// 문구는 i18n onboarding.language.purposes.<code>
+const PURPOSES = ['WORK', 'STUDY', 'FAMILY'] as const satisfies readonly ResidencePurpose[];
 
 // ── 서브 컴포넌트 ────────────────────────────────────────────────────────
 function LangCard({
@@ -67,6 +65,7 @@ function PurposeCard({
 // ── 화면 ─────────────────────────────────────────────────────────────────
 export default function LanguageScreen() {
   const { step, stage, totalStages, isFirst, goNext, isNavigating, navError } = useOnboardingStep();
+  const { t } = useTranslation();
   const storeLanguage = useOnboardingStore((s) => s.language);
   const storePurpose  = useOnboardingStore((s) => s.purpose);
   const setStoreLang  = useOnboardingStore((s) => s.setLanguage);
@@ -95,19 +94,19 @@ export default function LanguageScreen() {
       footer={
         <View style={styles.footerInner}>
           {navError ? <Text style={styles.navError}>{navError}</Text> : null}
-          <Button title="다음 단계로" showArrow onPress={handleNext} disabled={!canProceed} />
+          <Button title={t('onboarding.language.next')} showArrow onPress={handleNext} disabled={!canProceed} />
         </View>
       }
     >
       {/* 진행 표시 */}
-      <OnboardingProgress current={stage} total={totalStages} sub="언어 선택" />
+      <OnboardingProgress current={stage} total={totalStages} sub="language" />
 
       {/* 배지 + 제목 */}
       <View style={styles.heading}>
-        <StepBadge label={step?.badge ?? ''} />
+        <StepBadge label={step ? t(`onboarding.steps.${step.stepCode}.badge`) : ''} />
         <ScreenTitle
-          title={step?.title ?? ''}
-          description="화면과 답변 모두 선택한 언어로 제공돼요."
+          title={step ? t(`onboarding.steps.${step.stepCode}.title`) : ''}
+          description={t('onboarding.language.description')}
         />
       </View>
 
@@ -132,17 +131,17 @@ export default function LanguageScreen() {
       {/* 거주 목적 섹션 */}
       <View style={styles.purposeSection}>
         <View style={styles.purposeHeader}>
-          <Text style={styles.sectionTitle}>현재 체류 목적을 알려주세요</Text>
-          <Text style={styles.sectionSub}>{'비자 종류에 맞춰 전용 외환 & 계좌 한도를 안내해요'}</Text>
+          <Text style={styles.sectionTitle}>{t('onboarding.language.purposeTitle')}</Text>
+          <Text style={styles.sectionSub}>{t('onboarding.language.purposeSub')}</Text>
         </View>
         <View style={styles.purposeList}>
           {PURPOSES.map((p) => (
             <PurposeCard
-              key={p.code}
-              label={p.label}
-              sub={p.sub}
-              selected={purpose === p.code}
-              onPress={() => selectPurpose(p.code)}
+              key={p}
+              label={t(`onboarding.language.purposes.${p}.label`)}
+              sub={t(`onboarding.language.purposes.${p}.sub`)}
+              selected={purpose === p}
+              onPress={() => selectPurpose(p)}
             />
           ))}
         </View>

@@ -1,15 +1,17 @@
 // 마이데이터 API (MYD-01~03). 화면은 이 파일만 부르고 Mock 인지 모른다.
 // 실제 금융기관 연결이 아니라 서버가 Mock 계좌·거래를 적재한다. isMock 은 타입에만 두고 화면에는 표시하지 않는다.
-// 화면용 문구(기관 꼬리표·설명, 불러올 정보 이름)는 서버가 주지 않아 아래 표에서 만든다.
+// 화면용 문구(기관 꼬리표·설명, 불러올 정보 이름)는 서버가 주지 않아 i18n mydata 문구로 만든다.
 
 import { randomUUID } from 'expo-crypto';
 import { client } from './client';
 import { USE_MOCK, mockDelay } from './config';
+import i18n from '../i18n';
 import type {
   ApiError,
   ConnectionCreateRequest,
   ConnectionListResponse,
   InstitutionListResponse,
+  InstitutionResponse,
   InstitutionType,
   MydataScope,
 } from '../types/api';
@@ -112,11 +114,16 @@ export type InstitutionView = {
   scopes: MydataScope[]; // 이 기관을 고르면 불러올 정보
 };
 
-// 기관 코드별 꼬리표·설명. 표에 없는 기관은 이름만 보여 준다
-const INSTITUTION_TEXT: Record<string, { tag: string; desc: string }> = {
-  SHINHAN_BANK: { tag: '주거래', desc: '입출금·적금 계좌, 거래내역' },
-  SHINHAN_CARD: { tag: '카드', desc: '카드 이용내역, 결제 예정 금액' },
-};
+// 꼬리표·설명 문구가 있는 기관 코드 (i18n mydata.inst). 목록에 없는 기관은 이름만 보여 준다
+const TEXT_INSTITUTIONS = ['SHINHAN_BANK', 'SHINHAN_CARD'] as const;
+const hasText = (code: string): code is (typeof TEXT_INSTITUTIONS)[number] =>
+  (TEXT_INSTITUTIONS as readonly string[]).includes(code);
+
+// 기관 이름: 한국어 화면은 한국어 이름(없으면 영문), 영어 화면은 영문 이름에서 "(Mock)" 표시를 뺀 것
+function institutionName(inst: InstitutionResponse): string {
+  if (i18n.language === 'ko') return inst.nameKo ?? inst.name;
+  return inst.name.replace(/\s*\(Mock\)\s*$/i, '');
+}
 
 // 업권별 불러올 정보. 은행은 잔액·거래내역, 카드는 이용내역
 const TYPE_SCOPES: Partial<Record<InstitutionType, MydataScope[]>> = {
@@ -124,25 +131,19 @@ const TYPE_SCOPES: Partial<Record<InstitutionType, MydataScope[]>> = {
   CARD: ['CARD_USAGE'],
 };
 
-// 불러올 정보 이름. 이 순서대로 보내고 보여 준다
-const SCOPE_LABEL: Record<MydataScope, string> = {
-  ACCOUNT_BALANCE: '계좌 잔액',
-  TRANSACTIONS: '거래내역',
-  CARD_USAGE: '카드 이용내역',
-  LOANS: '대출',
-};
-const SCOPE_ORDER = Object.keys(SCOPE_LABEL) as MydataScope[];
+// 불러올 정보. 이 순서대로 보내고 보여 준다 (이름은 i18n mydata.scope)
+const SCOPE_ORDER: MydataScope[] = ['ACCOUNT_BALANCE', 'TRANSACTIONS', 'CARD_USAGE', 'LOANS'];
 
 // ON-003A 기관 목록. 순서는 서버 그대로
 export async function getInstitutionViews(): Promise<InstitutionView[]> {
   const { institutions } = await getInstitutions();
   return institutions.map((inst) => {
-    const text = INSTITUTION_TEXT[inst.institutionCode];
+    const code = inst.institutionCode;
     return {
       id: inst.id,
-      name: inst.nameKo ?? inst.name,
-      tag: text?.tag ?? null,
-      desc: text?.desc ?? null,
+      name: institutionName(inst),
+      tag: hasText(code) ? i18n.t(`mydata.inst.${code}.tag`) : null,
+      desc: hasText(code) ? i18n.t(`mydata.inst.${code}.desc`) : null,
       scopes: TYPE_SCOPES[inst.institutionType] ?? [],
     };
   });
@@ -156,22 +157,22 @@ export function scopesOf(selected: InstitutionView[]): MydataScope[] {
 
 // ["ACCOUNT_BALANCE", "TRANSACTIONS"] → "계좌 잔액 · 거래내역"
 export const scopeText = (scopes: MydataScope[]) =>
-  scopes.map((scope) => SCOPE_LABEL[scope]).join(' · ');
+  scopes.map((scope) => i18n.t(`mydata.scope.${scope}`)).join(' · ');
 
 // ── 오류 문구 (서버 message 는 사용자 언어라 code 로 고른다) ────────
 
-export const MYDATA_LOAD_ERROR = '연결할 금융기관을 불러오지 못했어요.';
+export const mydataLoadError = () => i18n.t('mydata.loadError');
 
 // 동의 저장·연결 실패 문구
 export function connectErrorText(e: ApiError): string {
   switch (e.code) {
     case 'DUPLICATE_REQUEST':
-      return '연결을 처리하고 있어요. 잠시 후 다시 시도해 주세요.';
+      return i18n.t('mydata.connectError.duplicate');
     case 'NETWORK':
-      return '네트워크 연결을 확인하고 다시 시도해 주세요.';
+      return i18n.t('mydata.connectError.network');
     case 'TIMEOUT':
-      return '응답이 늦어지고 있어요. 잠시 후 다시 시도해 주세요.';
+      return i18n.t('mydata.connectError.timeout');
     default:
-      return '금융 데이터를 연결하지 못했어요. 잠시 후 다시 시도해 주세요.';
+      return i18n.t('mydata.connectError.default');
   }
 }
