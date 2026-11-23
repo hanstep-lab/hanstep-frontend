@@ -2,14 +2,14 @@
 // 확인이 필요한 항목(needsReview·빈 값)과 체류 만료일(앞면에 없음)은 사용자가 직접 입력한다.
 // 네, 맞아요: PATCH fields → POST confirm → 온보딩 단계 완료
 
-import { useEffect, useState, type ReactNode } from 'react';
-import { View, Text, Pressable, StyleSheet, TextInput, ActivityIndicator } from 'react-native';
+import { useEffect, useRef, useState, type ReactNode } from 'react';
+import { View, Text, Pressable, StyleSheet, TextInput, ActivityIndicator, Alert } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { Image } from 'expo-image';
 import { router, type Href } from 'expo-router';
 import Screen from '../../components/Screen';
 import { updateStep } from '../../api/onboarding';
-import { confirmDocument, updateDocumentFields } from '../../api/document';
+import { confirmDocument, getDocument, updateDocumentFields } from '../../api/document';
 import { useIdDocument } from '../../hooks/useIdDocument';
 import { useOnboardingStore } from '../../store/onboardingStore';
 import { TOTAL_STAGES, getRouteFromStepCode, stageOf } from '../../constants/onboardingSteps';
@@ -119,6 +119,11 @@ function FieldValue({
   );
 }
 
+// 원본 만료 안내 문구 (이슈 #164 요청서)
+const EXPIRED_TITLE = '사진을 다시 찍어 주세요';
+const EXPIRED_BODY = '개인정보 보호를 위해 등록증 사진은 하루가 지나면 삭제돼요. 다시 촬영해 주세요.';
+const EXPIRED_BUTTON = '다시 촬영하기';
+
 export default function IdConfirmScreen() {
   const [isNavigating, setIsNavigating] = useState(false);
   const [navError, setNavError] = useState<string | null>(null);
@@ -149,6 +154,26 @@ export default function IdConfirmScreen() {
   const visaUnsupported = visaNow !== '' && !isSupportedVisaType(visaNow);
 
   const isConfirmed = doc?.status === 'CONFIRMED';
+
+  // 원본 보관 기한(업로드 24시간)이 지나 사진·인식 값이 지워진 문서 (BE #163·#164).
+  // 확정할 수 없으니 확인 화면 대신 안내를 띄우고 촬영 화면으로 보낸다. 판단은 서버 originalExpired 로만 한다
+  const [expired, setExpired] = useState(false);
+  const expiredAlerted = useRef(false); // 안내 창은 한 번만
+  const goRetake = () => router.replace('/onboarding/id-card' as Href);
+  const showExpired = () => {
+    setExpired(true);
+    if (expiredAlerted.current) return;
+    expiredAlerted.current = true;
+    Alert.alert(
+      EXPIRED_TITLE,
+      EXPIRED_BODY,
+      [{ text: EXPIRED_BUTTON, onPress: goRetake }],
+      { cancelable: false },
+    );
+  };
+  useEffect(() => {
+    if (phase === 'ready' && doc?.originalExpired === true) showExpired();
+  }, [phase, doc]);
   const needsReviewCount = doc?.fields.filter((f) => f.needsReview).length ?? 0;
   // 서버가 저장된 만료일로 계산한 남은 일수. 없으면(null) 표시하지 않는다 (화면에서 계산하지 않음)
   const daysLeft = doc?.daysRemaining ?? null;
@@ -156,7 +181,7 @@ export default function IdConfirmScreen() {
   const requiredFilled =
     values != null &&
     REQUIRED_KEYS.every((k) => values[k].trim() !== '');
-  const canConfirm = phase === 'ready' && (isConfirmed || requiredFilled) && !isNavigating;
+  const canConfirm = phase === 'ready' && !expired && (isConfirmed || requiredFilled) && !isNavigating;
 
   const goNextStep = async () => {
     const res = await updateStep('ID_DOCUMENT');
@@ -196,6 +221,14 @@ export default function IdConfirmScreen() {
       }
       await goNextStep();
     } catch (e) {
+      // 422 INSUFFICIENT_DATA: 화면에 머무는 동안 원본이 만료됐을 수 있어 문서를 다시 조회해 본다
+      if ((e as ApiError | null)?.code === 'INSUFFICIENT_DATA') {
+        const latest = await getDocument(doc.documentId).catch(() => null);
+        if (latest?.originalExpired === true) {
+          showExpired();
+          return;
+        }
+      }
       setNavError(fieldErrorText(e, sent) ?? errorText(e, '다음 단계로 이동할 수 없어요. 다시 시도해 주세요.'));
     } finally {
       setIsNavigating(false);
@@ -239,6 +272,15 @@ export default function IdConfirmScreen() {
           {error ?? '등록증을 읽지 못했어요. 밝은 곳에서 빛 반사 없이 다시 촬영해 주세요.'}
         </Text>
         {manualLink}
+      </View>
+    );
+  } else if (expired) {
+    body = (
+      <View style={styles.stateBox}>
+        <Text style={styles.stateText}>{EXPIRED_BODY}</Text>
+        <Pressable style={styles.stateBtn} onPress={goRetake}>
+          <Text style={styles.stateBtnText}>{EXPIRED_BUTTON}</Text>
+        </Pressable>
       </View>
     );
   } else if (isConfirmed) {
