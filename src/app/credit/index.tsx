@@ -5,7 +5,7 @@
 // SOL 글로벌론(credit.ts)만 실패하면 SOL 카드만 숨기고 나머지는 그대로 보여 준다.
 // 가입 조건 met 이 null 이면 옆 값 대신 "확인 불가"를 보여 준다.
 import { useEffect, useState, type ReactNode } from 'react';
-import { View, Text, StyleSheet, Alert } from 'react-native';
+import { View, Text, StyleSheet } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { router, type Href } from 'expo-router';
 import Screen from '../../components/Screen';
@@ -14,6 +14,7 @@ import StepBadge from '../../components/StepBadge';
 import Pill from '../../components/Pill';
 import Button from '../../components/Button';
 import { colors, typography, spacing, radius, fonts, shadow } from '../../constants/theme';
+import { Skeleton, SkeletonCard, SkeletonGroup } from '../../components/Skeleton';
 import {
   ALT_CREDIT_TEXT as T,
   LEVEL_BADGE,
@@ -44,7 +45,6 @@ import type { ApiError } from '../../types/api';
 
 type Loaded = { alt: AltCreditAssessment; name: string; loan: GlobalLoan | null };
 
-const preparing = () => Alert.alert('준비 중', '곧 사용할 수 있어요.');
 
 // 원 → 만 원 표시. 만 원 미만은 버린다. 6,234,567 → "623만 원", 30,000,000 → "3,000만 원"
 const fmtManWon = (won: number) => `${fmtNumber(Math.floor(won / 10000))}만 원`;
@@ -119,7 +119,7 @@ function LoanCard({
   name: string;
   badge?: ReactNode;
   children: ReactNode;
-  onDetail: () => void;
+  onDetail?: () => void; // 상세 화면이 있는 상품만. 없으면 '자세히 보기' 버튼을 그리지 않는다
 }) {
   return (
     <View style={[s.card, s.loanCard]}>
@@ -131,7 +131,7 @@ function LoanCard({
         {badge}
       </View>
       {children}
-      <Button title={T.detailButton} variant="secondary" onPress={onDetail} />
+      {onDetail ? <Button title={T.detailButton} variant="secondary" onPress={onDetail} /> : null}
     </View>
   );
 }
@@ -148,8 +148,20 @@ export default function AltCreditScreen() {
 
   if (!data) {
     return (
-      <Screen>
-        <Text style={s.stateText}>{error ?? T.loading}</Text>
+      <Screen loading={!error}>
+        {error ? (
+          <Text style={s.stateText}>{error}</Text>
+        ) : (
+          <SkeletonGroup>
+            <SkeletonGroup gap={spacing.sm}>
+              <Skeleton width="85%" height={26} />
+              <Skeleton width="60%" height={14} />
+            </SkeletonGroup>
+            <SkeletonCard lines={2} block={56} />
+            <SkeletonCard lines={3} />
+            <SkeletonCard lines={3} />
+          </SkeletonGroup>
+        )}
       </Screen>
     );
   }
@@ -277,7 +289,6 @@ export default function AltCreditScreen() {
           tag={T.hanstepLoanTag}
           name={T.hanstepLoanName}
           badge={<EligibilityBadge met={eligible} />}
-          onDetail={preparing}
         >
           {eligible ? (
             <View style={s.terms}>
@@ -317,7 +328,6 @@ export default function AltCreditScreen() {
               <Text style={s.tipTitle}>{tip.title}</Text>
               <Text style={s.tipDesc}>{tip.desc}</Text>
             </View>
-            {tip.button != null && <Button title={tip.button} variant="secondary" onPress={preparing} />}
           </View>
         ))}
       </View>

@@ -1,4 +1,6 @@
-// TR-001 해외송금 실행. 데이터는 src/api/transfer.ts 에서만 받고, 금액 계산은 서버(Mock) 값을 그대로 쓴다.
+// TR-001 해외송금 실행. 화면 기준: Figma 876:9 (TR-001 v3 · 외국인 송금 규정 반영 개선안).
+// 데이터는 src/api/transfer.ts 에서만 받고, 금액은 서버(Mock) 견적 값을 그대로 쓴다(더하거나 빼지 않음).
+// Figma 와 다른 점: 공통 Header(가운데 제목·닫기) 사용, 기능 없는 '변경'·송금 목적 연필·출금 계좌 ▼ 는 넣지 않음.
 import { useEffect, useState } from 'react';
 import { View, Text, TextInput, Pressable, StyleSheet, Alert } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
@@ -6,6 +8,7 @@ import { router, useLocalSearchParams, type Href } from 'expo-router';
 import Screen from '../../components/Screen';
 import Button from '../../components/Button';
 import { colors, typography, spacing, radius, fonts, shadow } from '../../constants/theme';
+import { SkeletonCard, SkeletonGroup } from '../../components/Skeleton';
 import { useTransferStore } from '../../store/transferStore';
 import {
   getTransferContext,
@@ -13,15 +16,36 @@ import {
   submitTransfer,
   canSendQuote,
   defaultQuoteOf,
-  productLabel,
   quoteNoticeText,
   transferErrorText,
 } from '../../api/transfer';
 import { fmtNumber, fmtRate, fmtDate } from '../../utils/format';
-import type { ApiError, TransferContext, TransferQuote } from '../../types/api';
+import type { ApiError, RemittanceProductQuote, TransferContext, TransferQuote } from '../../types/api';
 
-function preparingAlert() {
-  Alert.alert('준비 중', '곧 사용할 수 있어요.');
+// 전달 방식 (견적 deliveryType). 표에 없는 값은 줄을 숨긴다
+const DELIVERY_TEXT: Record<string, string> = { SWIFT_ACCOUNT: 'SWIFT 계좌송금', WESTERN_UNION: '웨스턴유니온' };
+// 도착 예정 (deliveryType 별 안내. 송금 완료 화면 안내 '처리 완료까지 1-2 영업일'과 같음)
+const ARRIVAL_TEXT: Record<string, string> = { SWIFT_ACCOUNT: '영업일 1~2일' };
+// 받는 은행 BIC(SWIFT 코드). 은행마다 정해진 공개 코드라 앱 표로 둔다. 표에 없는 은행은 BIC 를 숨긴다
+const BANK_BIC: Record<string, string> = { BDO: 'BNORPHMM', BPI: 'BOPIPHMM' };
+
+// 외국인 해외송금 확인 (시연용 고정값). 서버에 아직 값이 없다
+// - 거래외국환은행: 증빙 없는 해외송금을 하려면 은행 한 곳을 지정한다. 신한 SOL 안의 서비스라 신한은행으로 둔다
+// - 올해 해외송금: 지정 은행 기준 무증빙 연 한도(USD 50,000) 대비 올해 보낸 금액. 서버 값이 생기기 전까지 0
+const DESIGNATED_FX_BANK = '신한은행';
+const YEARLY_SENT_USD = 0;
+const YEARLY_LIMIT_USD = 50_000;
+
+// 수수료 한 줄: 송금수수료·전신료 중 0보다 큰 것만. 하나면 금액만, 둘이면 이름과 함께 나란히 (합치지 않는다)
+function feeText(q: RemittanceProductQuote): string | null {
+  const parts: { name: string; text: string }[] = [];
+  if (q.sendFeeKrw != null && q.sendFeeKrw > 0) parts.push({ name: '송금수수료', text: `${fmtNumber(q.sendFeeKrw)}원` });
+  else if (q.feeUsd != null && q.feeUsd > 0) parts.push({ name: '송금수수료', text: `US$${fmtNumber(q.feeUsd)}` });
+  if (q.telegraphicFeeKrw != null && q.telegraphicFeeKrw > 0)
+    parts.push({ name: '전신료', text: `${fmtNumber(q.telegraphicFeeKrw)}원` });
+  if (parts.length === 0) return null;
+  if (parts.length === 1) return parts[0].text;
+  return parts.map((p) => `${p.name} ${p.text}`).join(' · ');
 }
 
 // 주소의 amount(원). 숫자만 1~9자리(입력칸과 같은 한도)이고 0보다 클 때만 쓴다. 아니면 null
@@ -47,6 +71,7 @@ export default function TransferScreen() {
   const [quoteError, setQuoteError] = useState<string | null>(null);
   const [quoteLoading, setQuoteLoading] = useState(false);
   const [submitting, setSubmitting] = useState(false);
+  const [showDetail, setShowDetail] = useState(false); // '출금 총액·수수료 내역 자세히 보기'
 
   // 화면 진입 시 받는 분·계좌 정보
   useEffect(() => {
@@ -79,8 +104,17 @@ export default function TransferScreen() {
 
   if (!ctx) {
     return (
-      <Screen title="해외송금">
-        <Text style={s.stateText}>{ctxError ?? '송금 정보를 불러오는 중이에요.'}</Text>
+      <Screen title="해외송금" loading={!ctxError}>
+        {ctxError ? (
+          <Text style={s.stateText}>{ctxError}</Text>
+        ) : (
+          <SkeletonGroup>
+            <SkeletonCard lines={2} />
+            <SkeletonCard lines={1} block={48} />
+            <SkeletonCard lines={3} />
+            <SkeletonCard lines={3} />
+          </SkeletonGroup>
+        )}
       </Screen>
     );
   }
@@ -118,6 +152,12 @@ export default function TransferScreen() {
   const canSubmit = amount > 0 && !!quote && canSendQuote(quote) && !submitting;
   const mainQuote = quote ? defaultQuoteOf(quote) : null;
   const notice = quote ? quoteNoticeText(quote) : null;
+  const deliveryLine = [mainQuote ? DELIVERY_TEXT[mainQuote.deliveryType] : null, BANK_BIC[recipient.bank] ? `BIC ${BANK_BIC[recipient.bank]}` : null]
+    .filter(Boolean)
+    .join(' · ');
+  const fee = mainQuote ? feeText(mainQuote) : null;
+  const arrival = mainQuote ? ARRIVAL_TEXT[mainQuote.deliveryType] ?? null : null;
+  const yearlyRatio = Math.min(YEARLY_SENT_USD / YEARLY_LIMIT_USD, 1);
 
   return (
     <Screen
@@ -135,10 +175,6 @@ export default function TransferScreen() {
       <View style={s.section}>
         <View style={s.sectionHead}>
           <Text style={s.sectionLabel}>받는 분 (해외)</Text>
-          <Pressable style={s.linkRow} onPress={preparingAlert} hitSlop={8}>
-            <Text style={s.linkText}>최근/즐겨찾기</Text>
-            <Ionicons name="chevron-forward" size={10} color={colors.primary} />
-          </Pressable>
         </View>
         <View style={[s.card, s.row]}>
           <View style={s.recipientLeft}>
@@ -157,11 +193,13 @@ export default function TransferScreen() {
               <Text style={s.subText} numberOfLines={1}>
                 {recipient.bank} ****{recipient.accountLast4} · {recipient.country}
               </Text>
+              {deliveryLine ? (
+                <Text style={s.deliveryText} numberOfLines={1}>
+                  {deliveryLine}
+                </Text>
+              ) : null}
             </View>
           </View>
-          <Pressable style={s.pillBtn} onPress={preparingAlert}>
-            <Text style={s.pillBtnText}>변경</Text>
-          </Pressable>
         </View>
       </View>
 
@@ -204,68 +242,140 @@ export default function TransferScreen() {
         </View>
       </View>
 
-      {/* 수취 예상: 서버 견적을 그대로 표시. PHP 금액·환율은 참고값, 송금 환율은 기본 상품의 USD 환율 */}
-      <View style={s.preview}>
-        <View style={s.row}>
-          <Text style={s.previewLabel}>받는 분 수취 예상{quote?.isReference === false ? '' : ' (참고)'}</Text>
-          <Text style={s.previewValue}>
-            {quote?.receiveAmount
-              ? `약 ${fmtNumber(quote.receiveAmount.amount)} ${quote.receiveAmount.currency}`
-              : '—'}
-          </Text>
+      {/* 송금 내역 (예상): 서버 견적 그대로. PHP 금액은 참고값, 환율은 기본 상품(쏠편한)의 USD 적용 환율 */}
+      <View style={s.section}>
+        <Text style={s.sectionLabel}>송금 내역 (예상)</Text>
+        <View style={[s.card, s.listCard]}>
+          <View style={s.row}>
+            <Text style={s.itemLabelStrong}>받는 분 수취 예상{quote?.isReference === false ? '' : ' (참고)'}</Text>
+            <Text style={s.receiveValue}>
+              {quote?.receiveAmount
+                ? `약 ${fmtNumber(quote.receiveAmount.amount)} ${quote.receiveAmount.currency}`
+                : '—'}
+            </Text>
+          </View>
+          <View style={s.divider} />
+          {quoteError ? (
+            <Text style={s.errorText}>{quoteError}</Text>
+          ) : quoteLoading ? (
+            <Text style={s.itemLabel}>예상 금액을 확인하고 있어요.</Text>
+          ) : quote && mainQuote ? (
+            <>
+              <View style={s.row}>
+                <Text style={[s.itemLabel, s.flex]} numberOfLines={1}>
+                  환율 ({mainQuote.preferentialPct > 0 ? `우대 ${mainQuote.preferentialPct}% · ` : ''}
+                  {fmtDate(quote.rates.usdRateDate, { short: true })} 기준)
+                </Text>
+                <Text style={s.itemValue}>
+                  1 {quote.sendCurrency} = {fmtRate(mainQuote.usdAppliedRate)}원
+                </Text>
+              </View>
+              {fee ? (
+                <View style={s.row}>
+                  <Text style={s.itemLabel}>수수료</Text>
+                  <Text style={s.itemValue}>{fee}</Text>
+                </View>
+              ) : null}
+              {arrival ? (
+                <View style={s.row}>
+                  <Text style={s.itemLabel}>도착 예정</Text>
+                  <Text style={s.itemValue}>{arrival}</Text>
+                </View>
+              ) : null}
+
+              {showDetail ? (
+                <View style={s.detail}>
+                  {mainQuote.totalWithdrawKrw != null ? (
+                    <View style={s.row}>
+                      <Text style={s.itemLabel}>출금 총액</Text>
+                      <Text style={s.itemValue}>{fmtNumber(mainQuote.totalWithdrawKrw)}원</Text>
+                    </View>
+                  ) : null}
+                  {mainQuote.sendAmountUsd != null ? (
+                    <View style={s.row}>
+                      <Text style={s.itemLabel}>보내는 금액</Text>
+                      <Text style={s.itemValue}>US${fmtNumber(mainQuote.sendAmountUsd)}</Text>
+                    </View>
+                  ) : null}
+                  {mainQuote.sendFeeKrw != null && mainQuote.sendFeeKrw > 0 ? (
+                    <View style={s.row}>
+                      <Text style={s.itemLabel}>송금수수료</Text>
+                      <Text style={s.itemValue}>{fmtNumber(mainQuote.sendFeeKrw)}원</Text>
+                    </View>
+                  ) : null}
+                  {mainQuote.telegraphicFeeKrw != null && mainQuote.telegraphicFeeKrw > 0 ? (
+                    <View style={s.row}>
+                      <Text style={s.itemLabel}>전신료</Text>
+                      <Text style={s.itemValue}>{fmtNumber(mainQuote.telegraphicFeeKrw)}원</Text>
+                    </View>
+                  ) : null}
+                  {mainQuote.fxMarginKrw != null && mainQuote.fxMarginKrw > 0 ? (
+                    <View style={s.row}>
+                      <Text style={s.itemLabel}>환전 마진 (환율에 포함, 참고)</Text>
+                      <Text style={s.itemValue}>{fmtNumber(mainQuote.fxMarginKrw)}원</Text>
+                    </View>
+                  ) : null}
+                  {quote.appliedRate ? (
+                    <View style={s.row}>
+                      <Text style={[s.itemLabel, s.flex]} numberOfLines={2}>
+                        참고 환율 ({quote.appliedRate.sourceLabel} · {fmtDate(quote.appliedRate.asOf, { short: true })} 기준)
+                      </Text>
+                      <Text style={s.itemValue}>
+                        {quote.appliedRate.unit} {quote.appliedRate.currency} = {fmtRate(quote.appliedRate.rate)}원
+                      </Text>
+                    </View>
+                  ) : null}
+                </View>
+              ) : null}
+
+              <Pressable style={s.detailToggle} onPress={() => setShowDetail((v) => !v)} hitSlop={8}>
+                <Text style={s.detailToggleText}>출금 총액·수수료 내역 {showDetail ? '접기' : '자세히 보기'}</Text>
+                <Ionicons name={showDetail ? 'chevron-up' : 'chevron-down'} size={12} color={colors.primary} />
+              </Pressable>
+            </>
+          ) : null}
         </View>
-        {quoteError ? (
-          <Text style={s.errorText}>{quoteError}</Text>
-        ) : quoteLoading ? (
-          <Text style={s.rateLabel}>예상 금액을 확인하고 있어요.</Text>
-        ) : quote ? (
-          <>
-            {mainQuote ? (
-              <View style={s.row}>
-                <Text style={[s.rateLabel, s.flex]} numberOfLines={2}>
-                  적용 환율 ({productLabel(mainQuote.product)} · {fmtDate(quote.rates.usdRateDate, { short: true })} 기준)
-                </Text>
-                <Text style={s.rateValue}>
-                  1 {quote.sendCurrency} = {fmtRate(mainQuote.usdAppliedRate)} KRW
-                </Text>
-              </View>
-            ) : null}
-            {quote.appliedRate ? (
-              <View style={s.row}>
-                <Text style={[s.rateLabel, s.flex]} numberOfLines={2}>
-                  참고 환율 ({quote.appliedRate.sourceLabel} · {fmtDate(quote.appliedRate.asOf, { short: true })} 기준)
-                </Text>
-                <Text style={s.rateValue}>
-                  {quote.appliedRate.unit} {quote.appliedRate.currency} = {fmtRate(quote.appliedRate.rate)} KRW
-                </Text>
-              </View>
-            ) : null}
-            {notice ? <Text style={s.rateLabel}>{notice}</Text> : null}
-          </>
-        ) : null}
+        {notice ? <Text style={s.noticeText}>{notice}</Text> : null}
       </View>
 
       {/* 출금 계좌 */}
       <View style={s.section}>
         <Text style={s.sectionLabel}>출금 계좌</Text>
-        <Pressable style={[s.card, s.row]} onPress={preparingAlert}>
+        <View style={[s.card, s.row]}>
           {/* 상품명이 없으면 마스킹된 계좌번호를 이름 자리에 한 번만 보여 준다 */}
           <View>
             <Text style={s.accountName}>{account.name ?? account.number}</Text>
             {account.name ? <Text style={s.subText}>{account.number}</Text> : null}
           </View>
-          <Ionicons name="chevron-down" size={16} color={colors.primary} />
-        </Pressable>
+        </View>
       </View>
 
-      {/* 송금 목적 */}
-      <Pressable style={[s.card, s.row]} onPress={preparingAlert}>
-        <Text style={s.purposeLabel}>송금 목적</Text>
-        <View style={s.purposeRight}>
-          <Text style={s.purposeValue}>{purpose.label}</Text>
-          <Ionicons name="pencil" size={12} color={colors.text.strong} />
+      {/* 외국인 해외송금 확인 */}
+      <View style={s.section}>
+        <Text style={s.sectionLabel}>외국인 해외송금 확인</Text>
+        <View style={[s.card, s.listCard]}>
+          <View style={s.row}>
+            <Text style={s.itemLabel}>거래외국환은행</Text>
+            <View style={s.bankBadge}>
+              <Ionicons name="checkmark" size={12} color={colors.primary} />
+              <Text style={s.bankBadgeText}>{DESIGNATED_FX_BANK}</Text>
+            </View>
+          </View>
+          <View style={s.row}>
+            <Text style={s.itemLabel}>송금 목적</Text>
+            <Text style={s.itemValueStrong}>{purpose.label}</Text>
+          </View>
+          <View style={s.row}>
+            <Text style={s.itemLabel}>올해 해외송금 (무증빙 연 한도)</Text>
+            <Text style={s.limitValue}>
+              USD {fmtNumber(YEARLY_SENT_USD)} / {fmtNumber(YEARLY_LIMIT_USD)}
+            </Text>
+          </View>
+          <View style={s.progressTrack}>
+            <View style={[s.progressFill, { width: `${yearlyRatio * 100}%` }]} />
+          </View>
         </View>
-      </Pressable>
+      </View>
     </Screen>
   );
 }
@@ -287,8 +397,6 @@ const s = StyleSheet.create({
     color: colors.text.sub,
     paddingHorizontal: spacing.xs,
   },
-  linkRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.xs },
-  linkText: { ...typography.badge, color: colors.primary },
 
   card: {
     backgroundColor: colors.surface,
@@ -320,14 +428,7 @@ const s = StyleSheet.create({
   },
   countryBadgeText: { ...typography.badge, color: colors.primary },
   recipientName: { ...typography.h3, color: colors.text.strong },
-  pillBtn: {
-    backgroundColor: colors.background,
-    borderRadius: radius.full,
-    paddingHorizontal: spacing.md,
-    paddingVertical: spacing.xs,
-  },
-  pillBtnText: { ...typography.badge, color: colors.text.sub },
-
+  deliveryText: { ...typography.badge, color: colors.text.sub },
   amountCard: { gap: spacing.md },
   amountRow: { flex: 1, flexDirection: 'row', alignItems: 'baseline', gap: spacing.xs },
   amountInput: { ...typography.h2, color: colors.primary, padding: 0, minWidth: 24 },
@@ -351,22 +452,33 @@ const s = StyleSheet.create({
   quickBtnText: { ...typography.badge, color: colors.text.strong },
   quickBtnAll: { color: colors.primary },
 
-  preview: {
-    backgroundColor: colors.background,
-    borderRadius: radius.xl,
-    paddingHorizontal: spacing.lg,
-    paddingVertical: spacing.md,
-    gap: spacing.sm,
-  },
-  previewLabel: { ...typography.body, color: colors.text.strong },
-  previewValue: { ...typography.h3, color: colors.primary },
-  rateLabel: { ...typography.badge, fontFamily: fonts.light, color: colors.text.sub },
-  rateValue: { ...typography.badge, color: colors.text.strong },
+  // 송금 내역·외국인 해외송금 확인 카드: 왼쪽 이름 · 오른쪽 값 줄
+  listCard: { gap: spacing.sm },
+  itemLabel: { ...typography.body, color: colors.text.sub },
+  itemLabelStrong: { ...typography.body, fontFamily: fonts.bold, color: colors.text.strong },
+  itemValue: { ...typography.body, color: colors.text.strong },
+  itemValueStrong: { ...typography.body, fontFamily: fonts.bold, color: colors.text.strong },
+  receiveValue: { ...typography.h3, color: colors.primary },
+  divider: { height: 1, backgroundColor: colors.background },
+  detail: { gap: spacing.sm, paddingTop: spacing.xs },
+  detailToggle: { flexDirection: 'row', alignItems: 'center', justifyContent: 'flex-end', gap: spacing.xs },
+  detailToggleText: { ...typography.badge, fontFamily: fonts.bold, color: colors.primary },
+  noticeText: { ...typography.badge, color: colors.text.sub, paddingHorizontal: spacing.xs },
   errorText: { ...typography.badge, color: colors.error },
 
   accountName: { ...typography.title, color: colors.text.strong },
 
-  purposeLabel: { ...typography.subtitle, color: colors.text.sub },
-  purposeRight: { flexDirection: 'row', alignItems: 'center', gap: spacing.xs },
-  purposeValue: { ...typography.body, fontFamily: fonts.bold, color: colors.text.strong },
+  bankBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.xs,
+    backgroundColor: colors.primarySoft,
+    borderRadius: radius.full,
+    paddingHorizontal: spacing.sm,
+    paddingVertical: 2,
+  },
+  bankBadgeText: { ...typography.badge, fontFamily: fonts.bold, color: colors.primary },
+  limitValue: { ...typography.body, fontFamily: fonts.bold, color: colors.primary },
+  progressTrack: { height: 8, borderRadius: radius.full, backgroundColor: colors.background, overflow: 'hidden' },
+  progressFill: { height: 8, borderRadius: radius.full, backgroundColor: colors.primary },
 });

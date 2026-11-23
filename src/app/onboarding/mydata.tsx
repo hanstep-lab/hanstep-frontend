@@ -3,7 +3,7 @@
 // 확인하고 연결: POST consents → POST mydata/connections → 단계 COMPLETED / 나중에 연결할게요: 단계 SKIPPED
 import { useEffect, useState } from 'react';
 import { View, Text, Pressable, ScrollView, StyleSheet, Modal } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import Header from '../../components/Header';
 import Button from '../../components/Button';
@@ -22,6 +22,7 @@ import {
 import { saveConsents, MYDATA_CONSENTS } from '../../api/consents';
 import type { ApiError } from '../../types/api';
 import { colors, typography, spacing, radius, fonts } from '../../constants/theme';
+import { FadeIn, Skeleton, SkeletonGroup } from '../../components/Skeleton';
 
 // 필수 두 건은 MYDATA·MYDATA_TERMS 로 저장한다(consents.ts MYDATA_CONSENTS).
 // 선택 동의는 맞는 consentType 이 정해지지 않아 서버에 보내지 않는다.
@@ -33,6 +34,8 @@ const CONSENTS = [
 
 export default function MydataScreen() {
   const { goNext, skip, isNavigating, navError, stage, totalStages } = useOnboardingStep();
+  // Modal 은 별도 창이라 화면의 SafeAreaView 하단 여백이 안 먹는다. 시트에 시스템 내비게이션 바 높이를 더한다
+  const insets = useSafeAreaInsets();
   const [checks, setChecks] = useState([false, false, false]);
   const [showModal, setShowModal] = useState(false);
   const [institutions, setInstitutions] = useState<InstitutionView[] | null>(null);
@@ -96,9 +99,18 @@ export default function MydataScreen() {
         {/* 금융기관 카드 */}
         <View style={styles.cardList}>
           {!institutions ? (
-            <Text style={styles.stateText}>{loadError ?? '연결할 금융기관을 불러오는 중이에요.'}</Text>
+            loadError ? (
+              <Text style={styles.stateText}>{loadError}</Text>
+            ) : (
+              <SkeletonGroup gap={spacing.md}>
+                <Skeleton height={76} round={radius.lg} />
+                <Skeleton height={76} round={radius.lg} />
+                <Skeleton height={76} round={radius.lg} />
+              </SkeletonGroup>
+            )
           ) : (
-            institutions.map((inst) => {
+            <FadeIn style={{ gap: spacing.md }}>
+            {institutions.map((inst) => {
               const on = selectedIds.includes(inst.id);
               return (
                 <Pressable
@@ -129,7 +141,8 @@ export default function MydataScreen() {
                   )}
                 </Pressable>
               );
-            })
+            })}
+            </FadeIn>
           )}
 
           <View style={styles.instCardDefault}>
@@ -179,7 +192,7 @@ export default function MydataScreen() {
       <Modal visible={showModal} transparent animationType="slide" onRequestClose={() => setShowModal(false)}>
         <View style={styles.modalWrap}>
           <Pressable style={styles.dim} onPress={() => setShowModal(false)} />
-          <View style={styles.sheet}>
+          <View style={[styles.sheet, { paddingBottom: spacing.xxl + insets.bottom }]}>
             <View style={styles.handle} />
 
             <View style={styles.sheetTitleArea}>

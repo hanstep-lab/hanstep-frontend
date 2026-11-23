@@ -7,10 +7,12 @@ import {
   ScrollView,
   StyleSheet,
   Modal,
-  Alert,
   KeyboardAvoidingView,
+  Animated,
+  PanResponder,
+  Dimensions,
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { router, type Href } from 'expo-router';
 import { colors, typography, spacing, radius, fonts } from '../../constants/theme';
@@ -87,10 +89,6 @@ function getTodayString(): string {
 function getLandingDateString(): string {
   const d = new Date();
   return `${d.getFullYear()}년 ${d.getMonth() + 1}월 ${d.getDate()}일`;
-}
-
-function preparingAlert() {
-  Alert.alert('준비 중', '곧 사용할 수 있어요.');
 }
 
 export default function ChatScreen() {
@@ -294,7 +292,7 @@ export default function ChatScreen() {
         </View>
       </KeyboardAvoidingView>
 
-      <MenuSheet visible={showMenu} onClose={() => setShowMenu(false)} />
+      <MenuSheet visible={showMenu} onClose={() => setShowMenu(false)} userName={userName} />
     </SafeAreaView>
   );
 }
@@ -436,13 +434,74 @@ function MessageItem({
   );
 }
 
-function MenuSheet({ visible, onClose }: { visible: boolean; onClose: () => void }) {
-  // action 이 없는 메뉴(설정)는 아직 "준비 중"
+function MenuSheet({
+  visible,
+  onClose,
+  userName,
+}: {
+  visible: boolean;
+  onClose: () => void;
+  userName: string | null; // '금융상품 추천' 설명에 넣는 이름 (users/me shortName)
+}) {
+  // Modal 은 별도 창이라 화면의 SafeAreaView 하단 여백이 안 먹는다. 시트에 시스템 내비게이션 바 높이를 더한다
+  const insets = useSafeAreaInsets();
+  // 'SOL Global로 돌아가기' 줄: 구분선 아래 빈 영역의 세로 가운데에 둔다.
+  // 영역 높이 = 예전(위 8 + 글자 줄 18 + 아래 8 + 시트 아래 4 + 시스템 내비게이션 바)의 2/3. 위아래 여백을 같게 나눈다
+  const solLine = typography.body.lineHeight;
+  const solArea = Math.round((spacing.sm * 2 + spacing.xs + insets.bottom + solLine) * (2 / 3));
+  const solPad = Math.max((solArea - solLine) / 2, spacing.sm);
+  // action 이 없는 메뉴는 목록에서 숨긴다(hidden). 혹시 보이더라도 눌러서 아무것도 하지 않는다
   const handleItem = (action?: ChatAction) => {
-    if (!action) return preparingAlert();
+    if (!action) return;
     onClose();
     runAction(action);
   };
+
+  // 시트 애니메이션은 직접 한다(Modal 의 slide 는 어두운 배경까지 같이 밀어 내려서 끌어 닫을 때 배경 사각형이 따로 내려가 보임).
+  // 열 때: 시트는 아래에서 올라오고 배경은 짧게 나타난다. 닫을 때: 시트를 내린 뒤 모달을 닫아 배경은 한 번에 사라진다
+  const dragY = useRef(new Animated.Value(0)).current; // 시트 세로 위치 (0 = 제자리)
+  const dimOpacity = useRef(new Animated.Value(0)).current;
+  const closeRef = useRef(onClose); // PanResponder 는 한 번만 만들어서 최신 onClose 를 ref 로 읽는다
+  useEffect(() => {
+    closeRef.current = onClose;
+  }, [onClose]);
+  useEffect(() => {
+    if (!visible) return;
+    dragY.setValue(Dimensions.get('window').height);
+    dimOpacity.setValue(0);
+    Animated.parallel([
+      Animated.timing(dragY, { toValue: 0, duration: 250, useNativeDriver: true }),
+      Animated.timing(dimOpacity, { toValue: 1, duration: 150, useNativeDriver: true }),
+    ]).start();
+  }, [visible, dragY, dimOpacity]);
+  const sheet = useRef({
+    // 시트를 화면 밖으로 내린 뒤 닫는다 (X·바깥 탭·뒤로가기·끌어서 닫기)
+    close: () =>
+      Animated.timing(dragY, {
+        toValue: Dimensions.get('window').height,
+        duration: 200,
+        useNativeDriver: true,
+      }).start(() => closeRef.current()),
+    move: (dy: number) => dragY.setValue(Math.max(dy, 0)),
+    // 많이 끌었거나(100px) 빠르게 튕기면 닫고, 덜 끌었으면 제자리로
+    release: (dy: number, vy: number) => {
+      if (dy > 100 || vy > 0.8) sheet.close();
+      else Animated.spring(dragY, { toValue: 0, useNativeDriver: true, bounciness: 4 }).start();
+    },
+    reset: () => Animated.spring(dragY, { toValue: 0, useNativeDriver: true, bounciness: 4 }).start(),
+  }).current;
+  // 끌어서 닫기는 손잡이·제목 줄에서만. 손가락을 대는 순간부터 시트가 터치를 맡는다. X 버튼은 자식이라 먼저 눌린다.
+  // 목록 영역은 메뉴 터치·스크롤만 한다(목록에서 끌기를 가로채면 Android 에서 메뉴가 눌리지 않았음)
+  const headPan = useRef(
+    PanResponder.create({
+      onStartShouldSetPanResponder: () => true,
+      onMoveShouldSetPanResponder: (_, g) => Math.abs(g.dy) > 2,
+      onPanResponderTerminationRequest: () => false, // 끄는 도중 다른 곳에 뺏기지 않게
+      onPanResponderMove: (_, g) => sheet.move(g.dy),
+      onPanResponderRelease: (_, g) => sheet.release(g.dy, g.vy),
+      onPanResponderTerminate: () => sheet.reset(),
+    }),
+  ).current;
 
   // "목표 환율 알림" 점: 도달(TRIGGERED)했는데 /fx/alert 에서 아직 확인 안 한 알림이 있을 때. 메뉴를 열 때마다 확인
   const [fxAlertDot, setFxAlertDot] = useState(false);
@@ -461,16 +520,25 @@ function MenuSheet({ visible, onClose }: { visible: boolean; onClose: () => void
   }, [visible]);
 
   return (
-    <Modal visible={visible} transparent animationType="slide" onRequestClose={onClose}>
+    <Modal visible={visible} transparent animationType="none" onRequestClose={sheet.close}>
       <View style={menuStyles.wrap}>
-        <Pressable style={menuStyles.dim} onPress={onClose} />
-        <View style={menuStyles.sheet}>
-          <View style={menuStyles.handle} />
-          <View style={menuStyles.sheetHead}>
-            <Text style={menuStyles.sheetTitle}>전체 메뉴</Text>
-            <Pressable onPress={onClose} style={menuStyles.closeBtn}>
-              <Ionicons name="close" size={20} color={colors.text.strong} />
-            </Pressable>
+        <Animated.View style={[menuStyles.dim, { opacity: dimOpacity }]}>
+          <Pressable style={menuStyles.dimTouch} onPress={sheet.close} />
+        </Animated.View>
+        <Animated.View
+          style={[
+            menuStyles.sheet,
+            { paddingBottom: 0, transform: [{ translateY: dragY }] }, // 아래 여백은 SOL 줄(solPad)이 맡는다
+          ]}
+        >
+          <View {...headPan.panHandlers}>
+            <View style={menuStyles.handle} />
+            <View style={menuStyles.sheetHead}>
+              <Text style={menuStyles.sheetTitle}>전체 메뉴</Text>
+              <Pressable onPress={sheet.close} style={menuStyles.closeBtn}>
+                <Ionicons name="close" size={20} color={colors.text.strong} />
+              </Pressable>
+            </View>
           </View>
           <ScrollView showsVerticalScrollIndicator={false}>
             {/* hidden 항목은 빼고, 남는 항목이 없는 그룹(설정)은 제목도 그리지 않는다 */}
@@ -492,7 +560,11 @@ function MenuSheet({ visible, onClose }: { visible: boolean; onClose: () => void
                           <View style={menuStyles.dot} accessibilityLabel="확인하지 않은 도달 알림 있음" />
                         )}
                       </View>
-                      {item.desc ? <Text style={menuStyles.menuDesc}>{item.desc}</Text> : null}
+                      {item.desc ? (
+                        <Text style={menuStyles.menuDesc}>
+                          {typeof item.desc === 'function' ? item.desc(userName) : item.desc}
+                        </Text>
+                      ) : null}
                     </View>
                     <Ionicons name="chevron-forward" size={16} color={colors.text.sub} />
                   </Pressable>
@@ -500,7 +572,7 @@ function MenuSheet({ visible, onClose }: { visible: boolean; onClose: () => void
               </View>
             ))}
             <Pressable
-              style={menuStyles.solRow}
+              style={[menuStyles.solRow, { paddingTop: solPad, paddingBottom: solPad }]}
               onPress={() => {
                 onClose();
                 router.replace('/'); // SOL Global 홈(SG-000)으로
@@ -509,7 +581,7 @@ function MenuSheet({ visible, onClose }: { visible: boolean; onClose: () => void
               <Text style={menuStyles.solText}>SOL Global로 돌아가기</Text>
             </Pressable>
           </ScrollView>
-        </View>
+        </Animated.View>
       </View>
     </Modal>
   );
@@ -644,12 +716,13 @@ const menuStyles = StyleSheet.create({
     bottom: 0,
     backgroundColor: colors.dim,
   },
+  dimTouch: { flex: 1 },
   sheet: {
     backgroundColor: colors.surface,
     borderTopLeftRadius: 20,
     borderTopRightRadius: 20,
     maxHeight: '85%',
-    paddingBottom: spacing.xxl,
+    paddingBottom: spacing.xs,
   },
   handle: {
     width: 40,
@@ -694,7 +767,6 @@ const menuStyles = StyleSheet.create({
   menuDesc: { ...typography.body, color: colors.text.sub },
   solRow: {
     marginHorizontal: spacing.xl,
-    paddingVertical: spacing.md,
     borderTopWidth: StyleSheet.hairlineWidth,
     borderTopColor: colors.border,
     marginTop: spacing.sm,

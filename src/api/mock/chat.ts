@@ -38,23 +38,32 @@ export const LANDING_SUGGESTIONS = [
 ];
 
 // action 이 없는 메뉴는 "준비 중" (설정). hidden 이면 메뉴 목록에 보이지 않는다(항목·화면 코드는 남겨 둠)
-// desc 가 없으면 설명 줄을 그리지 않는다
-export type MenuItem = { label: string; desc?: string; action?: ChatAction; hidden?: boolean };
+// desc 가 없으면 설명 줄을 그리지 않는다. 이름이 들어가는 설명은 함수로 둔다(이름은 users/me shortName, 없으면 null)
+export type MenuItem = {
+  label: string;
+  desc?: string | ((name: string | null) => string);
+  action?: ChatAction;
+  hidden?: boolean;
+};
 
 export const MENU_GROUPS: { section: string; items: MenuItem[] }[] = [
   {
     section: '환율·송금',
     items: [
-      { label: '환율 정보', desc: '오늘 기준환율·추이·기간별 평균', action: 'fx' },
-      { label: '목표 환율 알림', desc: '원하는 기준환율이 되면 알림', action: 'fx_alert' },
-      { label: '해외송금', action: 'transfer' },
+      { label: '환율 정보', desc: '환율 / 환율 추이', action: 'fx' },
+      { label: '목표 환율 알림', desc: '원하는 환율이 되면 알림', action: 'fx_alert' },
+      { label: '해외송금', desc: '본국 계좌 송금 · 수수료 확인', action: 'transfer' },
     ],
   },
   {
     section: '금융 성장',
     items: [
-      { label: '금융상품 추천', desc: '여유자금에 맞춘 예금·적금 추천', action: 'products' },
-      { label: '대안신용 사전진단', desc: '대안신용 점수·참고 한도', action: 'credit' },
+      {
+        label: '금융상품 추천',
+        desc: (name) => `${name ? `${name}님께 ` : ''}딱 맞는 SOLSOL한 예금·적금 추천`,
+        action: 'products',
+      },
+      { label: '대안신용 사전진단', desc: '대안신용 점수 · 대출상품 금리 · 한도 측정', action: 'credit' },
     ],
   },
   {

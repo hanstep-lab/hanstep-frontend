@@ -703,6 +703,8 @@ export type DocumentResponse = {
   daysRemaining: number | null; // 저장된 체류 만료일까지 남은 일수(서버 계산값, 지났으면 음수). 만료일이 없거나 확정 후에는 null
   uploadedAt: string;
   confirmedAt: string | null;
+  // 원본 보관 기한(업로드 24시간)이 지나 원본·항목 값이 지워진 미확정 문서면 true (BE #164 추가 예정. 없으면 만료 아님으로 본다)
+  originalExpired?: boolean;
 };
 
 // DOC-03 수정 요청. 보낸 항목만 바뀐다(registrationNo 제외)

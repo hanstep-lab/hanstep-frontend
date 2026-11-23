@@ -10,6 +10,7 @@ import Button from '../../components/Button';
 import RateChart from '../../components/RateChart';
 import RangeSlider from '../../components/RangeSlider';
 import { colors, typography, spacing, radius, fonts, shadow } from '../../constants/theme';
+import { FadeIn, Skeleton, SkeletonGroup } from '../../components/Skeleton';
 import {
   getFxAlertSetup,
   getFxAlerts,
@@ -211,9 +212,20 @@ export default function FxAlertScreen() {
       {/* 목표 환율 카드 */}
       <View style={[s.card, s.targetCard]}>
         {!setup ? (
-          <Text style={s.stateText}>{setupError ?? '환율 정보를 불러오는 중이에요.'}</Text>
+          setupError ? (
+            <Text style={s.stateText}>{setupError}</Text>
+          ) : (
+            <View style={{ padding: spacing.lg }}>
+              <SkeletonGroup gap={spacing.md}>
+                <Skeleton width="55%" height={12} />
+                <Skeleton width="70%" height={28} />
+                <Skeleton height={44} round={radius.md} />
+                <Skeleton width="80%" height={12} />
+              </SkeletonGroup>
+            </View>
+          )
         ) : (
-          <>
+          <FadeIn>
             <View style={s.sourceStrip}>
               <View style={s.dot} />
               <Text style={s.sourceText}>
@@ -316,7 +328,7 @@ export default function FxAlertScreen() {
                 </View>
               </View>
             </View>
-          </>
+          </FadeIn>
         )}
       </View>
 

@@ -2,7 +2,7 @@
 // 상단 AI 버튼(쏠)을 누르면 신한걸음 진입: POST /auth/entry → GET /users/me 로 이동할 화면 결정
 //   - 온보딩 미완료 → currentStep 에 해당하는 온보딩 화면 (처음이면 ON-001 언어)
 //   - 온보딩 완료  → AI 채팅
-// AI 버튼 말고는 시연용 모양이라 "준비 중" 안내만 한다(우리 앱에 해당 기능 없음).
+// AI 버튼 말고는 시연용 모양이라 눌러도 반응하지 않는다(우리 앱에 해당 기능 없음).
 // 데모 토큰일 때만 숨은 기능: "SOL Global" 로고를 1.5초 안에 3번 탭 → 확인 창 → 데모 계정 초기화 → ON-001 언어
 //   로고에는 눈에 보이는 표시·접근성 라벨 변화를 넣지 않는다. 초기화 범위·앱 상태 처리는 features/demo/demoReset.ts
 
@@ -58,7 +58,6 @@ const TABS = [
   { label: '전체메뉴', icon: IMG.tabMenu, on: false },
 ];
 
-const preparing = () => Alert.alert('준비 중', '곧 사용할 수 있어요.');
 
 // 데모 초기화 확인 창 문구. 범위는 backend Swagger(POST /demo/reset) 설명 기준
 const RESET_TITLE = '데모 계정 초기화';
@@ -175,15 +174,9 @@ export default function SolGlobalHome() {
               </View>
             ) : null}
           </View>
-          <Pressable onPress={preparing} hitSlop={6}>
-            <Image source={IMG.language} style={styles.icon26} />
-          </Pressable>
-          <Pressable onPress={preparing} hitSlop={6}>
-            <Image source={IMG.headset} style={styles.icon26} />
-          </Pressable>
-          <Pressable onPress={preparing} hitSlop={6}>
-            <Image source={IMG.bell} style={styles.icon26} />
-          </Pressable>
+          <Image source={IMG.language} style={styles.icon26} />
+          <Image source={IMG.headset} style={styles.icon26} />
+          <Image source={IMG.bell} style={styles.icon26} />
         </View>
       </View>
 
@@ -215,23 +208,23 @@ export default function SolGlobalHome() {
         </View>
 
         {/* 영업점 찾기 */}
-        <Pressable style={styles.branchCard} onPress={preparing}>
+        <View style={styles.branchCard}>
           <Image source={IMG.pin} style={styles.icon26} />
           <View style={styles.branchText}>
             <Text style={styles.branchTitle}>영업점 찾기</Text>
             <Text style={styles.branchSub}>내 주변 가까운 신한은행 찾기</Text>
           </View>
           <Image source={IMG.chevronRight} style={styles.icon20} />
-        </Pressable>
+        </View>
       </ScrollView>
 
-      {/* SOL 앱 탭 모양 (화면 전환 없음: 홈은 현재 화면, 나머지는 준비 중) */}
+      {/* SOL 앱 탭 모양 (화면 전환 없음: 홈은 현재 화면, 나머지는 모양만) */}
       <View style={[styles.tabBar, { paddingBottom: Math.max(insets.bottom, spacing.md) }]}>
         {TABS.map((t) => (
-          <Pressable key={t.label} style={styles.tab} onPress={t.on ? undefined : preparing}>
+          <View key={t.label} style={styles.tab}>
             <Image source={t.icon} style={styles.icon26} />
             <Text style={[styles.tabLabel, t.on ? styles.tabLabelOn : styles.tabLabelOff]}>{t.label}</Text>
-          </Pressable>
+          </View>
         ))}
       </View>
     </SafeAreaView>

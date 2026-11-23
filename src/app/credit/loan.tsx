@@ -3,13 +3,14 @@
 // 모의 한도는 Figma "신한걸음 진단과 비교"(447:62) 자리에 둔다. 금액은 서버 값을 표시 형식만 바꿔 보여 주고 계산하지 않는다.
 // 범위 막대(447:74)는 화면에서 비율을 계산해야 해서 넣지 않는다.
 import { useEffect, useState } from 'react';
-import { View, Text, StyleSheet, Alert } from 'react-native';
+import { View, Text, StyleSheet } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { router, type Href } from 'expo-router';
 import Screen from '../../components/Screen';
 import Button from '../../components/Button';
 import Pill from '../../components/Pill';
 import { colors, typography, spacing, radius, fonts, shadow } from '../../constants/theme';
+import { Skeleton, SkeletonCard, SkeletonGroup } from '../../components/Skeleton';
 import {
   LOAN_TEXT as T,
   LIMIT_REASON_TEXT,
@@ -58,8 +59,19 @@ export default function GlobalLoanScreen() {
 
   if (!loan) {
     return (
-      <Screen>
-        <Text style={s.stateText}>{error ?? T.loading}</Text>
+      <Screen loading={!error}>
+        {error ? (
+          <Text style={s.stateText}>{error}</Text>
+        ) : (
+          <SkeletonGroup>
+            <SkeletonGroup gap={spacing.sm}>
+              <Skeleton width="80%" height={26} />
+              <Skeleton width="55%" height={14} />
+            </SkeletonGroup>
+            <SkeletonCard lines={2} block={56} />
+            <SkeletonCard lines={3} />
+          </SkeletonGroup>
+        )}
       </Screen>
     );
   }
@@ -74,12 +86,7 @@ export default function GlobalLoanScreen() {
     <Screen
       footer={
         <View style={s.footer}>
-          <Button
-            title={T.applyButton}
-            showArrow
-            onPress={() => Alert.alert(T.preparingTitle, T.preparingBody)}
-          />
-          <Button title={T.askButton} variant="text" onPress={() => router.push('/(tabs)/chat' as Href)} />
+          <Button title={T.askButton} showArrow onPress={() => router.push('/(tabs)/chat' as Href)} />
         </View>
       }
     >
