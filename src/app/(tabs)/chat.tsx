@@ -294,7 +294,7 @@ export default function ChatScreen() {
         </View>
       </KeyboardAvoidingView>
 
-      <MenuSheet visible={showMenu} onClose={() => setShowMenu(false)} />
+      <MenuSheet visible={showMenu} onClose={() => setShowMenu(false)} userName={userName} />
     </SafeAreaView>
   );
 }
@@ -436,7 +436,15 @@ function MessageItem({
   );
 }
 
-function MenuSheet({ visible, onClose }: { visible: boolean; onClose: () => void }) {
+function MenuSheet({
+  visible,
+  onClose,
+  userName,
+}: {
+  visible: boolean;
+  onClose: () => void;
+  userName: string | null; // '금융상품 추천' 설명에 넣는 이름 (users/me shortName)
+}) {
   // Modal 은 별도 창이라 화면의 SafeAreaView 하단 여백이 안 먹는다. 시트에 시스템 내비게이션 바 높이를 더한다
   const insets = useSafeAreaInsets();
   // action 이 없는 메뉴(설정)는 아직 "준비 중"
@@ -494,7 +502,11 @@ function MenuSheet({ visible, onClose }: { visible: boolean; onClose: () => void
                           <View style={menuStyles.dot} accessibilityLabel="확인하지 않은 도달 알림 있음" />
                         )}
                       </View>
-                      {item.desc ? <Text style={menuStyles.menuDesc}>{item.desc}</Text> : null}
+                      {item.desc ? (
+                        <Text style={menuStyles.menuDesc}>
+                          {typeof item.desc === 'function' ? item.desc(userName) : item.desc}
+                        </Text>
+                      ) : null}
                     </View>
                     <Ionicons name="chevron-forward" size={16} color={colors.text.sub} />
                   </Pressable>
