@@ -501,7 +501,7 @@ const ko = {
       subtitle: '외국인등록증에서 추출한 정보입니다.\n실제 정보와 일치하는지 꼼꼼히 확인해 주세요.',
       cardTitle: '외국인등록증 (ARC)',
       needsReviewCount: '확인 필요 {{n}}개',
-      recognizedOk: '정상 인식',
+      recognizedOk: '사진과 비교해 주세요',
       loadError: '등록증 정보를 불러오지 못했어요.',
     },
     idManual: {

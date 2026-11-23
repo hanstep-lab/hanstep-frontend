@@ -491,7 +491,7 @@ const en: Translation = {
       subtitle: 'We read these from your residence card.\nPlease check that they match.',
       cardTitle: 'Residence card (ARC)',
       needsReviewCount: '{{n}} to check',
-      recognizedOk: 'Read OK',
+      recognizedOk: 'Check against photo',
       loadError: "We couldn't load your card details.",
     },
     idManual: {
