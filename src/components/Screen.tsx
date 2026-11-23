@@ -1,6 +1,6 @@
-import { ReactNode } from 'react';
-import { View, ScrollView, StyleSheet, KeyboardAvoidingView, Dimensions, type StyleProp, type ViewStyle } from 'react-native';
-import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
+import { ReactNode, useLayoutEffect, useRef } from 'react';
+import { View, ScrollView, StyleSheet, KeyboardAvoidingView, Animated, type StyleProp, type ViewStyle } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import Header from './Header';
 import { colors, spacing } from '../constants/theme';
 
@@ -10,16 +10,21 @@ type ScreenProps = {
   title?: string;
   showBack?: boolean; //뒤로가기를 위한 boolean
   contentStyle?: StyleProp<ViewStyle>; // 스크롤 내용 여백·간격을 화면별로 덮어쓸 때
+  loading?: boolean; // 스켈레톤을 보여 주는 중이면 true. false 로 바뀌는 순간 불러온 내용이 서서히 나타난다
 };
 
-export default function Screen({ children, footer, title = '신한걸음', showBack = true, contentStyle }: ScreenProps) {
-  // [진단 임시] 하단 시스템 바 확인용. 커밋하지 않음
-  const insets = useSafeAreaInsets();
-  if (__DEV__) {
-    const win = Dimensions.get('window');
-    const scr = Dimensions.get('screen');
-    console.log(`[안전영역] Screen(${title}) insets 위 ${insets.top} 아래 ${insets.bottom} / window ${win.height} screen ${scr.height}`);
-  }
+export default function Screen({ children, footer, title = '신한걸음', showBack = true, contentStyle, loading = false }: ScreenProps) {
+  // 로딩 → 내용으로 바뀔 때만 내용 영역을 0.25초 동안 서서히 보이게 (그려지기 전에 투명하게 해 두려고 LayoutEffect)
+  const fade = useRef(new Animated.Value(1)).current;
+  const wasLoading = useRef(loading);
+  useLayoutEffect(() => {
+    if (wasLoading.current && !loading) {
+      fade.setValue(0);
+      Animated.timing(fade, { toValue: 1, duration: 250, useNativeDriver: true }).start();
+    }
+    wasLoading.current = loading;
+  }, [loading, fade]);
+
   return (
     <SafeAreaView style={styles.safe} edges={['top', 'bottom']}>
       <Header title={title} showBack={showBack} />
@@ -27,13 +32,13 @@ export default function Screen({ children, footer, title = '신한걸음', showB
           iOS 는 원래 안 올려 주고, Android 도 edge-to-edge(SDK 54~)라 시스템이 화면을 줄여 주지 않아서 둘 다 padding.
           입력칸이 없는 화면은 키보드가 안 뜨므로 영향 없음 */}
       <KeyboardAvoidingView style={styles.flex} behavior="padding">
-        <ScrollView
-          style={styles.flex}
+        <Animated.ScrollView
+          style={[styles.flex, { opacity: fade }]}
           contentContainerStyle={[styles.content, contentStyle]}
           keyboardShouldPersistTaps="handled"
         >
           {children}
-        </ScrollView>
+        </Animated.ScrollView>
         {footer && <View style={styles.footer}>{footer}</View>}
       </KeyboardAvoidingView>
     </SafeAreaView>
