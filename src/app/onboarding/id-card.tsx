@@ -13,6 +13,7 @@ import { errorText } from '../../utils/errorText';
 import OnboardingProgress from '../../components/OnboardingProgress';
 import { TOTAL_STAGES, stageOf } from '../../constants/onboardingSteps';
 import { ocrTimeMark, ocrTimeStart } from '../../utils/ocrTiming';
+import { useIdDocument } from '../../hooks/useIdDocument';
 
 // "직접 정보 입력하기" 버튼. 사진 없이 체류 정보를 저장하는 화면(id-manual, PUT /visa/profile)으로 간다
 const SHOW_MANUAL_ENTRY = true;
@@ -69,20 +70,46 @@ export default function IdCardScreen() {
   const setIdCardFrontUri = useOnboardingStore((s) => s.setIdCardFrontUri);
   const setIdDocumentId = useOnboardingStore((s) => s.setIdDocumentId);
 
-  const canCapture = hasPermission && isCameraReady && !isCapturing;
+  // 찍은 장면에서 미리보기를 멈춘 상태. OCR 이 끝나 다음 화면으로 가거나, 실패해서 다시 찍을 때까지 유지
+  const [frozen, setFrozen] = useState(false);
+  // 이 화면에서 OCR 결과를 기다리는 문서. 결과가 오면 확인 화면으로 넘어간다 (확인 화면도 같은 훅이라 바로 결과를 보여 줌)
+  const [waitingDocId, setWaitingDocId] = useState<number | null>(null);
+  const { phase: ocrPhase, error: ocrError, retry: retryOcrWait } = useIdDocument(waitingDocId);
+  const ocrFailed = waitingDocId != null && ocrPhase === 'failed';
+  const ocrTimeout = waitingDocId != null && ocrPhase === 'timeout';
+
+  const canCapture = hasPermission && isCameraReady && !isCapturing && !frozen;
 
   const isFocused = useIsFocused();
   const [torchOn, setTorchOn] = useState(false);
 
   // 화면이 가려질 때: 플래시 끄고, 카메라 준비 상태 초기화(돌아오면 다시 onCameraReady를 기다림)
+  // 멈춤 상태도 풀어서, 돌아오면(뒤로가기·확인 화면의 '다시 촬영') 살아 있는 카메라로 시작한다
   useFocusEffect(
     useCallback(() => {
       return () => {
         setTorchOn(false);
         setIsCameraReady(false);
+        setFrozen(false);
+        setWaitingDocId(null);
       };
     }, []),
   );
+
+  // 멈춘 미리보기를 다시 움직인다 (다시 촬영·업로드 실패)
+  const unfreeze = () => {
+    setFrozen(false);
+    setWaitingDocId(null);
+    cameraRef.current?.resumePreview().catch(() => {});
+  };
+
+  // OCR 결과가 오면 확인 화면으로. 한 문서에 한 번만 이동
+  const movedDocId = useRef<number | null>(null);
+  useEffect(() => {
+    if (waitingDocId == null || ocrPhase !== 'ready' || movedDocId.current === waitingDocId) return;
+    movedDocId.current = waitingDocId;
+    router.push('/onboarding/id-confirm' as Href);
+  }, [waitingDocId, ocrPhase]);
 
   const handleCapture = async () => {
     if (!cameraRef.current || capturingRef.current) return;
@@ -93,6 +120,10 @@ export default function IdCardScreen() {
       ocrTimeStart('촬영 버튼');
       const photo = await cameraRef.current.takePictureAsync();
       ocrTimeMark(`촬영 ${photo.width}x${photo.height}`);
+      // 찍은 장면에서 미리보기를 멈춘다(촬영이 끝난 뒤에 멈춰야 한다: 멈춘 상태에서는 촬영하지 말 것, expo-camera 문서)
+      setFrozen(true);
+      setTorchOn(false);
+      cameraRef.current?.pausePreview().catch(() => {});
       const resized = await prepareIdCardPhoto(photo, {
         viewWidth: viewSize.current.width,
         viewHeight: viewSize.current.height,
@@ -102,12 +133,13 @@ export default function IdCardScreen() {
       setIdCardFrontUri(resized.uri);
 
       uploading = true;
-      const doc = await uploadIdCard(resized.uri); // 저장 + OCR 작업 등록. 결과는 확인 화면에서 기다림
+      const doc = await uploadIdCard(resized.uri); // 저장 + OCR 작업 등록. 결과는 이 화면에서 멈춘 사진 위로 기다림
       ocrTimeMark(`업로드 응답 ${doc.status}/${doc.ocrJob?.status ?? '-'}`);
       setIdDocumentId(doc.documentId);
-      router.push('/onboarding/id-confirm' as Href);
+      setWaitingDocId(doc.documentId);
     } catch (e) {
       console.warn('[ON-002] 촬영·업로드 실패', e);
+      unfreeze();
       if (uploading) {
         Alert.alert('사진을 보내지 못했어요', errorText(e, '잠시 후 다시 시도해 주세요.'));
       } else {
@@ -173,6 +205,38 @@ export default function IdCardScreen() {
                 <CornerGuide pos="tr" />
                 <CornerGuide pos="bl" />
                 <CornerGuide pos="br" />
+                {frozen && (
+                  <View style={styles.scanOverlay}>
+                    {ocrFailed || ocrTimeout ? (
+                      <>
+                        <Text style={styles.scanTitle}>
+                          {ocrFailed ? '등록증을 읽지 못했어요' : '인식이 오래 걸리고 있어요'}
+                        </Text>
+                        <Text style={styles.scanDesc}>
+                          {ocrFailed
+                            ? ocrError ?? '밝은 곳에서 빛 반사 없이 다시 촬영해 주세요.'
+                            : '조금 더 기다리거나 다시 촬영해 주세요.'}
+                        </Text>
+                        <View style={styles.scanBtnRow}>
+                          {ocrTimeout && (
+                            <Pressable style={styles.scanBtn} onPress={retryOcrWait}>
+                              <Text style={styles.scanBtnText}>계속 기다리기</Text>
+                            </Pressable>
+                          )}
+                          <Pressable style={styles.scanBtn} onPress={unfreeze}>
+                            <Text style={styles.scanBtnText}>다시 촬영</Text>
+                          </Pressable>
+                        </View>
+                      </>
+                    ) : (
+                      <>
+                        <ActivityIndicator color={colors.text.inverse} />
+                        <Text style={styles.scanTitle}>등록증을 인식하고 있어요</Text>
+                        <Text style={styles.scanDesc}>1~2분 정도 걸릴 수 있어요</Text>
+                      </>
+                    )}
+                  </View>
+                )}
               </>
             ) : permission ? (
               <View style={styles.permissionBox}>
@@ -191,7 +255,9 @@ export default function IdCardScreen() {
 
         <View style={[styles.row, { justifyContent: 'center' }]}>
           <View style={styles.hintChip}>
-            <Text style={styles.hintChipText}>가이드라인에 맞춘 뒤 촬영 버튼을 눌러 주세요</Text>
+            <Text style={styles.hintChipText}>
+              {frozen ? '인식이 끝나면 다음 화면으로 넘어가요' : '가이드라인에 맞춘 뒤 촬영 버튼을 눌러 주세요'}
+            </Text>
           </View>
         </View>
 
@@ -216,7 +282,7 @@ export default function IdCardScreen() {
             <View style={styles.captureOuter}>
               <View style={styles.captureInner}>
                 <View style={styles.captureCenter}>
-                  {isCapturing ? (
+                  {isCapturing || (frozen && !ocrFailed && !ocrTimeout) ? (
                     <ActivityIndicator color={colors.primary} />
                   ) : (
                     <Ionicons name="camera" size={24} color={colors.primary} />
@@ -283,6 +349,30 @@ const styles = StyleSheet.create({
   corner: { position: 'absolute' },
   cornerH: { width: 24, height: 4, backgroundColor: colors.primary, borderRadius: radius.full },
   cornerV: { width: 4, height: 20, backgroundColor: colors.primary, borderRadius: radius.full },
+
+  // 멈춘 사진 위 안내 (인식 중·실패·시간 초과)
+  scanOverlay: {
+    position: 'absolute',
+    top: 0,
+    right: 0,
+    bottom: 0,
+    left: 0,
+    backgroundColor: 'rgba(0, 0, 0, 0.55)',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: spacing.xs,
+    padding: spacing.lg,
+  },
+  scanTitle: { ...typography.title, color: colors.text.inverse, textAlign: 'center' },
+  scanDesc: { ...typography.badge, color: colors.onColor.sub, textAlign: 'center' },
+  scanBtnRow: { flexDirection: 'row', gap: spacing.sm, marginTop: spacing.xs },
+  scanBtn: {
+    backgroundColor: colors.primary,
+    paddingHorizontal: spacing.lg,
+    paddingVertical: spacing.xs,
+    borderRadius: radius.full,
+  },
+  scanBtnText: { ...typography.body, fontFamily: fonts.bold, color: colors.text.inverse },
 
   permissionBox: {
     flex: 1,
