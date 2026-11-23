@@ -26,4 +26,21 @@ export function setAppLanguage(language: Language | null | undefined) {
   if (i18n.language !== next) i18n.changeLanguage(next);
 }
 
+// 지금 화면이 한국어인지 (문장을 직접 조립하는 코드에서 한국어 문장은 그대로 두고 영어 문장만 따로 만들 때)
+export const isKoreanUi = () => i18n.language === 'ko';
+
+// 문자열을 string 으로 넓힌 같은 모양 (영어 표가 한국어 표와 키·모양이 같은지 타입으로 검사)
+type Widen<T> = T extends string
+  ? string
+  : T extends (...args: infer A) => infer R
+    ? (...args: A) => Widen<R>
+    : T extends object
+      ? { [K in keyof T]: Widen<T[K]> }
+      : T;
+
+// 문구 표 파일용: 한국어 표와 같은 모양의 영어 표를 받아, 값을 읽는 순간의 화면 언어 쪽 값을 준다
+export function localized<T extends object>(ko: T, en: Widen<T>): T {
+  return new Proxy(ko, { get: (_target, key) => Reflect.get(isKoreanUi() ? ko : (en as T), key) });
+}
+
 export default i18n;
