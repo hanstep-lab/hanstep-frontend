@@ -126,7 +126,8 @@ function toProductView(p: ProductRecommendItem): ProductView {
     rateText,
     rateAsOf,
     meta: meta || null,
-    desc: p.feature?.quote ?? null,
+    // 상품설명서 원문(한국어)이라 영어 화면에서는 숨긴다. 금리·한도·기간은 위에서 영어로 보여 준다
+    desc: isKoreanUi() ? p.feature?.quote ?? null : null,
     note: note.text,
     noteHighlight: note.highlight,
   };

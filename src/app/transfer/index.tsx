@@ -19,6 +19,7 @@ import {
   defaultQuoteOf,
   quoteNoticeText,
   transferErrorText,
+  recipientCountry,
 } from '../../api/transfer';
 import { fmtNumber, fmtRate, fmtDate } from '../../utils/format';
 import type { ApiError, RemittanceProductQuote, TransferContext, TransferQuote } from '../../types/api';
@@ -190,7 +191,7 @@ export default function TransferScreen() {
                 <Text style={s.flagText}>{recipient.countryCode}</Text>
               </View>
               <View style={s.countryBadge}>
-                <Text style={s.countryBadgeText}>{recipient.country}</Text>
+                <Text style={s.countryBadgeText}>{recipientCountry(recipient)}</Text>
               </View>
             </View>
             <View style={s.flex}>
@@ -198,7 +199,7 @@ export default function TransferScreen() {
                 {recipient.relation ? `${recipient.name} (${recipient.relation})` : recipient.name}
               </Text>
               <Text style={s.subText} numberOfLines={1}>
-                {recipient.bank} ****{recipient.accountLast4} · {recipient.country}
+                {recipient.bank} ****{recipient.accountLast4} · {recipientCountry(recipient)}
               </Text>
               {deliveryLine ? (
                 <Text style={s.deliveryText} numberOfLines={1}>

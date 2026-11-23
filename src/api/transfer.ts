@@ -7,7 +7,7 @@ import { USE_MOCK, mockDelay } from './config';
 import { MOCK_TRANSFER_CONTEXT, mockQuote, mockSubmit } from './mock/transfer';
 import { fmtNumber } from '../utils/format';
 import { errorText } from '../utils/errorText';
-import i18n from '../i18n';
+import i18n, { isKoreanUi } from '../i18n';
 import type {
   ApiError,
   RemittanceProduct,
@@ -59,6 +59,12 @@ export async function submitTransfer(
 const PRODUCTS: readonly RemittanceProduct[] = ['SOL_EASY', 'SOL_FAST'];
 export const productLabel = (product: RemittanceProduct) =>
   PRODUCTS.includes(product) ? i18n.t(`transfer.product.${product}`) : product;
+
+// 받는 분 국가명. 서버 country 는 한국어("필리핀")라 영어 화면은 countryCode 로 영어 이름을 쓴다.
+// 표에 없는 코드는 서버 값 그대로 (한국어 화면은 항상 서버 값)
+const COUNTRY_EN: Record<string, string> = { PH: 'Philippines', VN: 'Vietnam', CN: 'China', US: 'United States' };
+export const recipientCountry = (r: Pick<TransferRecipient, 'country' | 'countryCode'>) =>
+  (!isKoreanUi() && COUNTRY_EN[r.countryCode]) || r.country;
 
 // 기본 상품(defaultProduct) 견적. receiveAmount 와 적용 송금 환율은 이 상품 기준
 export const defaultQuoteOf = (quote: TransferQuote): RemittanceProductQuote | null =>
