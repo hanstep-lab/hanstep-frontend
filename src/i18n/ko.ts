@@ -446,9 +446,7 @@ const ko = {
       header: '외국인등록증 촬영',
       infoTitle: '외국인등록증 앞면 인식',
       infoDesc: '빛 반사에 유의하여 카드를 어두운 배경에 올려놓고\n사각형 가이드라인에 맞춰주세요.',
-      readFailed: '등록증을 읽지 못했어요',
       slow: '인식이 오래 걸리고 있어요',
-      readFailedDesc: '밝은 곳에서 빛 반사 없이 다시 촬영해 주세요.',
       slowDesc: '조금 더 기다리거나 다시 촬영해 주세요.',
       keepWaiting: '계속 기다리기',
       recognizing: '등록증을 인식하고 있어요',
@@ -467,6 +465,15 @@ const ko = {
       manualButton: '직접 정보 입력하기',
       uploadFailed: '사진을 보내지 못했어요',
       captureFailed: '촬영하지 못했어요',
+    },
+    // OCR 실패 안내 (촬영·확인 화면 공통). 코드 → 종류는 constants/ocrFailure.ts
+    ocrFailure: {
+      retake: { title: '사진을 읽지 못했어요', desc: '카드를 틀에 맞추고 빛 반사 없이 다시 찍어 주세요.' },
+      temporary: { title: '일시적인 문제가 생겼어요', desc: '잠시 후 다시 찍어 주세요.' },
+      other: { title: '문제가 생겼어요', desc: '다시 찍어 주세요.' },
+      loadFailedTitle: '인식 결과를 불러오지 못했어요',
+      retakeButton: '다시 찍기',
+      retryButton: '다시 시도',
     },
     idConfirm: {
       fieldName: {
@@ -487,7 +494,6 @@ const ko = {
       reading: '등록증 정보를 읽고 있어요.\n최대 1분 정도 걸릴 수 있어요.',
       slow: '인식이 평소보다 오래 걸리고 있어요.',
       checkAgain: '다시 확인하기',
-      readFailed: '등록증을 읽지 못했어요. 밝은 곳에서 빛 반사 없이 다시 촬영해 주세요.',
       alreadyConfirmed: '이미 확인을 마친 등록증이에요.',
       stayOver: '체류 기간이 지났어요',
       daysLeft: 'D-{{days}}일 남음',

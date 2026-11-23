@@ -436,9 +436,7 @@ const en: Translation = {
       header: 'Scan residence card',
       infoTitle: 'Front of residence card',
       infoDesc: 'Place the card on a dark surface, avoid glare,\nand line it up with the guide.',
-      readFailed: "We couldn't read your card",
       slow: 'This is taking a while',
-      readFailedDesc: 'Retake the photo in a bright place without glare.',
       slowDesc: 'Wait a little longer or retake the photo.',
       keepWaiting: 'Keep waiting',
       recognizing: 'Reading your card',
@@ -457,6 +455,14 @@ const en: Translation = {
       manualButton: 'Enter details manually',
       uploadFailed: "We couldn't send the photo",
       captureFailed: "We couldn't take the photo",
+    },
+    ocrFailure: {
+      retake: { title: "We couldn't read the photo", desc: 'Fit the card inside the frame and retake it without glare.' },
+      temporary: { title: 'A temporary problem occurred', desc: 'Please retake the photo in a moment.' },
+      other: { title: 'Something went wrong', desc: 'Please retake the photo.' },
+      loadFailedTitle: "We couldn't load the result",
+      retakeButton: 'Retake',
+      retryButton: 'Try again',
     },
     idConfirm: {
       fieldName: {
@@ -477,7 +483,6 @@ const en: Translation = {
       reading: 'Reading your card details.\nThis can take up to 1 minute.',
       slow: 'This is taking longer than usual.',
       checkAgain: 'Check again',
-      readFailed: "We couldn't read your card. Retake the photo in a bright place without glare.",
       alreadyConfirmed: 'This card has already been confirmed.',
       stayOver: 'Your stay has expired',
       daysLeft: '{{days}} days left',

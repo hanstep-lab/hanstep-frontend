@@ -1,13 +1,19 @@
 // 외국인등록증 OCR Mock. 서버처럼 상태가 바뀌도록 메모리에 문서 하나를 들고 있다.
 // 업로드 직후 UPLOADED → 조회 2번째부터 PENDING_CONFIRMATION(OCR 결과 도착)
+// EXPO_PUBLIC_MOCK_OCR_FAILURE 가 있으면 조회 2번째에 실패를 재현한다 (config.ts MOCK_OCR_FAILURE)
 // 화면은 이 파일을 직접 import 하지 않고 src/api/document.ts 를 거친다.
 
 import type {
+  ApiError,
   DocumentField,
   DocumentFieldUpdateItem,
   DocumentResponse,
 } from '../../types/api';
+import { MOCK_OCR_FAILURE } from '../config';
 import { DEMO_USER } from './demoUser';
+
+// 조회 실패(LOAD_ERROR)는 업로드마다 한 번만 낸다. 다시 시도하면 정상 진행되는지 볼 수 있게
+let loadErrorShown = false;
 
 const MOCK_FIELDS: DocumentField[] = [
   { fieldKey: 'nameEn', value: DEMO_USER.nameEn, confidence: 0.97, needsReview: false, status: 'EXTRACTED', isMasked: false },
@@ -23,6 +29,7 @@ let pollCount = 0;
 
 export function mockUpload(): DocumentResponse {
   pollCount = 0;
+  loadErrorShown = false;
   doc = {
     documentId: 42,
     documentType: 'ARC',
@@ -41,6 +48,22 @@ export function mockUpload(): DocumentResponse {
 export function mockGet(): DocumentResponse {
   if (!doc) throw { code: 'NOT_FOUND', message: '문서를 찾을 수 없어요.' };
   pollCount += 1;
+  if (doc.status === 'UPLOADED' && pollCount >= 2 && MOCK_OCR_FAILURE) {
+    if (MOCK_OCR_FAILURE === 'LOAD_ERROR') {
+      if (!loadErrorShown) {
+        loadErrorShown = true;
+        throw { code: 'NETWORK', message: 'Mock 조회 실패' } satisfies ApiError;
+      }
+    } else {
+      doc = {
+        ...doc,
+        status: 'FAILED',
+        failureCode: MOCK_OCR_FAILURE,
+        ocrJob: { ...doc.ocrJob!, status: 'FAILED', errorCode: MOCK_OCR_FAILURE },
+      };
+      return doc;
+    }
+  }
   if (doc.status === 'UPLOADED' && pollCount >= 2) {
     doc = {
       ...doc,
@@ -88,4 +111,5 @@ export function mockConfirm(): DocumentResponse {
 export function mockDeleteDocument() {
   doc = null;
   pollCount = 0;
+  loadErrorShown = false;
 }

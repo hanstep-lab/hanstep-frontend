@@ -14,6 +14,7 @@ import { confirmDocument, getDocument, updateDocumentFields } from '../../api/do
 import { useIdDocument } from '../../hooks/useIdDocument';
 import { useOnboardingStore } from '../../store/onboardingStore';
 import { TOTAL_STAGES, getRouteFromStepCode, stageOf } from '../../constants/onboardingSteps';
+import { ocrFailureGuide } from '../../constants/ocrFailure';
 import OnboardingProgress from '../../components/OnboardingProgress';
 import { colors, typography, spacing, radius, fonts, shadow } from '../../constants/theme';
 import { errorText } from '../../utils/errorText';
@@ -124,7 +125,7 @@ export default function IdConfirmScreen() {
   const idCardFrontUri = useOnboardingStore((s) => s.idCardFrontUri);
   const documentId = useOnboardingStore((s) => s.idDocumentId);
 
-  const { doc, phase, error, retry } = useIdDocument(documentId);
+  const { doc, phase, error, failureCode, retry } = useIdDocument(documentId);
 
   // 화면에서 고치는 값. OCR 결과가 처음 오면 그 값으로 채운다
   const [values, setValues] = useState<Values | null>(null);
@@ -260,12 +261,28 @@ export default function IdConfirmScreen() {
         {manualLink}
       </View>
     );
-  } else if (phase === 'failed') {
+  } else if (phase === 'ocrFailed') {
+    // OCR 이 실패로 끝난 문서는 다시 돌릴 수 없어 안내 종류와 상관없이 다시 찍기
+    const guide = ocrFailureGuide(failureCode);
     body = (
       <View style={styles.stateBox}>
-        <Text style={styles.stateText}>
-          {error ?? t('onboarding.idConfirm.readFailed')}
-        </Text>
+        <Text style={styles.stateTitle}>{t(`onboarding.ocrFailure.${guide}.title`)}</Text>
+        <Text style={styles.stateText}>{t(`onboarding.ocrFailure.${guide}.desc`)}</Text>
+        <Pressable style={styles.stateBtn} onPress={goRetake}>
+          <Text style={styles.stateBtnText}>{t('onboarding.ocrFailure.retakeButton')}</Text>
+        </Pressable>
+        {manualLink}
+      </View>
+    );
+  } else if (phase === 'loadFailed') {
+    // 결과 조회 요청이 실패 (네트워크 등). OCR 은 진행 중일 수 있어 같은 문서를 다시 조회한다
+    body = (
+      <View style={styles.stateBox}>
+        <Text style={styles.stateTitle}>{t('onboarding.ocrFailure.loadFailedTitle')}</Text>
+        {error ? <Text style={styles.stateText}>{error}</Text> : null}
+        <Pressable style={styles.stateBtn} onPress={retry}>
+          <Text style={styles.stateBtnText}>{t('onboarding.ocrFailure.retryButton')}</Text>
+        </Pressable>
         {manualLink}
       </View>
     );
@@ -558,6 +575,7 @@ const styles = StyleSheet.create({
   dBadgeText: { ...typography.badge, fontFamily: fonts.bold, color: colors.primary },
 
   stateBox: { alignItems: 'center', gap: spacing.sm, paddingVertical: spacing.md },
+  stateTitle: { ...typography.body, fontFamily: fonts.bold, color: colors.text.strong, textAlign: 'center' },
   stateText: { ...typography.body, color: colors.text.sub, textAlign: 'center' },
   stateBtn: {
     backgroundColor: colors.primary,
