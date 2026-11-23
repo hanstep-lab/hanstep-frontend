@@ -10,7 +10,7 @@ import {
   Alert,
   KeyboardAvoidingView,
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { router, type Href } from 'expo-router';
 import { colors, typography, spacing, radius, fonts } from '../../constants/theme';
@@ -437,6 +437,8 @@ function MessageItem({
 }
 
 function MenuSheet({ visible, onClose }: { visible: boolean; onClose: () => void }) {
+  // Modal 은 별도 창이라 화면의 SafeAreaView 하단 여백이 안 먹는다. 시트에 시스템 내비게이션 바 높이를 더한다
+  const insets = useSafeAreaInsets();
   // action 이 없는 메뉴(설정)는 아직 "준비 중"
   const handleItem = (action?: ChatAction) => {
     if (!action) return preparingAlert();
@@ -464,7 +466,7 @@ function MenuSheet({ visible, onClose }: { visible: boolean; onClose: () => void
     <Modal visible={visible} transparent animationType="slide" onRequestClose={onClose}>
       <View style={menuStyles.wrap}>
         <Pressable style={menuStyles.dim} onPress={onClose} />
-        <View style={menuStyles.sheet}>
+        <View style={[menuStyles.sheet, { paddingBottom: spacing.xxl + insets.bottom }]}>
           <View style={menuStyles.handle} />
           <View style={menuStyles.sheetHead}>
             <Text style={menuStyles.sheetTitle}>전체 메뉴</Text>

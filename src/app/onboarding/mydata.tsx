@@ -3,7 +3,7 @@
 // 확인하고 연결: POST consents → POST mydata/connections → 단계 COMPLETED / 나중에 연결할게요: 단계 SKIPPED
 import { useEffect, useState } from 'react';
 import { View, Text, Pressable, ScrollView, StyleSheet, Modal } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import Header from '../../components/Header';
 import Button from '../../components/Button';
@@ -33,6 +33,8 @@ const CONSENTS = [
 
 export default function MydataScreen() {
   const { goNext, skip, isNavigating, navError, stage, totalStages } = useOnboardingStep();
+  // Modal 은 별도 창이라 화면의 SafeAreaView 하단 여백이 안 먹는다. 시트에 시스템 내비게이션 바 높이를 더한다
+  const insets = useSafeAreaInsets();
   const [checks, setChecks] = useState([false, false, false]);
   const [showModal, setShowModal] = useState(false);
   const [institutions, setInstitutions] = useState<InstitutionView[] | null>(null);
@@ -179,7 +181,7 @@ export default function MydataScreen() {
       <Modal visible={showModal} transparent animationType="slide" onRequestClose={() => setShowModal(false)}>
         <View style={styles.modalWrap}>
           <Pressable style={styles.dim} onPress={() => setShowModal(false)} />
-          <View style={styles.sheet}>
+          <View style={[styles.sheet, { paddingBottom: spacing.xxl + insets.bottom }]}>
             <View style={styles.handle} />
 
             <View style={styles.sheetTitleArea}>
