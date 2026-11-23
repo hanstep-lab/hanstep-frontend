@@ -1,6 +1,7 @@
 // 불러오는 동안 내용 자리에 보여 주는 회색 상자(스켈레톤)와, 불러온 내용을 부드럽게 나타나게 하는 FadeIn.
 // "○○을 불러오는 중이에요" 문구 대신 실제 화면 모양을 미리 보여 줘서, 내용이 뚝 끊기며 바뀌는 느낌을 줄인다.
 import { useEffect, useRef, type ReactNode } from 'react';
+import { useTranslation } from 'react-i18next';
 import { Animated, View, StyleSheet, type DimensionValue, type StyleProp, type ViewStyle } from 'react-native';
 import { colors, radius, shadow, spacing } from '../constants/theme';
 
@@ -77,8 +78,9 @@ export function SkeletonCard({
 
 // 스켈레톤 묶음. 화면 낭독기에는 "불러오는 중" 하나로 읽힌다
 export function SkeletonGroup({ children, gap = spacing.lg }: { children: ReactNode; gap?: number }) {
+  const { t } = useTranslation();
   return (
-    <View style={{ gap }} accessible accessibilityRole="progressbar" accessibilityLabel="불러오는 중">
+    <View style={{ gap }} accessible accessibilityRole="progressbar" accessibilityLabel={t('common.loading')}>
       {children}
     </View>
   );

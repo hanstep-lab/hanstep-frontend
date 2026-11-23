@@ -1,6 +1,7 @@
 import { Stack } from 'expo-router';
 import { useFonts } from 'expo-font';
 import ToastHost from '../components/Toast';
+import '../i18n'; // 화면 문구 번역 준비 (언어는 users/me 를 받은 뒤 정한다)
 
 export default function RootLayout() {
   const [fontsLoaded, fontError] = useFonts({

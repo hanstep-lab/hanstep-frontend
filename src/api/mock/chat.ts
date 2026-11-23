@@ -30,52 +30,44 @@ export function getVisaDday(): number {
   return Math.ceil((expiry.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
 }
 
-export const LANDING_SUGGESTIONS = [
-  '한국에서 오래 살고 싶은데 어떻게 해요?',
-  '본국에 50만 원 보내면 얼마 받아요?',
-  '이번 달 얼마까지 저축할 수 있어요?',
-  '비자 만료까지 얼마나 남았어요?',
-];
+// 첫 화면 질문. 문구는 i18n chat.landing.<키> (누르면 그 언어 문구를 질문으로 보낸다)
+export const LANDING_SUGGESTIONS = ['q1', 'q2', 'q3', 'q4'] as const;
 
 // action 이 없는 메뉴는 "준비 중" (설정). hidden 이면 메뉴 목록에 보이지 않는다(항목·화면 코드는 남겨 둠)
-// desc 가 없으면 설명 줄을 그리지 않는다. 이름이 들어가는 설명은 함수로 둔다(이름은 users/me shortName, 없으면 null)
+// 이름·설명 문구는 i18n chat.menu.items.<key>, 그룹 제목은 chat.menu.sections.<section>.
+// 금융상품 추천 설명만 이름(users/me shortName)이 있으면 chat.menu.productsDescNamed 를 쓴다(chat.tsx)
 export type MenuItem = {
-  label: string;
-  desc?: string | ((name: string | null) => string);
+  key: 'fx' | 'fxAlert' | 'transfer' | 'products' | 'credit' | 'visaRoadmap' | 'editProfile' | 'language';
   action?: ChatAction;
   hidden?: boolean;
 };
 
-export const MENU_GROUPS: { section: string; items: MenuItem[] }[] = [
+export const MENU_GROUPS: { section: 'fxTransfer' | 'growth' | 'visa' | 'settings'; items: MenuItem[] }[] = [
   {
-    section: '환율·송금',
+    section: 'fxTransfer',
     items: [
-      { label: '환율 정보', desc: '환율 / 환율 추이', action: 'fx' },
-      { label: '목표 환율 알림', desc: '원하는 환율이 되면 알림', action: 'fx_alert' },
-      { label: '해외송금', desc: '본국 계좌 송금 · 수수료 확인', action: 'transfer' },
+      { key: 'fx', action: 'fx' },
+      { key: 'fxAlert', action: 'fx_alert' },
+      { key: 'transfer', action: 'transfer' },
     ],
   },
   {
-    section: '금융 성장',
+    section: 'growth',
     items: [
-      {
-        label: '금융상품 추천',
-        desc: (name) => `${name ? `${name}님께 ` : ''}딱 맞는 SOLSOL한 예금·적금 추천`,
-        action: 'products',
-      },
-      { label: '대안신용 사전진단', desc: '대안신용 점수 · 대출상품 금리 · 한도 측정', action: 'credit' },
+      { key: 'products', action: 'products' },
+      { key: 'credit', action: 'credit' },
     ],
   },
   {
-    section: '체류·비자',
-    items: [{ label: '비자 로드맵', desc: 'E-9 → E-7-4 점수 사전진단', action: 'visa_tab' }],
+    section: 'visa',
+    items: [{ key: 'visaRoadmap', action: 'visa_tab' }],
   },
   {
-    section: '설정',
+    section: 'settings',
     items: [
       // 시연 범위 밖이라 목록에서만 숨김 (#54)
-      { label: '내 정보 수정', desc: '온보딩 답변 다시 입력', hidden: true },
-      { label: '화면 언어', desc: '한국어·English·Filipino·中文', hidden: true },
+      { key: 'editProfile', hidden: true },
+      { key: 'language', hidden: true },
     ],
   },
 ];

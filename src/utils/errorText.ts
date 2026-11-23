@@ -1,9 +1,10 @@
-// 오류를 화면에 보여 줄 한국어 문구로 바꾼다.
+// 오류를 화면에 보여 줄 문구로 바꾼다 (한국어 화면은 아래 한국어 표, 영어 화면은 영어 표).
 // 서버 message 는 사용자 언어(예: Reyes 는 vi)로 올 수 있어 쓰지 않고, code 로 문구를 고른다.
 // 화면이 직접 만든 오류(throw new Error('...'))는 이미 한국어라 그 message 를 그대로 쓴다.
 import type { ApiError } from '../types/api';
+import { localized } from '../i18n';
 
-const BY_CODE: Record<string, string> = {
+const BY_CODE_KO: Record<string, string> = {
   NETWORK: '네트워크 연결을 확인하고 다시 시도해 주세요.',
   TIMEOUT: '응답이 늦어지고 있어요. 잠시 후 다시 시도해 주세요.',
   HTTP_401: '접속 정보가 만료됐어요. 앱을 다시 시작해 주세요.',
@@ -13,13 +14,27 @@ const BY_CODE: Record<string, string> = {
   RESOURCE_NOT_FOUND: '정보를 찾을 수 없어요. 처음부터 다시 시도해 주세요.',
   HTTP_404: '정보를 찾을 수 없어요. 처음부터 다시 시도해 주세요.',
   AI_UPSTREAM_ERROR: '잠시 후 다시 시도해 주세요.',
+  HTTP_5XX: '잠시 후 다시 시도해 주세요.', // 5xx 전체 (아래 errorText 에서 HTTP_5\d\d 를 이 키로 본다)
 };
+
+const BY_CODE: Record<string, string> = localized(BY_CODE_KO, {
+  NETWORK: 'Check your network connection and try again.',
+  TIMEOUT: 'The response is taking longer than usual. Please try again in a moment.',
+  HTTP_401: 'Your session has expired. Please restart the app.',
+  UNAUTHORIZED: 'Your session has expired. Please restart the app.',
+  VALIDATION_ERROR: 'Please check what you entered.',
+  INVALID_STATE: "We can't process this right now. Please reopen the screen.",
+  RESOURCE_NOT_FOUND: "We couldn't find the information. Please start again.",
+  HTTP_404: "We couldn't find the information. Please start again.",
+  AI_UPSTREAM_ERROR: 'Please try again in a moment.',
+  HTTP_5XX: 'Please try again in a moment.',
+});
 
 export function errorText(e: unknown, fallback: string): string {
   if (e instanceof Error) return e.message || fallback; // 화면이 만든 한국어 오류
   const code = (e as Partial<ApiError> | null)?.code;
   if (!code) return fallback;
   if (BY_CODE[code]) return BY_CODE[code];
-  if (/^HTTP_5\d\d$/.test(code)) return '잠시 후 다시 시도해 주세요.';
+  if (/^HTTP_5\d\d$/.test(code)) return BY_CODE.HTTP_5XX;
   return fallback;
 }

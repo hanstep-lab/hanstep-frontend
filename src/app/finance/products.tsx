@@ -1,6 +1,7 @@
 // FP-001 금융상품 추천 (예금·적금). Figma 정리안 560:9 기준.
 // 데이터는 src/api/products.ts 에서만 받고, 여유자금·남은 체류·금리·한도는 서버(Mock) 값을 그대로 보여준다.
 import { useEffect, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { View, Text, Pressable, StyleSheet } from 'react-native';
 import { router, type Href } from 'expo-router';
 import Screen from '../../components/Screen';
@@ -33,6 +34,7 @@ function ProductCard({ product }: { product: ProductView }) {
 }
 
 export default function ProductsScreen() {
+  const { t } = useTranslation();
   const [data, setData] = useState<ProductsScreenData | null>(null);
   const [error, setError] = useState<string | null>(null);
 
@@ -45,28 +47,29 @@ export default function ProductsScreen() {
   // 추천 기준 줄: 값이 없는 줄은 숨김 (둘 다 없으면 카드째 숨김)
   const criteria = data
     ? [
-        { key: 'spare', title: '월 여유자금', sub: '소득 − 고정지출 − 송금 − 변동지출 평균', value: data.spareText },
-        { key: 'stay', title: '체류 만료까지', sub: '남은 체류 기간', value: data.stayText },
+        { key: 'spare', title: t('products.spareTitle'), sub: t('products.spareSub'), value: data.spareText },
+        { key: 'stay', title: t('products.stayTitle'), sub: t('products.staySub'), value: data.stayText },
       ].filter((c) => c.value)
     : [];
-  const namePrefix = data?.shortName ? `${data.shortName}님` : null;
+  const name = data?.shortName ?? null;
 
   // CR-001 대안신용 화면이 생기면 /credit 으로 연결
   const goCredit = () => router.push('/credit' as Href);
 
   return (
-    <Screen title="금융상품 추천">
+    <Screen title={t('products.title')}>
       <View style={s.titleBlock}>
         <View style={s.badge}>
-          <Text style={s.badgeText}>금융상품 추천</Text>
+          <Text style={s.badgeText}>{t('products.title')}</Text>
         </View>
         <Text style={s.title}>
-          {namePrefix ? `${namePrefix}께 딱 맞는\nSOLSOL한 금융상품` : '딱 맞는\nSOLSOL한 금융상품'}
+          {name ? t('products.headingNamed', { name }) : t('products.heading')}
         </Text>
         {data && !data.abstainText && (
           <Text style={s.sub}>
-            {namePrefix ? `${namePrefix}의 ` : ''}여유자금과 체류 기간을 기준으로 신한은행 예금·적금{' '}
-            {data.products.length}개를 골랐어요.
+            {name
+              ? t('products.subNamed', { name, n: data.products.length })
+              : t('products.sub', { n: data.products.length })}
           </Text>
         )}
       </View>
@@ -88,8 +91,10 @@ export default function ProductsScreen() {
           {criteria.length > 0 && (
             <View style={[s.card, s.criteriaCard]}>
               <View>
-                <Text style={s.sectionTitle}>{namePrefix ? `${namePrefix} 추천 기준` : '추천 기준'}</Text>
-                <Text style={s.sub}>마이데이터 분석 기준</Text>
+                <Text style={s.sectionTitle}>
+                  {name ? t('products.criteriaTitleNamed', { name }) : t('products.criteriaTitle')}
+                </Text>
+                <Text style={s.sub}>{t('products.criteriaBasis')}</Text>
               </View>
               <View style={s.rowList}>
                 {criteria.map((c) => (
@@ -114,8 +119,8 @@ export default function ProductsScreen() {
             ) : (
               <>
                 <View style={s.rowBetween}>
-                  <Text style={s.sectionTitle}>추천 상품 {data.products.length}개</Text>
-                  <Text style={s.label}>세전 · 상품설명서 기준</Text>
+                  <Text style={s.sectionTitle}>{t('products.listTitle', { n: data.products.length })}</Text>
+                  <Text style={s.label}>{t('products.listNote')}</Text>
                 </View>
                 <View style={s.productList}>
                   {data.products.map((p) => (
@@ -124,26 +129,24 @@ export default function ProductsScreen() {
                 </View>
               </>
             )}
-            <Text style={s.label}>
-              금리는 각 상품설명서의 세전 금리예요. 실제 금리와 가입 조건은 가입할 때 신한 SOL에서 확인해 주세요.
-            </Text>
-            {data.visaNote && <Text style={s.label}>비자 조건은 가입할 때 확인해 주세요</Text>}
+            <Text style={s.label}>{t('products.rateNote')}</Text>
+            {data.visaNote && <Text style={s.label}>{t('products.visaNote')}</Text>}
           </View>
 
           {/* 대출 안내 */}
           <View style={[s.card, s.loanCard]}>
-            <Text style={s.loanTitle}>대출 상품을 찾고 있나요?</Text>
+            <Text style={s.loanTitle}>{t('products.loanTitle')}</Text>
             <Pressable style={s.infoRow} onPress={goCredit} accessibilityRole="button">
               <View style={s.flex}>
-                <Text style={s.rowTitle}>대안신용 사전진단 보기</Text>
-                <Text style={s.label}>대출은 참고 한도와 함께 따로 보여 드려요</Text>
+                <Text style={s.rowTitle}>{t('products.loanRow')}</Text>
+                <Text style={s.label}>{t('products.loanRowSub')}</Text>
               </View>
-              <Text style={s.rowValue}>바로가기</Text>
+              <Text style={s.rowValue}>{t('products.go')}</Text>
             </Pressable>
           </View>
 
           <View style={s.actions}>
-            <Button title="신한걸음에 물어보기" onPress={() => router.push('/(tabs)/chat' as Href)} />
+            <Button title={t('products.ask')} onPress={() => router.push('/(tabs)/chat' as Href)} />
           </View>
         </FadeIn>
       )}
@@ -155,9 +158,9 @@ const s = StyleSheet.create({
   flex: { flex: 1 },
   rowBetween: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: spacing.sm },
   stateText: { ...typography.body, color: colors.text.sub, textAlign: 'center', paddingVertical: spacing.xl },
-  label: { ...typography.badge, color: colors.text.sub },
+  label: { ...typography.badge, color: colors.text.sub, flexShrink: 1 },
   sub: { ...typography.body, color: colors.text.sub },
-  sectionTitle: { ...typography.h3, color: colors.text.strong },
+  sectionTitle: { ...typography.h3, color: colors.text.strong, flexShrink: 1 },
 
   titleBlock: { gap: 3 },
   badge: {
@@ -183,7 +186,7 @@ const s = StyleSheet.create({
     backgroundColor: colors.background,
   },
   rowTitle: { ...typography.body, color: colors.text.strong },
-  rowValue: { ...typography.body, fontFamily: fonts.bold, color: colors.primary },
+  rowValue: { ...typography.body, fontFamily: fonts.bold, color: colors.primary, flexShrink: 0 },
 
   section: { gap: spacing.lg },
   productList: { gap: spacing.md },
@@ -193,8 +196,9 @@ const s = StyleSheet.create({
     borderRadius: radius.full,
     paddingHorizontal: spacing.sm,
     paddingVertical: 2,
+    flexShrink: 1,
   },
-  rateBlock: { alignItems: 'flex-end' },
+  rateBlock: { alignItems: 'flex-end', flexShrink: 0 },
   rate: { ...typography.body, fontFamily: fonts.bold, color: colors.primary },
   productName: { ...typography.title, color: colors.text.strong },
   noteHighlight: { color: colors.primary },

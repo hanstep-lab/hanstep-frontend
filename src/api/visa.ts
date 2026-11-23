@@ -7,6 +7,7 @@ import { USE_MOCK, mockDelay } from './config';
 import { mockCreateRoadmap, mockLatestE74, mockLatestRoadmap, mockSaveVisaProfile } from './mock/visa';
 import { getOnboardingSummary } from './onboarding';
 import { fmtDate, fmtNumber } from '../utils/format';
+import { localized } from '../i18n';
 import type {
   ApiError,
   E74AssessmentDetailResponse,
@@ -61,7 +62,7 @@ export async function getLatestE74(): Promise<E74AssessmentDetailResponse | null
 
 type ServerErrorBody = { code?: string; message?: string; details?: { reason?: string } };
 
-const CREATE_ERROR_TEXT = {
+const CREATE_ERROR_TEXT_KO = {
   NO_VISA_PROFILE: '체류 정보가 없어 로드맵을 만들 수 없어요. 외국인등록증 정보를 먼저 확인해 주세요.',
   NO_STAY_EXPIRY: '체류 만료일 정보가 없어 로드맵을 만들 수 없어요. 외국인등록증의 체류 만료일을 확인해 주세요.',
   STAY_EXPIRED: '체류 만료일이 이미 지나 로드맵을 만들 수 없어요. 가까운 출입국·외국인관서에 문의해 주세요.',
@@ -71,6 +72,17 @@ const CREATE_ERROR_TEXT = {
   TIMEOUT: '응답이 늦어지고 있어요. 잠시 후 다시 시도해 주세요.',
   DEFAULT: '로드맵을 만들지 못했어요. 다시 시도해 주세요.',
 } as const;
+// 영어 화면 문구 (위 한국어 표와 같은 키)
+const CREATE_ERROR_TEXT = localized(CREATE_ERROR_TEXT_KO, {
+  NO_VISA_PROFILE: "We can't make a roadmap without your stay information. Please check your residence card details first.",
+  NO_STAY_EXPIRY: "We can't make a roadmap without your stay expiry date. Please check the expiry date on your residence card.",
+  STAY_EXPIRED: "Your stay has already expired, so we can't make a roadmap. Please contact a nearby immigration office.",
+  PROFILE_REJECTED: "Some saved information needs to be checked again, so we couldn't make a roadmap. Please try again in a moment.",
+  INVALID_STATE: "The scoring rules aren't ready right now. Please try again in a moment.",
+  AI_UPSTREAM_ERROR: 'Something went wrong while making your roadmap. Please try again in a moment.',
+  TIMEOUT: 'The response is taking longer than usual. Please try again in a moment.',
+  DEFAULT: "We couldn't make your roadmap. Please try again.",
+});
 
 function createErrorText(status: number, body: ServerErrorBody | undefined): string {
   if (status === 422) {
@@ -155,28 +167,111 @@ export type VisaScreenView = {
 
 export type VisaScreenData = { kind: 'empty' } | { kind: 'ready'; view: VisaScreenView };
 
-// 비자 코드 → 한글 이름. 서버는 영문 이름만 줘서 프론트에 둔다.
-const VISA_LABEL: Record<string, string> = {
-  'E-9': '비전문취업',
-  'E-7-4': '숙련기능인력',
-};
+// 비자 코드 → 이름. 서버는 영문 이름만 줘서 프론트에 둔다. (영어 화면은 영어 이름)
+const VISA_LABEL: Record<string, string> = localized(
+  {
+    'E-9': '비전문취업',
+    'E-7-4': '숙련기능인력',
+  } as Record<string, string>,
+  {
+    'E-9': 'Non-professional employment',
+    'E-7-4': 'Skilled worker',
+  },
+);
 
-const SCORE_BASIS = 'E-7-4 점수표 기준 · 사전진단';
-const PENALTY_NOTE = '감점 항목(벌금·체납 등)은 아직 반영되지 않았어요';
-// 서버 isMock 값과 관계없이 항상 보여준다 (isMock 자체는 화면에 쓰지 않음).
+// 화면 문장. 한국어(_KO) 문장은 그대로 두고, 영어 화면이면 영어(_EN) 쪽을 쓴다
+const VT_KO = {
+  scoreBasis: 'E-7-4 점수표 기준 · 사전진단',
+  penaltyNote: '감점 항목(벌금·체납 등)은 아직 반영되지 않았어요',
+  summaryNote: '사전진단 결과이며 실제 심사 결과가 아니에요',
+  loadError: '로드맵을 불러오지 못했어요.',
+  months: (y: number, m: number) => (y === 0 ? `${m}개월` : m === 0 ? `${y}년` : `${y}년 ${m}개월`),
+  won: (n: number) => (n % 10_000 === 0 ? `${fmtNumber(n / 10_000)}만 원` : `${fmtNumber(n)}원`),
+  income: (avg: string | null) => (avg === null ? '연소득' : `연소득 (평균 ${avg})`),
+  korean: (level: number | null) => (level !== null ? `한국어능력 (TOPIK ${level}급)` : '한국어능력'),
+  age: (age: number | null) => (age === null ? '나이' : `나이 (만 ${age}세)`),
+  bonusItem: '가점 항목',
+  scoreItem: '점수 항목',
+  tenure: (months: string) => `근속 ${months}`,
+  requiredSub: '없으면 신청할 수 없어요',
+  pendingSub: '증빙 서류 필요',
+  defaultBasis: '등록된 서류 기준',
+  notSecured: '미확보',
+  points: (n: number) => `${n}점`,
+  bonusPoints: (n: number) => `+${n}점`,
+  proofGain: (n: number) => `증빙 시 +${n}점`,
+  gain: (n: number) => `+${n}점 가능`,
+  stepApply: (order: number) => `STEP ${order} · 신청`,
+  stepKind: (order: number, required: boolean) => `STEP ${order} · ${required ? '필수' : '선택'}`,
+  from: (date: string) => `${date}부터`,
+  employer: '사업주 요청',
+  stayMet: (months: string) => `체류 ${months} 충족`,
+  breakdown: (base: number, bonus: number, penalty: number) =>
+    `기본 ${base}점 + 가점 ${bonus}점` + (penalty !== 0 ? ` · 감점 ${penalty}점` : ''),
+  afterRequired: '필수 단계를 마치면',
+  afterAll: '모든 단계를 마치면',
+  stay: (months: string) => `체류 ${months}`,
+  applyFrom: (date: string, note: string | null) => `${date}부터${note ? ` (${note})` : ''}`,
+  proof: (n: number) => `증빙 시 ${n}점`,
+  threshold: (n: number) => `기준 점수 ${n}점`,
+};
+const plural = (n: number, word: string) => `${n} ${word}${n === 1 ? '' : 's'}`;
+const VT = localized(VT_KO, {
+  scoreBasis: 'Based on the E-7-4 points table · pre-check',
+  penaltyNote: 'Deductions (fines, unpaid taxes, etc.) are not reflected yet',
+  summaryNote: 'This is a pre-check, not an actual review result',
+  loadError: "We couldn't load your roadmap.",
+  months: (y: number, m: number) =>
+    y === 0 ? plural(m, 'month') : m === 0 ? plural(y, 'year') : `${plural(y, 'year')} ${plural(m, 'month')}`,
+  won: (n: number) => `₩${fmtNumber(n)}`,
+  income: (avg: string | null) => (avg === null ? 'Annual income' : `Annual income (avg. ${avg})`),
+  korean: (level: number | null) => (level !== null ? `Korean (TOPIK level ${level})` : 'Korean'),
+  age: (age: number | null) => (age === null ? 'Age' : `Age (${age})`),
+  bonusItem: 'Bonus item',
+  scoreItem: 'Score item',
+  tenure: (months: string) => `Employed ${months}`,
+  requiredSub: "You can't apply without this",
+  pendingSub: 'Proof needed',
+  defaultBasis: 'Based on registered documents',
+  notSecured: 'Not met',
+  points: (n: number) => `${n} pts`,
+  bonusPoints: (n: number) => `+${n} pts`,
+  proofGain: (n: number) => `+${n} pts with proof`,
+  gain: (n: number) => `+${n} pts possible`,
+  stepApply: (order: number) => `STEP ${order} · Apply`,
+  stepKind: (order: number, required: boolean) => `STEP ${order} · ${required ? 'Required' : 'Optional'}`,
+  from: (date: string) => `From ${date}`,
+  employer: 'Employer request',
+  stayMet: (months: string) => `${months} of stay met`,
+  breakdown: (base: number, bonus: number, penalty: number) =>
+    `Base ${base} + bonus ${bonus}` + (penalty !== 0 ? ` · deduction ${penalty}` : ''),
+  afterRequired: 'After the required steps',
+  afterAll: 'After all steps',
+  stay: (months: string) => `Stay ${months}`,
+  applyFrom: (date: string, note: string | null) => `From ${date}${note ? ` (${note})` : ''}`,
+  proof: (n: number) => `${n} pts with proof`,
+  threshold: (n: number) => `Required ${n} pts`,
+});
+// 요약 안내(VT.summaryNote)는 서버 isMock 값과 관계없이 항상 보여준다 (isMock 자체는 화면에 쓰지 않음).
 // 기준 변경 안내는 RULES_EXPIRE 경고가 맡아서 여기서는 쓰지 않는다.
-const SUMMARY_NOTE = '사전진단 결과이며 실제 심사 결과가 아니에요';
 
 // roadmap.warnings 코드 → 안내. 여기 없는 코드는 표시하지 않는다.
-const WARNING_TEXT: Record<string, { text: string; strong: boolean }> = {
-  STAY_EXPIRES_FIRST: { text: '신청 가능일 전에 체류기간이 끝나요. 연장 여부를 먼저 확인하세요', strong: true },
-  RULES_EXPIRE: { text: '2027년부터 선발 기준이 바뀌면 점수가 달라질 수 있어요', strong: false },
-  DRAFT_RULES: { text: '점수표가 공식 확정 전 기준이에요', strong: false },
-};
-const LOAD_ERROR_TEXT = '로드맵을 불러오지 못했어요.';
+const WARNING_TEXT: Record<string, { text: string; strong: boolean }> = localized(
+  {
+    STAY_EXPIRES_FIRST: { text: '신청 가능일 전에 체류기간이 끝나요. 연장 여부를 먼저 확인하세요', strong: true },
+    RULES_EXPIRE: { text: '2027년부터 선발 기준이 바뀌면 점수가 달라질 수 있어요', strong: false },
+    DRAFT_RULES: { text: '점수표가 공식 확정 전 기준이에요', strong: false },
+  } as Record<string, { text: string; strong: boolean }>,
+  {
+    STAY_EXPIRES_FIRST: { text: 'Your stay ends before you can apply. Check whether you can extend it first', strong: true },
+    RULES_EXPIRE: { text: 'Your score may change if the selection rules change from 2027', strong: false },
+    DRAFT_RULES: { text: 'The points table is not officially final yet', strong: false },
+  },
+);
 
 // 점수 항목 제목 (ruleCode 기준, 없으면 category 기준)
-const ITEM_TITLE: Record<string, string> = {
+const ITEM_TITLE: Record<string, string> = localized(
+  {
   TENURE_3Y: '근속 가점 (3년 이상)',
   DRIVER_LICENSE: '운전면허 가점',
   REC_EMPLOYER: '고용기업 추천',
@@ -184,14 +279,31 @@ const ITEM_TITLE: Record<string, string> = {
   REC_REGIONAL: '광역지자체 추천',
   QUALIFICATION: '자격증·학위 가점',
   REGION_3Y: '지역 근속 가점',
-};
+  } as Record<string, string>,
+  {
+    TENURE_3Y: 'Tenure bonus (3+ years)',
+    DRIVER_LICENSE: "Driver's license bonus",
+    REC_EMPLOYER: 'Employer recommendation',
+    REC_CENTRAL: 'Central government recommendation',
+    REC_REGIONAL: 'Regional government recommendation',
+    QUALIFICATION: 'Certificate · degree bonus',
+    REGION_3Y: 'Regional tenure bonus',
+  },
+);
 
 // 점수 항목 근거 (basis)
-const BASIS_TEXT: Record<string, string> = {
+const BASIS_TEXT: Record<string, string> = localized(
+  {
   DOCUMENT: '제출 서류 기준',
   TOPIK: 'TOPIK 성적 기준',
   ARC: '외국인등록증 생년월일 기준',
-};
+  } as Record<string, string>,
+  {
+    DOCUMENT: 'Based on submitted documents',
+    TOPIK: 'Based on TOPIK results',
+    ARC: 'Based on date of birth on residence card',
+  },
+);
 
 const num = (v: unknown): number | null => (typeof v === 'number' ? v : null);
 
@@ -199,13 +311,12 @@ const num = (v: unknown): number | null => (typeof v === 'number' ? v : null);
 function fmtMonths(months: number): string {
   const y = Math.floor(months / 12);
   const m = months % 12;
-  if (y === 0) return `${m}개월`;
-  return m === 0 ? `${y}년` : `${y}년 ${m}개월`;
+  return VT.months(y, m);
 }
 
 // 31250000 → "3,125만 원", 1만 원 단위가 아니면 "31,250,500원"
 function fmtWon(n: number): string {
-  return n % 10_000 === 0 ? `${fmtNumber(n / 10_000)}만 원` : `${fmtNumber(n)}원`;
+  return VT.won(n);
 }
 
 function fmtDday(days: number): string {
@@ -217,18 +328,18 @@ function itemTitle(item: VisaRoadmapScoreItem): string {
   switch (item.category) {
     case 'BASE_INCOME': {
       const income = num(v.averageIncome);
-      return income === null ? '연소득' : `연소득 (평균 ${fmtWon(income)})`;
+      return VT.income(income === null ? null : fmtWon(income));
     }
     case 'BASE_KOREAN': {
       const level = num(v.level);
-      return level !== null && item.basis === 'TOPIK' ? `한국어능력 (TOPIK ${level}급)` : '한국어능력';
+      return VT.korean(item.basis === 'TOPIK' ? level : null);
     }
     case 'BASE_AGE': {
       const age = num(v.age);
-      return age === null ? '나이' : `나이 (만 ${age}세)`;
+      return VT.age(age);
     }
   }
-  return ITEM_TITLE[item.ruleCode] ?? (item.category === 'BONUS' ? '가점 항목' : '점수 항목');
+  return ITEM_TITLE[item.ruleCode] ?? (item.category === 'BONUS' ? VT.bonusItem : VT.scoreItem);
 }
 
 function itemState(item: VisaRoadmapScoreItem): VisaScoreState {
@@ -239,10 +350,10 @@ function itemState(item: VisaRoadmapScoreItem): VisaScoreState {
 
 function itemSub(item: VisaRoadmapScoreItem, state: VisaScoreState): string {
   const tenure = num(item.value.tenureMonths);
-  if (tenure !== null) return `근속 ${fmtMonths(tenure)}`;
-  if (state === 'required') return '없으면 신청할 수 없어요';
-  if (state === 'pending') return '증빙 서류 필요';
-  return (item.basis ? BASIS_TEXT[item.basis] : undefined) ?? '등록된 서류 기준';
+  if (tenure !== null) return VT.tenure(fmtMonths(tenure));
+  if (state === 'required') return VT.requiredSub;
+  if (state === 'pending') return VT.pendingSub;
+  return (item.basis ? BASIS_TEXT[item.basis] : undefined) ?? VT.defaultBasis;
 }
 
 function toScoreItem(
@@ -252,23 +363,23 @@ function toScoreItem(
   const state = itemState(item);
   const gain = item.status === 'MET' ? null : gainOf(item.ruleCode);
   let score: string;
-  if (state === 'required') score = '미확보';
-  else if (item.category === 'BONUS' && item.earnedPoints > 0) score = `+${item.earnedPoints}점`;
-  else score = `${item.earnedPoints}점`;
+  if (state === 'required') score = VT.notSecured;
+  else if (item.category === 'BONUS' && item.earnedPoints > 0) score = VT.bonusPoints(item.earnedPoints);
+  else score = VT.points(item.earnedPoints);
   let scoreSub: string | undefined;
-  if (gain !== null) scoreSub = state === 'pending' ? `증빙 시 +${gain}점` : `+${gain}점 가능`;
+  if (gain !== null) scoreSub = state === 'pending' ? VT.proofGain(gain) : VT.gain(gain);
   return { key: item.ruleCode, title: itemTitle(item), sub: itemSub(item, state), score, scoreSub, state };
 }
 
 function stepLabel(st: VisaRoadmapStep): string {
-  if (st.kind === 'APPLY') return `STEP ${st.order} · 신청`;
-  return `STEP ${st.order} · ${st.required ? '필수' : '선택'}`;
+  if (st.kind === 'APPLY') return VT.stepApply(st.order);
+  return VT.stepKind(st.order, st.required);
 }
 
 function stepMeta(st: VisaRoadmapStep): string {
-  if (st.estimatedAdditionalScore !== null) return `+${st.estimatedAdditionalScore}점`;
-  if (st.availableFrom) return `${fmtDate(st.availableFrom)}부터`;
-  if (st.actor === 'EMPLOYER') return '사업주 요청';
+  if (st.estimatedAdditionalScore !== null) return VT.bonusPoints(st.estimatedAdditionalScore);
+  if (st.availableFrom) return VT.from(fmtDate(st.availableFrom));
+  if (st.actor === 'EMPLOYER') return VT.employer;
   return '';
 }
 
@@ -300,7 +411,7 @@ function toView(
   const stayWait = improvements.find((imp) => imp.ruleCode === 'REQ_STAY_PERIOD');
   const requiredMonths = num(stayWait?.target.requiredMonths);
   const applyFrom = roadmap.stay.applicableFrom;
-  const applyNote = requiredMonths !== null ? `체류 ${fmtMonths(requiredMonths)} 충족` : null;
+  const applyNote = requiredMonths !== null ? VT.stayMet(fmtMonths(requiredMonths)) : null;
 
   // 항목별 "+n점": E-7-4 평가 improvements 우선, 없으면 로드맵 단계의 예상 점수
   const gainOf = (ruleCode: string): number | null =>
@@ -312,8 +423,7 @@ function toView(
   const potential = result?.potentialScore.total ?? roadmap.score.potential;
   const required = result?.score.required ?? roadmap.score.required;
   const breakdown = result
-    ? `기본 ${result.score.base}점 + 가점 ${result.score.bonus}점` +
-      (result.score.penalty !== 0 ? ` · 감점 ${result.score.penalty}점` : '')
+    ? VT.breakdown(result.score.base, result.score.bonus, result.score.penalty)
     : null;
   const penaltyNotDeclared = roadmap.missingInputs.some((m) => m.field.startsWith('legalDeclaration.'));
 
@@ -321,17 +431,17 @@ function toView(
   const rows: VisaScreenView['summary']['rows'] = [
     {
       key: 'required',
-      title: '필수 단계를 마치면',
+      title: VT.afterRequired,
       sub: scoreParts(roadmap.steps.filter((st) => st.required)),
-      score: `${afterRequiredSteps}점`,
+      score: VT.points(afterRequiredSteps),
     },
   ];
   if (afterAllSteps !== afterRequiredSteps) {
     rows.push({
       key: 'all',
-      title: '모든 단계를 마치면',
+      title: VT.afterAll,
       sub: scoreParts(roadmap.steps.filter((st) => !st.required)),
-      score: `${afterAllSteps}점`,
+      score: VT.points(afterAllSteps),
     });
   }
 
@@ -339,21 +449,21 @@ function toView(
     status: {
       current,
       currentLabel: VISA_LABEL[current] ?? null,
-      stayText: stayMonths !== null ? `체류 ${fmtMonths(stayMonths)}` : null,
+      stayText: stayMonths !== null ? VT.stay(fmtMonths(stayMonths)) : null,
       target: roadmap.goalVisaCode,
       targetLabel: VISA_LABEL[roadmap.goalVisaCode] ?? null,
       expiryText: hasExpiry ? fmtDate(expiry.date!) : null,
       ddayText: hasExpiry ? fmtDday(expiry.days!) : null,
-      applyText: applyFrom ? `${fmtDate(applyFrom)}부터${applyNote ? ` (${applyNote})` : ''}` : null,
+      applyText: applyFrom ? VT.applyFrom(fmtDate(applyFrom), applyNote) : null,
     },
     score: {
       totalText: String(total),
-      proofText: potential !== total ? `증빙 시 ${potential}점` : null,
-      basis: SCORE_BASIS,
+      proofText: potential !== total ? VT.proof(potential) : null,
+      basis: VT.scoreBasis,
       breakdownText: breakdown,
-      thresholdText: required !== null ? `기준 점수 ${required}점` : null,
+      thresholdText: required !== null ? VT.threshold(required) : null,
       items: roadmap.score.items.map((it) => toScoreItem(it, gainOf)),
-      penaltyNote: penaltyNotDeclared ? PENALTY_NOTE : null,
+      penaltyNote: penaltyNotDeclared ? VT.penaltyNote : null,
       warnings: [...new Set(roadmap.warnings ?? [])]
         .filter((code) => code in WARNING_TEXT)
         .map((code) => ({ key: code, ...WARNING_TEXT[code] })),
@@ -369,7 +479,7 @@ function toView(
       // 신청 단계는 서버에서 required 지만 빨간 필수 카드로 보이지 않게 한다
       required: st.required && st.kind !== 'APPLY',
     })),
-    summary: { rows, note: SUMMARY_NOTE },
+    summary: { rows, note: VT.summaryNote },
   };
 }
 
@@ -378,7 +488,7 @@ function toView(
 export async function getVisaScreen(): Promise<VisaScreenData> {
   const [detail, e74, summaryVisa] = await Promise.all([
     getLatestRoadmap().catch((e: ApiError) => {
-      const err: ApiError = { code: e.code, message: LOAD_ERROR_TEXT };
+      const err: ApiError = { code: e.code, message: VT.loadError };
       throw err;
     }),
     getLatestE74().catch(() => null),

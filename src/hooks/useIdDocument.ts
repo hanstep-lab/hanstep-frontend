@@ -10,6 +10,7 @@ import { getDocument, retryOcr } from '../api/document';
 import type { DocumentResponse } from '../types/api';
 import { errorText } from '../utils/errorText';
 import { ocrTimeMark } from '../utils/ocrTiming';
+import i18n from '../i18n';
 
 const INTERVAL_MS = 1000;
 // 1초 × 60 = 약 1분. 11/23 운영 기준선: 업로드 → 결과까지 중앙값 약 3.8초, 최대 약 7.7초
@@ -70,7 +71,7 @@ export function useIdDocument(documentId: number | null) {
       } catch (e) {
         if (cancelled) return;
         ocrTimeMark('조회 오류');
-        setError(errorText(e, '등록증 정보를 불러오지 못했어요.'));
+        setError(errorText(e, i18n.t('onboarding.idConfirm.loadError')));
         setPhase('failed');
         return;
       }

@@ -2,6 +2,7 @@
 // 프리셋 값·슬라이더 범위·최저/최고는 서버(Mock) 값을 그대로 쓰고, 화면은 사용자가 고른 목표값만 들고 있는다.
 // 출처 문구는 서버 sourceLabel 그대로(PHP ECB 참고값, USD 수출입은행 고시, 하루 1번). "실시간", "종가" 표현은 쓰지 않는다.
 import { useCallback, useEffect, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { View, Text, Pressable, ScrollView, StyleSheet, Alert } from 'react-native';
 import { Image } from 'expo-image';
 import { Ionicons } from '@expo/vector-icons';
@@ -20,7 +21,8 @@ import {
   createErrorText,
   deleteErrorText,
   ALERT_CURRENCIES,
-  COMPARATOR_TEXT,
+  comparatorText,
+  fxCurrencyName,
   FX_ALERT_LOAD_ERROR,
   type AlertCurrency,
   type FxAlertSetup,
@@ -53,6 +55,7 @@ const decimalsOf = (step: number) => (String(step).split('.')[1] ?? '').length;
 const pairText = (unit: number, currency: string) => `${unit} ${currency}`;
 
 export default function FxAlertScreen() {
+  const { t } = useTranslation();
   const [currency, setCurrency] = useState<AlertCurrency>('PHP');
   const [setup, setSetup] = useState<FxAlertSetup | null>(null);
   const [setupError, setSetupError] = useState<string | null>(null);
@@ -113,7 +116,7 @@ export default function FxAlertScreen() {
   // 목표가 현재 환율과 같으면 이상/이하를 정할 수 없어서 등록을 막는다
   const sameAsCurrent = !!setup && target === setup.rate;
   const comparator = comparatorFor(target, setup?.rate ?? target);
-  const directionText = COMPARATOR_TEXT[comparator];
+  const directionText = comparatorText(comparator);
   const unitPair = setup ? pairText(setup.unit, currency) : '';
 
   const register = async () => {
@@ -127,7 +130,10 @@ export default function FxAlertScreen() {
     try {
       await createFxAlert({ currency, comparator, targetRate: target });
       loadAlerts();
-      Alert.alert('알림을 등록했어요', `${unitPair} = ${fmtRate(target)} KRW ${directionText}일 때 알려드려요.`);
+      Alert.alert(
+        t('fx.alert.registered'),
+        `${t('fx.alert.notifyWhen', { pair: unitPair, rate: fmtRate(target), cmp: directionText })}.`,
+      );
     } catch (e) {
       const text = createErrorText(e as ApiError, currency, comparator);
       Alert.alert(text.title, text.message);
@@ -148,24 +154,24 @@ export default function FxAlertScreen() {
   };
 
   const confirmDelete = (item: FxAlert) => {
-    Alert.alert('알림 삭제', `${item.currency} 목표 환율 알림을 삭제할까요?`, [
-      { text: '취소', style: 'cancel' },
-      { text: '삭제', style: 'destructive', onPress: () => removeAlert(item) },
+    Alert.alert(t('fx.alert.deleteTitle'), t('fx.alert.deleteAsk', { currency: item.currency }), [
+      { text: t('common.cancel'), style: 'cancel' },
+      { text: t('fx.alert.delete'), style: 'destructive', onPress: () => removeAlert(item) },
     ]);
   };
 
   const footerText = !setup
     ? ' '
     : sameAsCurrent
-      ? '현재 환율과 다른 값을 골라 주세요'
-      : `${unitPair} = ${fmtRate(target)} KRW ${directionText}일 때 알려드려요`;
+      ? t('fx.alert.pickOther')
+      : t('fx.alert.notifyWhen', { pair: unitPair, rate: fmtRate(target), cmp: directionText });
 
   return (
     <Screen
-      title="환율 알림"
+      title={t('fx.alert.screenTitle')}
       footer={
         <Button
-          title="목표 환율 알림 등록하기"
+          title={t('fx.alert.register')}
           icon="checkmark-circle-outline"
           subtitle={footerText}
           disabled={!setup || sameAsCurrent || saving}
@@ -175,11 +181,9 @@ export default function FxAlertScreen() {
     >
       {/* 제목 */}
       <View style={s.intro}>
-        <Text style={s.eyebrow}>환율 알림</Text>
-        <Text style={s.title}>목표 환율 알림 설정</Text>
-        <Text style={s.desc}>
-          원하는 환율을 설정해 두면, 하루 1번 갱신되는 기준환율로 확인해서 도달하면 알림 목록에 표시해 드려요.
-        </Text>
+        <Text style={s.eyebrow}>{t('fx.alert.screenTitle')}</Text>
+        <Text style={s.title}>{t('fx.alertSetting')}</Text>
+        <Text style={s.desc}>{t('fx.alert.desc')}</Text>
       </View>
 
       {/* 통화 칩 */}
@@ -202,7 +206,7 @@ export default function FxAlertScreen() {
                 <Image source={FLAGS[c.code]} style={s.flagImg} contentFit="cover" />
               </View>
               <Text style={[s.chipText, selected && s.chipTextSelected]}>
-                {c.name} {c.code}
+                {fxCurrencyName(c.code)} {c.code}
               </Text>
             </Pressable>
           );
@@ -229,14 +233,14 @@ export default function FxAlertScreen() {
             <View style={s.sourceStrip}>
               <View style={s.dot} />
               <Text style={s.sourceText}>
-                {setup.sourceLabel} · {fmtDate(setup.asOf)} 기준
+                {setup.sourceLabel} · {t('fx.asOf', { date: fmtDate(setup.asOf) })}
               </Text>
             </View>
 
             <View style={s.cardBody}>
               <View style={s.rateRow}>
                 <View style={s.rateInfo}>
-                  <Text style={s.label}>기준 환율</Text>
+                  <Text style={s.label}>{t('fx.alert.baseRate')}</Text>
                   <Text style={s.rate}>
                     {unitPair} = {fmtRate(setup.rate)} KRW
                   </Text>
@@ -262,13 +266,13 @@ export default function FxAlertScreen() {
               </View>
 
               <View style={s.targetSection}>
-                <Text style={s.sectionTitle}>얼마일 때 알려드릴까요?</Text>
+                <Text style={s.sectionTitle}>{t('fx.alert.ask')}</Text>
 
                 <View style={s.stepper}>
                   <Pressable
                     style={s.stepBtn}
                     onPress={() => stepTarget(-1)}
-                    accessibilityLabel="환율 낮추기"
+                    accessibilityLabel={t('fx.alert.lower')}
                     hitSlop={4}
                   >
                     <Ionicons name="remove" size={20} color={colors.text.strong} />
@@ -278,12 +282,12 @@ export default function FxAlertScreen() {
                       <Text style={s.targetValue}>{fmtRate(target)}</Text>
                       <Text style={s.targetUnit}>KRW {directionText}</Text>
                     </View>
-                    <Text style={s.label}>{unitPair} 기준</Text>
+                    <Text style={s.label}>{t('fx.alert.pairBase', { pair: unitPair })}</Text>
                   </View>
                   <Pressable
                     style={s.stepBtn}
                     onPress={() => stepTarget(1)}
-                    accessibilityLabel="환율 높이기"
+                    accessibilityLabel={t('fx.alert.higher')}
                     hitSlop={4}
                   >
                     <Ionicons name="add" size={20} color={colors.text.strong} />
@@ -299,9 +303,9 @@ export default function FxAlertScreen() {
                     onChange={changeTarget}
                   />
                   <View style={s.rangeLabels}>
-                    <Text style={s.label}>최저 {fmtRate(setup.low)}</Text>
-                    <Text style={s.label}>현재 {fmtRate(setup.rate)}</Text>
-                    <Text style={s.label}>최고 {fmtRate(setup.high)}</Text>
+                    <Text style={s.label}>{t('fx.low', { value: fmtRate(setup.low) })}</Text>
+                    <Text style={s.label}>{t('fx.current', { value: fmtRate(setup.rate) })}</Text>
+                    <Text style={s.label}>{t('fx.max', { value: fmtRate(setup.high) })}</Text>
                   </View>
                 </View>
 
@@ -335,11 +339,11 @@ export default function FxAlertScreen() {
       {/* 등록된 알림 */}
       <View style={[s.card, s.padCard]}>
         <View style={s.rowBetween}>
-          <Text style={s.sectionTitle}>현재 등록된 내 환율 알림</Text>
-          {alerts && <Text style={s.activeCount}>{alerts.activeCount}건 대기 중</Text>}
+          <Text style={s.sectionTitle}>{t('fx.alert.listTitle')}</Text>
+          {alerts && <Text style={s.activeCount}>{t('fx.alert.waitingCount', { n: alerts.activeCount })}</Text>}
         </View>
         {alertsError && <Text style={s.label}>{FX_ALERT_LOAD_ERROR.list}</Text>}
-        {alerts?.items.length === 0 && <Text style={s.label}>등록된 알림이 없어요.</Text>}
+        {alerts?.items.length === 0 && <Text style={s.label}>{t('fx.alert.empty')}</Text>}
         {alerts?.items.map((item) => {
           const reached = item.status === 'TRIGGERED';
           return (
@@ -355,7 +359,7 @@ export default function FxAlertScreen() {
                     <Text style={s.optionTitle}>{item.currency}</Text>
                     <View style={[s.statusBadge, reached && s.statusBadgeReached]}>
                       <Text style={[s.statusText, reached && s.statusTextReached]}>
-                        {reached ? '목표 도달' : '알림 대기중'}
+                        {reached ? t('fx.alert.reached') : t('fx.alert.waiting')}
                       </Text>
                     </View>
                   </View>
@@ -366,7 +370,7 @@ export default function FxAlertScreen() {
               <Pressable
                 style={s.moreBtn}
                 onPress={() => confirmDelete(item)}
-                accessibilityLabel="알림 설정 관리"
+                accessibilityLabel={t('fx.alert.manage')}
                 hitSlop={4}
               >
                 <Ionicons name="ellipsis-vertical" size={16} color={colors.text.sub} />
@@ -381,7 +385,7 @@ export default function FxAlertScreen() {
 
 const s = StyleSheet.create({
   stateText: { ...typography.body, color: colors.text.sub, textAlign: 'center', padding: spacing.lg },
-  rowBetween: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
+  rowBetween: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', gap: spacing.sm },
 
   intro: { gap: 3 },
   eyebrow: { ...typography.badge, fontFamily: fonts.bold, color: colors.primary },
@@ -419,10 +423,10 @@ const s = StyleSheet.create({
     paddingBottom: spacing.md,
   },
   dot: { width: 8, height: 8, borderRadius: radius.full, backgroundColor: colors.primary },
-  sourceText: { ...typography.badge, color: colors.text.sub },
+  sourceText: { ...typography.badge, color: colors.text.sub, flexShrink: 1 },
   cardBody: { padding: spacing.lg, gap: spacing.lg },
 
-  rateRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start' },
+  rateRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', gap: spacing.sm },
   rateInfo: { gap: 2, flexShrink: 1 },
   label: { ...typography.badge, color: colors.text.sub },
   rate: { ...typography.h2, color: colors.text.strong },
@@ -431,7 +435,7 @@ const s = StyleSheet.create({
   sparkBox: { backgroundColor: colors.background, borderRadius: radius.md, padding: spacing.sm, height: 40 },
 
   targetSection: { gap: spacing.sm, paddingTop: spacing.sm },
-  sectionTitle: { ...typography.h3, color: colors.text.strong },
+  sectionTitle: { ...typography.h3, color: colors.text.strong, flexShrink: 1 },
   stepper: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -454,7 +458,7 @@ const s = StyleSheet.create({
   targetUnit: { ...typography.body, fontFamily: fonts.bold, color: colors.text.sub },
 
   sliderBlock: { gap: spacing.xs, paddingTop: spacing.sm },
-  rangeLabels: { flexDirection: 'row', justifyContent: 'space-between' },
+  rangeLabels: { flexDirection: 'row', justifyContent: 'space-between', gap: spacing.sm },
 
   presetRow: { flexDirection: 'row', gap: 6, paddingTop: 6 },
   preset: {
@@ -472,7 +476,7 @@ const s = StyleSheet.create({
 
   optionTitle: { ...typography.body, fontFamily: fonts.bold, color: colors.text.strong },
 
-  activeCount: { ...typography.badge, fontFamily: fonts.bold, color: colors.primary },
+  activeCount: { ...typography.badge, fontFamily: fonts.bold, color: colors.primary, flexShrink: 0 },
   alertItem: {
     flexDirection: 'row',
     alignItems: 'center',

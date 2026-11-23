@@ -3,6 +3,7 @@
 
 import type { ApiError, VisaProfileFieldKey } from '../types/api';
 import { ISO_ALPHA3 } from '../constants/countries';
+import i18n from '../i18n';
 
 export type VisaProfileValues = Record<VisaProfileFieldKey, string>;
 export type VisaProfileErrors = Partial<Record<VisaProfileFieldKey, string>>;
@@ -24,25 +25,16 @@ export const SUPPORTED_VISA_TYPES: readonly string[] = ['E-9', 'E-7-4', 'H-2', '
 
 export const isSupportedVisaType = (code: string) => SUPPORTED_VISA_TYPES.includes(code);
 
-// 지원 목록 밖 체류자격 (앱 검사·서버 400 unknown visa type 공통). 문구는 태건님 제안
-export const VISA_UNSUPPORTED_TEXT = '현재 지원하지 않는 체류자격이에요. (E-9 근로자 대상 서비스)';
+// 지원 목록 밖 체류자격 (앱 검사·서버 400 unknown visa type 공통). 문구는 태건님 제안 (i18n visaField.unsupported)
+export const visaUnsupportedText = () => i18n.t('visaField.unsupported');
 
-// 칸별 오류 문구 (앱 검사·서버 400 모두 이 문구. 서버 reason 은 영문 코드일 수 있어 쓰지 않는다)
-export const VISA_FIELD_ERROR: Record<VisaProfileFieldKey, string> = {
-  nationality: '영문 3자리 국가 코드로 입력해 주세요. (예: PHL)',
-  birthDate: '생년월일을 숫자 8자리로 정확히 입력해 주세요. (예: 19950312)',
-  visaType: '체류자격을 입력해 주세요. (예: E-9)',
-  stayExpiry: '체류 만료일을 숫자 8자리로 정확히 입력해 주세요. (예: 20271004)',
-};
+// 칸별 오류 문구 (앱 검사·서버 400 모두 이 문구. 서버 reason 은 영문 코드일 수 있어 쓰지 않는다. i18n visaField.error)
+export const visaFieldError = (key: VisaProfileFieldKey) => i18n.t(`visaField.error.${key}`);
 
 const DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
 
-// 형식은 맞지만 값이 안 되는 경우의 칸별 문구 (앱 검사만)
-const VISA_FIELD_INVALID = {
-  nationality: '없는 국가 코드예요. 등록증에 적힌 국적 코드를 확인해 주세요. (예: PHL)',
-  birthDate: '생년월일은 오늘 이전 날짜로 입력해 주세요.',
-  stayExpiry: '체류 만료일이 지났어요. 등록증 뒷면의 최신 만료일을 입력해 주세요.',
-};
+// 형식은 맞지만 값이 안 되는 경우의 칸별 문구 (앱 검사만. i18n visaField.invalid)
+const visaFieldInvalid = (key: 'nationality' | 'birthDate' | 'stayExpiry') => i18n.t(`visaField.invalid.${key}`);
 
 // 오늘 날짜(기기 시간 기준) YYYY-MM-DD. 같은 모양 문자열끼리는 글자 비교 = 날짜 비교
 function todayString(): string {
@@ -89,18 +81,18 @@ export function validateVisaProfile(v: VisaProfileValues): VisaProfileErrors {
   const errors: VisaProfileErrors = {};
   const today = todayString();
 
-  if (!/^[A-Z]{3}$/.test(v.nationality)) errors.nationality = VISA_FIELD_ERROR.nationality;
-  else if (!ISO_ALPHA3.has(v.nationality)) errors.nationality = VISA_FIELD_INVALID.nationality;
+  if (!/^[A-Z]{3}$/.test(v.nationality)) errors.nationality = visaFieldError('nationality');
+  else if (!ISO_ALPHA3.has(v.nationality)) errors.nationality = visaFieldInvalid('nationality');
 
-  if (!isValidDate(v.birthDate)) errors.birthDate = VISA_FIELD_ERROR.birthDate;
-  else if (v.birthDate > today) errors.birthDate = VISA_FIELD_INVALID.birthDate; // 서버 규칙(미래 불가)과 같게
+  if (!isValidDate(v.birthDate)) errors.birthDate = visaFieldError('birthDate');
+  else if (v.birthDate > today) errors.birthDate = visaFieldInvalid('birthDate'); // 서버 규칙(미래 불가)과 같게
 
-  if (v.visaType === '') errors.visaType = VISA_FIELD_ERROR.visaType;
-  else if (!isSupportedVisaType(v.visaType)) errors.visaType = VISA_UNSUPPORTED_TEXT;
+  if (v.visaType === '') errors.visaType = visaFieldError('visaType');
+  else if (!isSupportedVisaType(v.visaType)) errors.visaType = visaUnsupportedText();
 
-  if (!isValidDate(v.stayExpiry)) errors.stayExpiry = VISA_FIELD_ERROR.stayExpiry;
+  if (!isValidDate(v.stayExpiry)) errors.stayExpiry = visaFieldError('stayExpiry');
   // 만료일이 지났으면 체류 기간이 끝난 등록증. 서버는 아직 허용하지만 앱에서 먼저 막는다(오늘은 허용)
-  else if (v.stayExpiry < today) errors.stayExpiry = VISA_FIELD_INVALID.stayExpiry;
+  else if (v.stayExpiry < today) errors.stayExpiry = visaFieldInvalid('stayExpiry');
 
   return errors;
 }
@@ -114,7 +106,7 @@ export function visaFieldErrorsFromApi(e: unknown): VisaProfileErrors | null {
   fields.forEach((f) => {
     const idx = f.field.match(/^fields\[(\d+)\]/);
     const key = idx ? VISA_PROFILE_KEYS[Number(idx[1])] : VISA_PROFILE_KEYS.find((k) => f.field.includes(k));
-    if (key) errors[key] = key === 'visaType' ? VISA_UNSUPPORTED_TEXT : VISA_FIELD_ERROR[key];
+    if (key) errors[key] = key === 'visaType' ? visaUnsupportedText() : visaFieldError(key);
   });
   return Object.keys(errors).length > 0 ? errors : null;
 }

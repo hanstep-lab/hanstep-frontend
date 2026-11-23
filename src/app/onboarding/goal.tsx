@@ -2,6 +2,7 @@
 // 다음: PUT /goals(GOL-02, 전체 교체) → POST /steps/GOALS
 
 import { useEffect, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { View, Text, Pressable, ScrollView, StyleSheet } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
@@ -16,6 +17,7 @@ import type { GoalResponse, GoalType } from '../../types/api';
 
 export default function GoalScreen() {
   const { goNext, isNavigating, navError, stage, totalStages } = useOnboardingStep();
+  const { t } = useTranslation();
   const [selected, setSelected] = useState<Set<GoalType>>(new Set());
   // 서버에 저장돼 있던 목표. 다시 저장할 때 목표 금액·시점(ON-005 에서 입력)을 지우지 않으려고 들고 있음
   const [savedGoals, setSavedGoals] = useState<GoalResponse[]>([]);
@@ -68,7 +70,7 @@ export default function GoalScreen() {
 
   return (
     <SafeAreaView style={styles.safe} edges={['top', 'bottom']}>
-      <Header title="신한걸음" showBack />
+      <Header title={t('common.appName')} showBack />
 
       <ScrollView style={styles.scroll} contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
         <View style={styles.progressWrap}>
@@ -76,8 +78,8 @@ export default function GoalScreen() {
         </View>
 
         <View style={styles.titleArea}>
-          <Text style={styles.title}>{'한국에서 이루고 싶은\n금융 목표는 무엇인가요?'}</Text>
-          <Text style={styles.subtitle}>여러 개를 고를 수 있어요. 고른 목표에 따라 다음 질문이 달라져요.</Text>
+          <Text style={styles.title}>{t('onboarding.goal.title')}</Text>
+          <Text style={styles.subtitle}>{t('onboarding.goal.subtitle')}</Text>
         </View>
 
         <View style={styles.cardList}>
@@ -93,18 +95,18 @@ export default function GoalScreen() {
                 <View style={styles.cardLeft}>
                   <View style={styles.cardTitleRow}>
                     <Text style={[styles.cardLabel, on ? styles.labelOn : styles.labelOff]}>
-                      {goal.label}
+                      {t(`goals.${goal.key}.label`)}
                     </Text>
                     {goal.tag && (
                       <View style={[styles.tagPill, on ? styles.tagPillOn : styles.tagPillOff]}>
                         <Text style={[styles.tagText, on ? styles.tagTextOn : styles.tagTextOff]}>
-                          {goal.tag}
+                          {t(`goalTags.${goal.tag}`)}
                         </Text>
                       </View>
                     )}
                   </View>
                   <Text style={[styles.cardDesc, on ? styles.descOn : styles.descOff]}>
-                    {goal.desc}
+                    {t(`goals.${goal.key}.desc`)}
                   </Text>
                 </View>
                 <View style={[styles.checkCircle, on ? styles.checkOn : styles.checkOff]}>
@@ -121,9 +123,7 @@ export default function GoalScreen() {
 
         <View style={styles.helperNote}>
           <Ionicons name="information-circle-outline" size={18} color={colors.text.sub} style={{ marginTop: 1 }} />
-          <Text style={styles.helperText}>
-            선택한 목표는 언제든지 마이페이지에서 추가하거나 수정할 수 있어요.
-          </Text>
+          <Text style={styles.helperText}>{t('onboarding.goal.helper')}</Text>
         </View>
       </ScrollView>
 
@@ -132,12 +132,12 @@ export default function GoalScreen() {
         <Button
           title={
             isNavigating
-              ? '처리 중...'
+              ? t('common.processing')
               : !loaded
-                ? '저장된 목표를 불러오는 중...'
+                ? t('onboarding.goal.loadingSaved')
                 : count > 0
-                ? `선택 완료 (${count}개) - 세부 계획 세우기`
-                : '목표를 선택해 주세요'
+                ? t('onboarding.goal.done', { n: count })
+                : t('onboarding.goal.choose')
           }
           showArrow={!isNavigating && count > 0}
           onPress={() => goNext(save)}
@@ -166,6 +166,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
+    gap: spacing.md,
     overflow: 'hidden',
   },
   cardOn:  { backgroundColor: colors.primary },
@@ -174,7 +175,7 @@ const styles = StyleSheet.create({
   cardLeft: { flex: 1, gap: 2 },
   cardTitleRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
 
-  cardLabel: { ...typography.h3 },
+  cardLabel: { ...typography.h3, flexShrink: 1 },
   labelOn:   { color: colors.text.inverse },
   labelOff:  { color: colors.text.strong },
 
@@ -182,7 +183,7 @@ const styles = StyleSheet.create({
   descOn:   { color: colors.onColor.sub },
   descOff:  { color: colors.text.sub },
 
-  tagPill: { paddingHorizontal: spacing.sm, paddingVertical: 2, borderRadius: radius.full },
+  tagPill: { paddingHorizontal: spacing.sm, paddingVertical: 2, borderRadius: radius.full, flexShrink: 0 },
   tagPillOn:  { backgroundColor: colors.onColor.fill },
   tagPillOff: { backgroundColor: colors.background },
   tagText: { ...typography.badge },
@@ -190,6 +191,7 @@ const styles = StyleSheet.create({
   tagTextOff: { color: colors.text.sub },
 
   checkCircle: {
+    flexShrink: 0,
     width: 28,
     height: 28,
     borderRadius: radius.full,

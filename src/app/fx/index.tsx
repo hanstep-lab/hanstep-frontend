@@ -1,6 +1,7 @@
 // FX-001 환율 정보. 데이터·문구는 src/api/fx.ts 에서만 받고, 평균·대비·최저/최고·방향은 서버(Mock) 값을 그대로 쓴다.
 // 출처 문구는 서버 sourceLabel 그대로(USD 수출입은행 고시, PHP ECB 참고값, 하루 1번).
 import { useEffect, useRef, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import {
   View,
   Text,
@@ -23,8 +24,9 @@ import {
   getFxRate,
   getFxHistory,
   FX_PERIODS,
+  fxPeriodLabel,
   FX_FIRST_CURRENCY,
-  FX_LOAD_ERROR,
+  fxLoadError,
   AVG_DECIMALS,
   type FxRate,
   type FxHistory,
@@ -70,6 +72,7 @@ type TrendChartProps = {
 // 환율 추이 차트 + 누르고 끄는 동안 그 지점 날짜·환율 말풍선. 손을 떼면 사라진다.
 // 날짜·환율은 points 값을 그대로 보여 주고, 여기서 하는 계산은 손가락 위치 ↔ 점 순번 변환뿐.
 function TrendChart({ points, min, max, digits }: TrendChartProps) {
+  const { t } = useTranslation();
   const [width, setWidth] = useState(0);
   const [tipW, setTipW] = useState(0);
   const [active, setActive] = useState<number | null>(null);
@@ -146,7 +149,7 @@ function TrendChart({ points, min, max, digits }: TrendChartProps) {
       ) : (
         <View style={[s.floatBadge, s.maxRight]} pointerEvents="none">
           <View style={s.maxDot} />
-          <Text style={s.maxText}>최고 {fmtRate(max, { digits })}</Text>
+          <Text style={s.maxText}>{t('fx.max', { value: fmtRate(max, { digits }) })}</Text>
         </View>
       )}
     </View>
@@ -154,6 +157,7 @@ function TrendChart({ points, min, max, digits }: TrendChartProps) {
 }
 
 export default function FxScreen() {
+  const { t } = useTranslation();
   const [currency, setCurrency] = useState<string>(FX_FIRST_CURRENCY);
   const [chips, setChips] = useState<FxCurrencyChip[]>([]);
   const [rate, setRate] = useState<FxRate | null>(null);
@@ -173,7 +177,7 @@ export default function FxScreen() {
         setRate(r);
         setChips(r.screenCurrencies);
       })
-      .catch(() => !cancelled && setRateError(FX_LOAD_ERROR));
+      .catch(() => !cancelled && setRateError(fxLoadError()));
     return () => {
       cancelled = true;
     };
@@ -185,7 +189,7 @@ export default function FxScreen() {
     setHistoryError(null);
     getFxHistory(currency, period)
       .then((h) => !cancelled && setHistory(h))
-      .catch(() => !cancelled && setHistoryError(FX_LOAD_ERROR));
+      .catch(() => !cancelled && setHistoryError(fxLoadError()));
     return () => {
       cancelled = true;
     };
@@ -201,7 +205,7 @@ export default function FxScreen() {
   // 첫 응답 전에는 칩 목록도 없어서 안내 문구만
   if (chips.length === 0) {
     return (
-      <Screen title="환율 정보" loading={!rateError}>
+      <Screen title={t('fx.title')} loading={!rateError}>
         {rateError ? (
           <Text style={s.stateText}>{rateError}</Text>
         ) : (
@@ -253,9 +257,9 @@ export default function FxScreen() {
   if (!rate) {
     return (
       <Screen
-        title="환율 정보"
+        title={t('fx.title')}
         loading={!rateError}
-        footer={<Button title="해외송금하기" showArrow onPress={goTransfer} />}
+        footer={<Button title={t('fx.goTransfer')} showArrow onPress={goTransfer} />}
       >
         {chipList}
         {rateError ? (
@@ -270,7 +274,7 @@ export default function FxScreen() {
     );
   }
 
-  const periodLabel = FX_PERIODS.find((p) => p.key === period)?.label ?? '';
+  const periodLabel = fxPeriodLabel(period);
   const hasBankRates = rate.sendRate != null && rate.receiveRate != null;
   // 통화를 바꾼 직후 이전 통화 차트가 보이지 않게
   const chart = history && history.currency === rate.currency ? history : null;
@@ -278,8 +282,8 @@ export default function FxScreen() {
 
   return (
     <Screen
-      title="환율 정보"
-      footer={<Button title="해외송금하기" showArrow onPress={goTransfer} />}
+      title={t('fx.title')}
+      footer={<Button title={t('fx.goTransfer')} showArrow onPress={goTransfer} />}
     >
       {chipList}
 
@@ -316,7 +320,7 @@ export default function FxScreen() {
                 />
               )}
               <Text style={[s.changeText, { color: trendColor(rate.changeTrend) }]}>
-                전일 대비 {fmtRate(rate.change, { sign: true })} KRW
+                {t('fx.dayChange', { value: fmtRate(rate.change, { sign: true }) })}
               </Text>
               {rate.changeRate !== null && (
                 <View style={[s.changeBadge, { backgroundColor: trendSoft(rate.changeTrend) }]}>
@@ -333,14 +337,14 @@ export default function FxScreen() {
 
         <View style={s.asOfStrip}>
           <View style={s.dot} />
-          <Text style={s.asOfText}>{fmtDate(rate.asOf)} 기준</Text>
+          <Text style={s.asOfText}>{t('fx.asOf', { date: fmtDate(rate.asOf) })}</Text>
         </View>
 
         {/* 은행 송금 환율은 서버가 줄 때만 표시 (ECB 에는 없음) */}
         {hasBankRates && (
           <View style={s.bankRates}>
-            <Text style={s.bankRateText}>송금 보낼 때 {fmtRate(rate.sendRate!)}</Text>
-            <Text style={s.bankRateText}>송금 받을 때 {fmtRate(rate.receiveRate!)}</Text>
+            <Text style={s.bankRateText}>{t('fx.sendRate', { value: fmtRate(rate.sendRate!) })}</Text>
+            <Text style={s.bankRateText}>{t('fx.receiveRate', { value: fmtRate(rate.receiveRate!) })}</Text>
           </View>
         )}
 
@@ -360,7 +364,7 @@ export default function FxScreen() {
       {/* 환율 추이 차트 */}
       <View style={[s.card, s.chartCard]}>
         <View style={s.row}>
-          <Text style={s.sectionTitle}>환율 추이 차트</Text>
+          <Text style={s.sectionTitle}>{t('fx.chartTitle')}</Text>
           <View style={s.tabList}>
             {FX_PERIODS.map((p) => {
               const selected = p.key === period;
@@ -370,7 +374,7 @@ export default function FxScreen() {
                   style={[s.tab, selected && s.tabSelected]}
                   onPress={() => setPeriod(p.key)}
                 >
-                  <Text style={[s.tabText, selected && s.tabTextSelected]}>{p.label}</Text>
+                  <Text style={[s.tabText, selected && s.tabTextSelected]}>{fxPeriodLabel(p.key)}</Text>
                 </Pressable>
               );
             })}
@@ -389,12 +393,12 @@ export default function FxScreen() {
             />
             <View style={s.row}>
               <Text style={s.statText}>
-                {periodLabel} 최저 {fmtRate(chart.min, { digits })}
+                {t('fx.periodLow', { period: periodLabel, value: fmtRate(chart.min, { digits }) })}
               </Text>
               <Text style={s.statText}>
-                {periodLabel} 평균 {chart.avgText}
+                {t('fx.periodAvg', { period: periodLabel, value: chart.avgText })}
               </Text>
-              <Text style={[s.statText, s.statCurrent]}>현재 {fmtRate(chart.current, { digits })}</Text>
+              <Text style={[s.statText, s.statCurrent]}>{t('fx.current', { value: fmtRate(chart.current, { digits }) })}</Text>
             </View>
           </FadeIn>
         ) : historyError ? (
@@ -409,14 +413,14 @@ export default function FxScreen() {
 
       {/* 기간별 평균 비교 */}
       <View style={s.avgSection}>
-        <Text style={s.sectionTitle}>기간별 평균 비교</Text>
+        <Text style={s.sectionTitle}>{t('fx.avgTitle')}</Text>
         <Text style={s.summary}>{rate.summaryText}</Text>
 
         <View>
           <View style={s.tableRow}>
-            <Text style={[s.tableHead, s.cell]}>구간</Text>
-            <Text style={[s.tableHead, s.cell, s.right]}>기간 평균</Text>
-            <Text style={[s.tableHead, s.cell, s.right]}>현재 대비</Text>
+            <Text style={[s.tableHead, s.cell]}>{t('fx.thPeriod')}</Text>
+            <Text style={[s.tableHead, s.cell, s.right]}>{t('fx.thAvg')}</Text>
+            <Text style={[s.tableHead, s.cell, s.right]}>{t('fx.thDiff')}</Text>
           </View>
           {rate.periodAverages.map((row) => (
             <View key={row.period} style={[s.tableRow, s.tableDivider]}>
@@ -432,7 +436,7 @@ export default function FxScreen() {
 
         <Pressable style={s.alertBtn} onPress={goAlert}>
           <Ionicons name="notifications-outline" size={14} color={colors.primary} />
-          <Text style={s.alertBtnText}>목표 환율 알림 설정</Text>
+          <Text style={s.alertBtnText}>{t('fx.alertSetting')}</Text>
         </Pressable>
       </View>
     </Screen>
@@ -441,7 +445,8 @@ export default function FxScreen() {
 
 const s = StyleSheet.create({
   stateText: { ...typography.body, color: colors.text.sub, textAlign: 'center' },
-  row: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
+  // gap·flexShrink: 영어처럼 긴 문구도 줄 안에서 줄바꿈되게 (짧으면 모양 그대로)
+  row: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', gap: spacing.sm },
 
   // 통화 칩: FX-002 알림 화면(alert.tsx) 칩과 같은 모양
   chipScroll: { marginHorizontal: -spacing.xl, flexGrow: 0 },
@@ -492,7 +497,7 @@ const s = StyleSheet.create({
   price: { ...typography.h2, color: colors.text.strong },
   priceUnit: { ...typography.subtitle, color: colors.text.sub },
   changeRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.xs, paddingBottom: spacing.md },
-  changeText: { ...typography.body },
+  changeText: { ...typography.body, flexShrink: 1 },
   changeBadge: { borderRadius: radius.full, paddingHorizontal: spacing.xs },
   changeBadgeText: { ...typography.badge },
 
@@ -505,21 +510,22 @@ const s = StyleSheet.create({
     paddingVertical: spacing.md,
   },
   dot: { width: 8, height: 8, borderRadius: radius.full, backgroundColor: colors.primary },
-  asOfText: { ...typography.badge, color: colors.text.sub },
+  asOfText: { ...typography.badge, color: colors.text.sub, flexShrink: 1 },
   bankRates: { flexDirection: 'row', gap: spacing.md, paddingHorizontal: spacing.lg, paddingVertical: spacing.md },
-  bankRateText: { ...typography.body, color: colors.text.strong },
+  bankRateText: { ...typography.body, color: colors.text.strong, flexShrink: 1 },
   notices: { gap: spacing.xs, paddingHorizontal: spacing.xl, paddingVertical: spacing.md },
   noticeRow: { flexDirection: 'row', alignItems: 'flex-start', gap: spacing.xs },
   noticeText: { ...typography.badge, color: colors.text.sub, flex: 1 },
 
   chartCard: { padding: spacing.lg, gap: spacing.sm },
-  sectionTitle: { ...typography.h3, color: colors.text.strong },
+  sectionTitle: { ...typography.h3, color: colors.text.strong, flexShrink: 1 },
   tabList: {
     flexDirection: 'row',
     gap: spacing.xs,
     padding: spacing.xs,
     borderRadius: radius.full,
     backgroundColor: colors.background,
+    flexShrink: 0,
   },
   tab: { paddingHorizontal: spacing.sm, borderRadius: radius.full },
   tabSelected: { backgroundColor: colors.surface },
@@ -539,7 +545,7 @@ const s = StyleSheet.create({
   maxRight: { right: 0 },
   maxDot: { width: 6, height: 6, borderRadius: radius.full, backgroundColor: colors.primary },
   maxText: { ...typography.badge, color: colors.primary },
-  statText: { ...typography.badge, color: colors.text.sub },
+  statText: { ...typography.badge, color: colors.text.sub, flexShrink: 1 },
   statCurrent: { color: colors.primary },
 
   avgSection: { gap: spacing.sm, paddingTop: spacing.sm },

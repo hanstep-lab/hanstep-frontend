@@ -38,11 +38,18 @@ export default function Button({
       {icon && <Ionicons name={icon} size={18} color={arrowColor} />}
       {subtitle != null ? (
         <View style={styles.texts}>
-          <Text style={labelStyles[variant]}>{title}</Text>
-          <Text style={[labelStyles[variant], styles.subtitle]}>{subtitle}</Text>
+          {/* 버튼 높이가 고정이라 긴 문구(영어)는 한 줄 안에서 글자를 줄인다. 들어가는 문구는 그대로 */}
+          <Text style={labelStyles[variant]} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.75}>
+            {title}
+          </Text>
+          <Text style={[labelStyles[variant], styles.subtitle]} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.75}>
+            {subtitle}
+          </Text>
         </View>
       ) : (
-        <Text style={labelStyles[variant]}>{title}</Text>
+        <Text style={[labelStyles[variant], styles.label]} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.75}>
+          {title}
+        </Text>
       )}
       {showArrow && <Ionicons name="arrow-forward" size={18} color={arrowColor} />}
     </Pressable>
@@ -64,7 +71,8 @@ const styles = StyleSheet.create({
   disabled: { backgroundColor: colors.disabled },
   pressed: { opacity: 0.8 }, // 누르는 동안 opacity 0.8
   withSubtitle: { height: 60, justifyContent: 'flex-start', paddingHorizontal: spacing.xl, gap: spacing.md },
-  texts: { gap: 2 },
+  texts: { gap: 2, flexShrink: 1 },
+  label: { flexShrink: 1 },
   subtitle: { ...typography.badge, opacity: 0.8 },
 });
 

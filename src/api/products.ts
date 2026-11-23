@@ -7,6 +7,7 @@ import { mockProductRecommendation } from './mock/products';
 import { getMe } from './user';
 import { getOnboardingSummary } from './onboarding';
 import { fmtWon } from '../utils/format';
+import { isKoreanUi, localized } from '../i18n';
 import type {
   ProductAbstainReason,
   ProductAmountRange,
@@ -48,30 +49,54 @@ export type ProductsScreenData = {
   visaNote: boolean; // notChecked 에 visa 가 있는 상품이 있으면 true
 };
 
-const KIND_LABEL: Record<string, string> = { SAVINGS: '적금', DEPOSIT: '정기예금' };
+// 문구 표·문장은 한국어 그대로 두고, 영어 화면이면 영어 쪽을 쓴다(localized·isKoreanUi)
+const KIND_LABEL: Record<string, string> = localized(
+  { SAVINGS: '적금', DEPOSIT: '정기예금' },
+  { SAVINGS: 'Savings', DEPOSIT: 'Term deposit' },
+);
 
-const ABSTAIN_TEXT: Record<ProductAbstainReason, string> = {
-  STAY_TOO_SHORT: '남은 체류 기간 안에 만기가 끝나는 상품이 없어요',
-  REQUEST_EXCEEDS_SURPLUS: '매달 넣을 금액이 여유자금보다 커요',
-  NO_MATCHING_PRODUCT: '지금 조건에 맞는 상품이 없어요',
-};
+const ABSTAIN_TEXT: Record<ProductAbstainReason, string> = localized(
+  {
+    STAY_TOO_SHORT: '남은 체류 기간 안에 만기가 끝나는 상품이 없어요',
+    REQUEST_EXCEEDS_SURPLUS: '매달 넣을 금액이 여유자금보다 커요',
+    NO_MATCHING_PRODUCT: '지금 조건에 맞는 상품이 없어요',
+  } as Record<ProductAbstainReason, string>,
+  {
+    STAY_TOO_SHORT: 'No product matures within your remaining stay',
+    REQUEST_EXCEEDS_SURPLUS: 'The monthly amount is more than your spare money',
+    NO_MATCHING_PRODUCT: 'No product fits your current conditions',
+  },
+);
 
 const withComma = (n: number) => String(n).replace(/\B(?=(\d{3})+(?!\d))/g, ',');
 const fmtDot = (iso: string) => iso.replaceAll('-', '.');
 
 function termText(t: ProductTermMonths): string | null {
   if (!t) return null;
+  if (!isKoreanUi()) {
+    if (Array.isArray(t)) return t.length ? `${t.join('·')} months` : null;
+    return t.min === t.max ? `${t.min} months` : `${t.min}–${t.max} months`;
+  }
   if (Array.isArray(t)) return t.length ? `${t.join('·')}개월` : null;
   return t.min === t.max ? `${t.min}개월` : `${t.min}~${t.max}개월`;
 }
 
 function limitText(range: ProductAmountRange | null, kind: string): string | null {
   if (!range || range.max === null) return null;
+  if (!isKoreanUi()) {
+    if (range.max === 'no limit') return 'No limit';
+    return kind === 'DEPOSIT' ? `Up to ${fmtWon(range.max)} per deposit` : `Up to ${fmtWon(range.max)}/month`;
+  }
   if (range.max === 'no limit') return '한도 없음';
   return kind === 'DEPOSIT' ? `1회 최대 ${fmtWon(range.max)}` : `월 ${fmtWon(range.max)}까지`;
 }
 
 function noteOf(stayFits: boolean | null): { text: string; highlight: boolean } {
+  if (!isKoreanUi()) {
+    if (stayFits === true) return { text: 'Matures before your stay ends', highlight: true };
+    if (stayFits === false) return { text: 'Matures after your stay ends', highlight: false };
+    return { text: "We couldn't check your stay period", highlight: false };
+  }
   if (stayFits === true) return { text: '만기가 체류 만료 전에 끝나요', highlight: true };
   if (stayFits === false) return { text: '만기가 체류 만료보다 늦어요', highlight: false };
   return { text: '체류 기간은 확인하지 못했어요', highlight: false };
@@ -82,9 +107,15 @@ function toProductView(p: ProductRecommendItem): ProductView {
   const term = termText(p.termMonths);
   // 기본금리나 기준일이 없으면 금리(기본·최고 모두) 숨김
   const base = p.baseRate && p.baseRate.asOf ? p.baseRate : null;
-  const rateText = base ? `기본 연 ${base.ratePct.toFixed(2)}%` : null;
-  const rateAsOf = base ? `${fmtDot(base.asOf!)} 기준` : null;
-  const maxText = base && p.maxRate ? `우대 조건 충족 시 최고 연 ${p.maxRate.ratePct.toFixed(2)}%` : null;
+  const ko = isKoreanUi();
+  const rateText = base ? (ko ? `기본 연 ${base.ratePct.toFixed(2)}%` : `Base ${base.ratePct.toFixed(2)}% a year`) : null;
+  const rateAsOf = base ? (ko ? `${fmtDot(base.asOf!)} 기준` : `As of ${fmtDot(base.asOf!)}`) : null;
+  const maxText =
+    base && p.maxRate
+      ? ko
+        ? `우대 조건 충족 시 최고 연 ${p.maxRate.ratePct.toFixed(2)}%`
+        : `Up to ${p.maxRate.ratePct.toFixed(2)}% a year with preferential terms`
+      : null;
   const limit = limitText(p.kind === 'DEPOSIT' ? p.depositAmountKrw : p.monthlyAmountKrw, p.kind);
   const meta = [maxText, limit].filter(Boolean).join(' · ');
   const note = noteOf(p.stayFits);
@@ -95,7 +126,8 @@ function toProductView(p: ProductRecommendItem): ProductView {
     rateText,
     rateAsOf,
     meta: meta || null,
-    desc: p.feature?.quote ?? null,
+    // 상품설명서 원문(한국어)이라 영어 화면에서는 숨긴다. 금리·한도·기간은 위에서 영어로 보여 준다
+    desc: isKoreanUi() ? p.feature?.quote ?? null : null,
     note: note.text,
     noteHighlight: note.highlight,
   };
@@ -121,8 +153,18 @@ export async function getProductsScreen(): Promise<ProductsScreenData> {
 
   return {
     shortName,
-    stayText: rec.remainingStayMonths === null ? null : `약 ${rec.remainingStayMonths}개월`,
-    spareText: spare && spare.currency === 'KRW' && spare.amount >= 0 ? `${withComma(spare.amount)}원` : null,
+    stayText:
+      rec.remainingStayMonths === null
+        ? null
+        : isKoreanUi()
+          ? `약 ${rec.remainingStayMonths}개월`
+          : `About ${rec.remainingStayMonths} months`,
+    spareText:
+      spare && spare.currency === 'KRW' && spare.amount >= 0
+        ? isKoreanUi()
+          ? `${withComma(spare.amount)}원`
+          : `₩${withComma(spare.amount)}`
+        : null,
     products: rec.products.map(toProductView),
     abstainText,
     visaNote: rec.products.some((p) => p.notChecked.includes('visa')),

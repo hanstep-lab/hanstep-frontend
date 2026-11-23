@@ -3,6 +3,7 @@
 // 네, 맞아요: PATCH fields → POST confirm → 온보딩 단계 완료
 
 import { useEffect, useRef, useState, type ReactNode } from 'react';
+import { useTranslation } from 'react-i18next';
 import { View, Text, Pressable, StyleSheet, TextInput, ActivityIndicator, Alert } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { Image } from 'expo-image';
@@ -16,9 +17,10 @@ import { TOTAL_STAGES, getRouteFromStepCode, stageOf } from '../../constants/onb
 import OnboardingProgress from '../../components/OnboardingProgress';
 import { colors, typography, spacing, radius, fonts, shadow } from '../../constants/theme';
 import { errorText } from '../../utils/errorText';
+import i18n from '../../i18n';
 import {
   VISA_PROFILE_KEYS,
-  VISA_UNSUPPORTED_TEXT,
+  visaUnsupportedText,
   isSupportedVisaType,
   normalizeVisaType,
   formatDateInput,
@@ -33,13 +35,8 @@ type Values = Record<EditableKey, string>;
 const EDITABLE_KEYS: EditableKey[] = ['nameEn', 'nationality', 'birthDate', 'visaType', 'stayExpiry'];
 const REQUIRED_KEYS: EditableKey[] = ['nationality', 'birthDate', 'visaType', 'stayExpiry'];
 
-const FIELD_LABEL: Record<EditableKey, string> = {
-  nameEn: '성명',
-  nationality: '국적',
-  birthDate: '생년월일',
-  visaType: '체류자격',
-  stayExpiry: '체류 만료일',
-};
+// 오류 문구에 넣는 칸 이름 (i18n onboarding.idConfirm.fieldName)
+const fieldLabel = (key: EditableKey) => i18n.t(`onboarding.idConfirm.fieldName.${key}`);
 
 // 체류 정보 4칸(국적·생년월일·체류자격·만료일)만 골라낸다. 정리·검사는 직접 입력 화면과 같은 visaFields 규칙
 const stayOf = (v: Values): VisaProfileValues => ({
@@ -56,7 +53,7 @@ function normalize(v: Values): Values {
 
 // 확정 전 검사. 서버도 같은 검사를 하지만(400·422) 미리 막아서 바로 안내한다. 첫 번째 틀린 칸의 문구 하나만
 function validate(v: Values): string | null {
-  if (v.nameEn.length > 100) return '성명은 100자 이하로 입력해 주세요.';
+  if (v.nameEn.length > 100) return i18n.t('onboarding.idConfirm.nameTooLong');
   const errors = validateVisaProfile(stayOf(v));
   const first = VISA_PROFILE_KEYS.find((k) => errors[k]);
   return first ? errors[first] ?? null : null;
@@ -79,8 +76,8 @@ function fieldErrorText(e: unknown, sent: EditableKey[]): string | null {
   ];
   if (keys.length === 0) return null;
   // 체류자격만 막혔으면 앱 검사는 통과한 값 → 서버 미지원 자격 (예: D-8)
-  if (keys.length === 1 && keys[0] === 'visaType') return VISA_UNSUPPORTED_TEXT;
-  return `${keys.map((k) => FIELD_LABEL[k]).join(', ')} 값을 다시 확인해 주세요.`;
+  if (keys.length === 1 && keys[0] === 'visaType') return visaUnsupportedText();
+  return i18n.t('onboarding.idConfirm.checkFields', { fields: keys.map(fieldLabel).join(', ') });
 }
 
 // 값 한 줄. OCR 은 어느 칸이든 틀릴 수 있으므로 모든 칸을 입력칸으로 둔다.
@@ -100,6 +97,7 @@ function FieldValue({
   autoCapitalize?: 'none' | 'characters';
   isDate?: boolean; // 숫자 키패드 + 하이픈 자동 입력
 }) {
+  const { t } = useTranslation();
   const needsCheck = field?.needsReview === true;
   return (
     <View style={styles.inputWrap}>
@@ -114,17 +112,13 @@ function FieldValue({
         autoCapitalize={autoCapitalize}
         autoCorrect={false}
       />
-      {needsCheck ? <Text style={styles.reviewText}>확인 필요</Text> : null}
+      {needsCheck ? <Text style={styles.reviewText}>{t('onboarding.idConfirm.needsCheck')}</Text> : null}
     </View>
   );
 }
 
-// 원본 만료 안내 문구 (이슈 #164 요청서)
-const EXPIRED_TITLE = '사진을 다시 찍어 주세요';
-const EXPIRED_BODY = '개인정보 보호를 위해 등록증 사진은 하루가 지나면 삭제돼요. 다시 촬영해 주세요.';
-const EXPIRED_BUTTON = '다시 촬영하기';
-
 export default function IdConfirmScreen() {
+  const { t } = useTranslation();
   const [isNavigating, setIsNavigating] = useState(false);
   const [navError, setNavError] = useState<string | null>(null);
   const idCardFrontUri = useOnboardingStore((s) => s.idCardFrontUri);
@@ -164,10 +158,11 @@ export default function IdConfirmScreen() {
     setExpired(true);
     if (expiredAlerted.current) return;
     expiredAlerted.current = true;
+    // 원본 만료 안내 문구 (이슈 #164 요청서)
     Alert.alert(
-      EXPIRED_TITLE,
-      EXPIRED_BODY,
-      [{ text: EXPIRED_BUTTON, onPress: goRetake }],
+      t('onboarding.idConfirm.expiredTitle'),
+      t('onboarding.idConfirm.expiredBody'),
+      [{ text: t('onboarding.idConfirm.expiredButton'), onPress: goRetake }],
       { cancelable: false },
     );
   };
@@ -229,7 +224,7 @@ export default function IdConfirmScreen() {
           return;
         }
       }
-      setNavError(fieldErrorText(e, sent) ?? errorText(e, '다음 단계로 이동할 수 없어요. 다시 시도해 주세요.'));
+      setNavError(fieldErrorText(e, sent) ?? errorText(e, t('common.navError')));
     } finally {
       setIsNavigating(false);
     }
@@ -238,29 +233,29 @@ export default function IdConfirmScreen() {
   // 인식 실패·지연 때 대체 경로: 사진 없이 직접 입력 (PUT /visa/profile)
   const manualLink = (
     <Pressable onPress={() => router.push('/onboarding/id-manual' as Href)} hitSlop={8}>
-      <Text style={styles.manualLink}>사진 없이 직접 입력하기</Text>
+      <Text style={styles.manualLink}>{t('onboarding.idConfirm.manualLink')}</Text>
     </Pressable>
   );
 
   // 카드 본문: 상태별로 다르게
   let body: ReactNode = null;
   if (documentId == null) {
-    body = <Text style={styles.stateText}>등록증을 먼저 촬영해 주세요.</Text>;
+    body = <Text style={styles.stateText}>{t('onboarding.idConfirm.captureFirst')}</Text>;
   } else if (phase === 'waiting') {
     body = (
       <View style={styles.stateBox}>
         <ActivityIndicator color={colors.primary} />
         <Text style={styles.stateText}>
-          {'등록증 정보를 읽고 있어요.\n최대 1분 정도 걸릴 수 있어요.'}
+          {t('onboarding.idConfirm.reading')}
         </Text>
       </View>
     );
   } else if (phase === 'timeout') {
     body = (
       <View style={styles.stateBox}>
-        <Text style={styles.stateText}>인식이 평소보다 오래 걸리고 있어요.</Text>
+        <Text style={styles.stateText}>{t('onboarding.idConfirm.slow')}</Text>
         <Pressable style={styles.stateBtn} onPress={retry}>
-          <Text style={styles.stateBtnText}>다시 확인하기</Text>
+          <Text style={styles.stateBtnText}>{t('onboarding.idConfirm.checkAgain')}</Text>
         </Pressable>
         {manualLink}
       </View>
@@ -269,7 +264,7 @@ export default function IdConfirmScreen() {
     body = (
       <View style={styles.stateBox}>
         <Text style={styles.stateText}>
-          {error ?? '등록증을 읽지 못했어요. 밝은 곳에서 빛 반사 없이 다시 촬영해 주세요.'}
+          {error ?? t('onboarding.idConfirm.readFailed')}
         </Text>
         {manualLink}
       </View>
@@ -277,19 +272,19 @@ export default function IdConfirmScreen() {
   } else if (expired) {
     body = (
       <View style={styles.stateBox}>
-        <Text style={styles.stateText}>{EXPIRED_BODY}</Text>
+        <Text style={styles.stateText}>{t('onboarding.idConfirm.expiredBody')}</Text>
         <Pressable style={styles.stateBtn} onPress={goRetake}>
-          <Text style={styles.stateBtnText}>{EXPIRED_BUTTON}</Text>
+          <Text style={styles.stateBtnText}>{t('onboarding.idConfirm.expiredButton')}</Text>
         </Pressable>
       </View>
     );
   } else if (isConfirmed) {
-    body = <Text style={styles.stateText}>이미 확인을 마친 등록증이에요.</Text>;
+    body = <Text style={styles.stateText}>{t('onboarding.idConfirm.alreadyConfirmed')}</Text>;
   } else if (values) {
     body = (
       <>
         <View style={styles.field}>
-          <Text style={styles.fieldLabel}>성명 (Full Name)</Text>
+          <Text style={styles.fieldLabel}>{t('onboarding.visaLabel.nameEn')}</Text>
           <FieldValue
             field={fieldOf('nameEn')}
             value={values.nameEn}
@@ -303,7 +298,7 @@ export default function IdConfirmScreen() {
         <View style={styles.divider} />
 
         <View style={styles.field}>
-          <Text style={styles.fieldLabel}>체류자격 (Visa Status)</Text>
+          <Text style={styles.fieldLabel}>{t('onboarding.visaLabel.visaType')}</Text>
           <FieldValue
             field={fieldOf('visaType')}
             value={values.visaType}
@@ -312,14 +307,14 @@ export default function IdConfirmScreen() {
             autoCapitalize="characters"
           />
           {/* 서버 등록 5개(E-9·E-7-4·H-2·D-2·F-2) 밖의 값이면 저장 전에 바로 안내 (예: OCR 이 D-8 로 읽음) */}
-          {visaUnsupported ? <Text style={styles.visaNotice}>{VISA_UNSUPPORTED_TEXT}</Text> : null}
+          {visaUnsupported ? <Text style={styles.visaNotice}>{visaUnsupportedText()}</Text> : null}
         </View>
 
         <View style={styles.divider} />
 
         <View style={styles.twoColRow}>
           <View style={styles.twoColCell}>
-            <Text style={styles.fieldLabel}>국적 (Nationality)</Text>
+            <Text style={styles.fieldLabel}>{t('onboarding.visaLabel.nationality')}</Text>
             <FieldValue
               field={fieldOf('nationality')}
               value={values.nationality}
@@ -329,7 +324,7 @@ export default function IdConfirmScreen() {
             />
           </View>
           <View style={styles.twoColCell}>
-            <Text style={styles.fieldLabel}>생년월일 (Birth)</Text>
+            <Text style={styles.fieldLabel}>{t('onboarding.visaLabel.birthDate')}</Text>
             <FieldValue
               field={fieldOf('birthDate')}
               value={values.birthDate}
@@ -344,11 +339,11 @@ export default function IdConfirmScreen() {
 
         <View style={styles.expiryBox}>
           <View style={styles.expiryRow}>
-            <Text style={styles.fieldLabel}>체류 만료일 (Expiry Date)</Text>
+            <Text style={styles.fieldLabel}>{t('onboarding.visaLabel.stayExpiry')}</Text>
             {daysLeft != null ? (
               <View style={styles.dBadge}>
                 <Text style={styles.dBadgeText}>
-                  {daysLeft < 0 ? '체류 기간이 지났어요' : `D-${daysLeft}일 남음`}
+                  {daysLeft < 0 ? t('onboarding.idConfirm.stayOver') : t('onboarding.idConfirm.daysLeft', { days: daysLeft })}
                 </Text>
               </View>
             ) : null}
@@ -362,7 +357,7 @@ export default function IdConfirmScreen() {
             isDate
           />
           {values.stayExpiry.trim() === '' ? (
-            <Text style={styles.hintText}>뒷면에 적힌 체류 만료일을 입력해 주세요.</Text>
+            <Text style={styles.hintText}>{t('onboarding.idConfirm.expiryHint')}</Text>
           ) : null}
         </View>
       </>
@@ -370,7 +365,12 @@ export default function IdConfirmScreen() {
   }
 
   // 사진 위 칩: 인식 중·실패일 때만 보여 준다. 인식이 끝나면(ready) 사진만 보이게 칩을 숨긴다
-  const bannerText = phase === 'ready' ? null : phase === 'waiting' ? '자동 인식 중...' : '자동 인식 실패';
+  const bannerText =
+    phase === 'ready'
+      ? null
+      : phase === 'waiting'
+        ? t('onboarding.idConfirm.bannerWaiting')
+        : t('onboarding.idConfirm.bannerFailed');
 
   const footer = (
     <View style={styles.footerInner}>
@@ -382,14 +382,14 @@ export default function IdConfirmScreen() {
           disabled={isNavigating}
         >
           <Ionicons name="refresh-outline" size={16} color={colors.text.strong} />
-          <Text style={styles.btnGrayText}>다시 촬영</Text>
+          <Text style={styles.btnGrayText}>{t('common.retake')}</Text>
         </Pressable>
         <Pressable
           style={[styles.btn, styles.btnBlue, !canConfirm && { opacity: 0.5 }]}
           onPress={handleConfirm}
           disabled={!canConfirm}
         >
-          <Text style={styles.btnBlueText}>{isNavigating ? '처리 중...' : '네, 맞아요'}</Text>
+          <Text style={styles.btnBlueText}>{isNavigating ? t('common.processing') : t('onboarding.idConfirm.yes')}</Text>
           {!isNavigating && <Ionicons name="arrow-forward" size={16} color={colors.text.inverse} />}
         </Pressable>
       </View>
@@ -398,18 +398,18 @@ export default function IdConfirmScreen() {
 
   // Screen 이 키보드 회피(KeyboardAvoidingView)·스크롤·하단 footer 를 공통으로 처리한다
   return (
-    <Screen title="체류 정보 확인" footer={footer} contentStyle={styles.content}>
+    <Screen title={t('onboarding.idConfirm.screenTitle')} footer={footer} contentStyle={styles.content}>
         <View style={styles.progressWrap}>
-          <OnboardingProgress current={stageOf('ID_DOCUMENT')} total={TOTAL_STAGES} sub="등록증 확인" />
+          <OnboardingProgress current={stageOf('ID_DOCUMENT')} total={TOTAL_STAGES} sub="idConfirm" />
         </View>
 
         <View style={styles.titleArea}>
           <View style={styles.subBadge}>
-            <Text style={styles.subBadgeText}>등록증 정보 확인</Text>
+            <Text style={styles.subBadgeText}>{t('onboarding.idConfirm.subBadge')}</Text>
           </View>
-          <Text style={styles.title}>인식된 정보가 맞나요?</Text>
+          <Text style={styles.title}>{t('onboarding.idConfirm.title')}</Text>
           <Text style={styles.subtitle}>
-            {'외국인등록증에서 추출한 정보입니다.\n실제 정보와 일치하는지 꼼꼼히 확인해 주세요.'}
+            {t('onboarding.idConfirm.subtitle')}
           </Text>
         </View>
 
@@ -429,11 +429,13 @@ export default function IdConfirmScreen() {
         <View style={styles.px}>
           <View style={styles.infoCard}>
             <View style={styles.cardHead}>
-              <Text style={styles.cardHeadTitle}>외국인등록증 (ARC)</Text>
+              <Text style={styles.cardHeadTitle}>{t('onboarding.idConfirm.cardTitle')}</Text>
               {phase === 'ready' && !isConfirmed ? (
                 <View style={[styles.okBadge, needsReviewCount > 0 && styles.warnBadge]}>
                   <Text style={[styles.okBadgeText, needsReviewCount > 0 && styles.warnBadgeText]}>
-                    {needsReviewCount > 0 ? `확인 필요 ${needsReviewCount}개` : '정상 인식'}
+                    {needsReviewCount > 0
+                      ? t('onboarding.idConfirm.needsReviewCount', { n: needsReviewCount })
+                      : t('onboarding.idConfirm.recognizedOk')}
                   </Text>
                 </View>
               ) : null}
@@ -498,13 +500,15 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingHorizontal: spacing.xl,
     paddingVertical: spacing.md,
+    gap: spacing.sm,
   },
-  cardHeadTitle: { ...typography.h3, color: colors.text.strong },
+  cardHeadTitle: { ...typography.h3, color: colors.text.strong, flexShrink: 1 },
   okBadge: {
     backgroundColor: colors.primarySoft,
     paddingHorizontal: spacing.sm,
     paddingVertical: 2,
     borderRadius: radius.full,
+    flexShrink: 0,
   },
   okBadgeText: { ...typography.badge, fontFamily: fonts.bold, color: colors.primary },
   warnBadge: { backgroundColor: colors.surface },
@@ -533,7 +537,7 @@ const styles = StyleSheet.create({
     paddingVertical: 2,
   },
   inputWarn: { borderBottomColor: colors.errorText },
-  reviewText: { ...typography.badge, fontFamily: fonts.bold, color: colors.errorText },
+  reviewText: { ...typography.badge, fontFamily: fonts.bold, color: colors.errorText, flexShrink: 0 },
   hintText: { ...typography.badge, color: colors.text.sub },
   visaNotice: { ...typography.badge, color: colors.errorText, marginTop: spacing.xs },
 
@@ -543,12 +547,13 @@ const styles = StyleSheet.create({
     padding: spacing.md,
     gap: 6,
   },
-  expiryRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
+  expiryRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', gap: spacing.sm },
   dBadge: {
     backgroundColor: colors.surface,
     paddingHorizontal: spacing.sm,
     paddingVertical: 2,
     borderRadius: radius.sm,
+    flexShrink: 0,
   },
   dBadgeText: { ...typography.badge, fontFamily: fonts.bold, color: colors.primary },
 
@@ -575,7 +580,7 @@ const styles = StyleSheet.create({
   },
   btnGray: { flex: 2, backgroundColor: colors.border },
   btnBlue: { flex: 3, backgroundColor: colors.primary },
-  btnGrayText: { ...typography.title, color: colors.text.strong },
-  btnBlueText: { ...typography.title, color: colors.text.inverse },
+  btnGrayText: { ...typography.title, color: colors.text.strong, flexShrink: 1 },
+  btnBlueText: { ...typography.title, color: colors.text.inverse, flexShrink: 1 },
   navError: { ...typography.body, color: colors.errorText, textAlign: 'center' },
 });

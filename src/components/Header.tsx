@@ -17,7 +17,9 @@ export default function Header({ title, showBack = true }: HeaderProps) {
         )}
       </View>
 
-      <Text style={styles.title}>{title}</Text>
+      <Text style={styles.title} numberOfLines={1}>
+        {title}
+      </Text>
 
       <View style={[styles.side, styles.right]}>
         {/* 앱인앱 닫기: SOL Global 홈(SG-000)으로 */}

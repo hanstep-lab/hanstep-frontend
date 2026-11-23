@@ -24,6 +24,8 @@ import {
 } from '../../api/mock/chat';
 import { createChatSession, streamChatMessage, type ChatCardBlock } from '../../api/chat';
 import { getMe } from '../../api/user';
+import i18n, { setAppLanguage } from '../../i18n';
+import { useTranslation } from 'react-i18next';
 import { getFxAlerts } from '../../api/fx';
 import { hasUnseenIds } from '../../utils/fxAlertStorage';
 import type { ApiError } from '../../types/api';
@@ -73,25 +75,41 @@ type ChatMessage = {
   suggestionsLabel?: string;
 };
 
+// 영어 화면 날짜용 (한국어 화면은 아래 함수의 한국어 형식 그대로)
+const EN_DAYS = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+const EN_MONTHS = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
+const isKo = () => i18n.language === 'ko';
+
+// 오전 9:05 / 9:05 AM
 function nowTime(): string {
   const d = new Date();
   const h = d.getHours();
   const m = String(d.getMinutes()).padStart(2, '0');
-  return `${h < 12 ? '오전' : '오후'} ${h % 12 || 12}:${m}`;
+  const ampm = i18n.t(h < 12 ? 'chat.am' : 'chat.pm');
+  return isKo() ? `${ampm} ${h % 12 || 12}:${m}` : `${h % 12 || 12}:${m} ${ampm}`;
 }
 
+// 2026년 11월 23일 / November 23, 2026
+function landingDate(d: Date): string {
+  return isKo()
+    ? `${d.getFullYear()}년 ${d.getMonth() + 1}월 ${d.getDate()}일`
+    : `${EN_MONTHS[d.getMonth()]} ${d.getDate()}, ${d.getFullYear()}`;
+}
+
+// 오늘 2026년 11월 23일 월요일 / Today, Monday, November 23, 2026
 function getTodayString(): string {
   const days = ['일요일', '월요일', '화요일', '수요일', '목요일', '금요일', '토요일'];
   const d = new Date();
-  return `오늘 ${d.getFullYear()}년 ${d.getMonth() + 1}월 ${d.getDate()}일 ${days[d.getDay()]}`;
+  const date = isKo() ? `${landingDate(d)} ${days[d.getDay()]}` : `${EN_DAYS[d.getDay()]}, ${landingDate(d)}`;
+  return i18n.t('chat.today', { date });
 }
 
 function getLandingDateString(): string {
-  const d = new Date();
-  return `${d.getFullYear()}년 ${d.getMonth() + 1}월 ${d.getDate()}일`;
+  return landingDate(new Date());
 }
 
 export default function ChatScreen() {
+  const { t } = useTranslation();
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [input, setInput] = useState('');
   const [showMenu, setShowMenu] = useState(false);
@@ -187,6 +205,7 @@ export default function ChatScreen() {
         if (cancelled) return;
         setUserName(me.shortName || null);
         setCardLang(cardLanguage(me.preferredLanguage));
+        setAppLanguage(me.preferredLanguage); // 앱을 채팅에서 다시 열었을 때도 사용자 언어로
       })
       .catch(() => {});
     return () => {
@@ -209,11 +228,11 @@ export default function ChatScreen() {
     <SafeAreaView style={styles.safe} edges={['top', 'bottom']}>
       <View style={styles.header}>
         <Pressable style={styles.headerLeft} onPress={() => setShowMenu(true)}>
-          <Text style={styles.headerTitle}>신한걸음</Text>
+          <Text style={styles.headerTitle}>{t('common.appName')}</Text>
           <Ionicons name="chevron-down" size={14} color={colors.text.strong} />
         </Pressable>
         <Pressable onPress={clearChat}>
-          <Text style={styles.newChatBtn}>새 대화</Text>
+          <Text style={styles.newChatBtn}>{t('chat.newChat')}</Text>
         </Pressable>
         <View style={styles.headerRight}>
           <Pressable>
@@ -270,7 +289,7 @@ export default function ChatScreen() {
             style={styles.textInput}
             value={input}
             onChangeText={setInput}
-            placeholder="메시지를 입력하세요"
+            placeholder={t('chat.inputPlaceholder')}
             placeholderTextColor={colors.text.sub}
             maxLength={2000} // 서버 제한 (CHT-04 content 최대 2000자)
             multiline
@@ -298,22 +317,23 @@ export default function ChatScreen() {
 }
 
 function LandingContent({ onSend, userName }: { onSend: (t: string) => void; userName: string | null }) {
-  const hello = userName ? `안녕하세요, ${userName}님.` : '안녕하세요.';
+  const { t } = useTranslation();
+  const hello = userName ? t('chat.helloName', { name: userName }) : t('chat.hello');
   return (
     <View style={landStyles.wrap}>
       <Text style={landStyles.date}>{getLandingDateString()}</Text>
       <Text style={landStyles.greeting}>
-        {`${hello}\n한국 생활과 금융, 무엇이 궁금하신가요?`}
+        {`${hello}\n${t('chat.landingAsk')}`}
       </Text>
-      <Text style={landStyles.sub}>아래 질문 확인해 보세요</Text>
+      <Text style={landStyles.sub}>{t('chat.landingSub')}</Text>
       <View style={landStyles.card}>
-        {LANDING_SUGGESTIONS.map((s, i) => (
+        {LANDING_SUGGESTIONS.map((key, i) => (
           <Pressable
-            key={s}
+            key={key}
             style={[landStyles.row, i < LANDING_SUGGESTIONS.length - 1 && landStyles.rowBorder]}
-            onPress={() => onSend(s)}
+            onPress={() => onSend(t(`chat.landing.${key}`))}
           >
-            <Text style={landStyles.rowText}>· {s}</Text>
+            <Text style={landStyles.rowText}>· {t(`chat.landing.${key}`)}</Text>
           </Pressable>
         ))}
       </View>
@@ -379,6 +399,7 @@ function MessageItem({
   userName: string | null;
   cardLang: CardLanguage;
 }) {
+  const { t } = useTranslation();
   if (msg.role === 'user') {
     return (
       <View style={msgStyles.userWrap}>
@@ -402,14 +423,14 @@ function MessageItem({
         <AnswerText text={msg.text} style={msgStyles.aiText} partial={msg.status !== 'done'} />
       ) : msg.status === 'streaming' ? (
         // 첫 글자가 오기 전까지
-        <Text style={msgStyles.pendingText}>답변을 준비하고 있어요…</Text>
+        <Text style={msgStyles.pendingText}>{t('chat.preparing')}</Text>
       ) : null}
       {msg.status === 'error' && (
         <View style={msgStyles.errorWrap}>
           <Text style={msgStyles.errorText}>{msg.errorMessage}</Text>
           <Pressable style={[msgStyles.sugChip, msgStyles.retryBtn]} onPress={() => onRetry(msg)}>
             <Ionicons name="refresh" size={12} color={colors.text.strong} style={msgStyles.chipIcon} />
-            <Text style={msgStyles.sugChipText}>다시 시도</Text>
+            <Text style={msgStyles.sugChipText}>{t('chat.retry')}</Text>
           </Pressable>
         </View>
       )}
@@ -444,6 +465,7 @@ function MenuSheet({
   userName: string | null; // '금융상품 추천' 설명에 넣는 이름 (users/me shortName)
 }) {
   // Modal 은 별도 창이라 화면의 SafeAreaView 하단 여백이 안 먹는다. 시트에 시스템 내비게이션 바 높이를 더한다
+  const { t } = useTranslation();
   const insets = useSafeAreaInsets();
   // 'SOL Global로 돌아가기' 줄: 구분선 아래 빈 영역의 세로 가운데에 둔다.
   // 영역 높이 = 예전(위 8 + 글자 줄 18 + 아래 8 + 시트 아래 4 + 시스템 내비게이션 바)의 2/3. 위아래 여백을 같게 나눈다
@@ -534,7 +556,7 @@ function MenuSheet({
           <View {...headPan.panHandlers}>
             <View style={menuStyles.handle} />
             <View style={menuStyles.sheetHead}>
-              <Text style={menuStyles.sheetTitle}>전체 메뉴</Text>
+              <Text style={menuStyles.sheetTitle}>{t('chat.menuTitle')}</Text>
               <Pressable onPress={sheet.close} style={menuStyles.closeBtn}>
                 <Ionicons name="close" size={20} color={colors.text.strong} />
               </Pressable>
@@ -546,25 +568,25 @@ function MenuSheet({
               .filter(group => group.items.length > 0)
               .map(group => (
               <View key={group.section} style={menuStyles.group}>
-                <Text style={menuStyles.groupTitle}>{group.section}</Text>
+                <Text style={menuStyles.groupTitle}>{t(`chat.menu.sections.${group.section}`)}</Text>
                 {group.items.map(item => (
                   <Pressable
-                    key={item.label}
+                    key={item.key}
                     style={menuStyles.menuRow}
                     onPress={() => handleItem(item.action)}
                   >
                     <View style={{ flex: 1 }}>
                       <View style={menuStyles.labelRow}>
-                        <Text style={menuStyles.menuLabel}>{item.label}</Text>
+                        <Text style={menuStyles.menuLabel}>{t(`chat.menu.items.${item.key}.label`)}</Text>
                         {item.action === 'fx_alert' && fxAlertDot && (
-                          <View style={menuStyles.dot} accessibilityLabel="확인하지 않은 도달 알림 있음" />
+                          <View style={menuStyles.dot} accessibilityLabel={t('chat.unseenAlert')} />
                         )}
                       </View>
-                      {item.desc ? (
-                        <Text style={menuStyles.menuDesc}>
-                          {typeof item.desc === 'function' ? item.desc(userName) : item.desc}
-                        </Text>
-                      ) : null}
+                      <Text style={menuStyles.menuDesc}>
+                        {item.key === 'products' && userName
+                          ? t('chat.menu.productsDescNamed', { name: userName })
+                          : t(`chat.menu.items.${item.key}.desc`)}
+                      </Text>
                     </View>
                     <Ionicons name="chevron-forward" size={16} color={colors.text.sub} />
                   </Pressable>
@@ -578,7 +600,7 @@ function MenuSheet({
                 router.replace('/'); // SOL Global 홈(SG-000)으로
               }}
             >
-              <Text style={menuStyles.solText}>SOL Global로 돌아가기</Text>
+              <Text style={menuStyles.solText}>{t('chat.backToSol')}</Text>
             </Pressable>
           </ScrollView>
         </Animated.View>
@@ -600,14 +622,14 @@ const styles = StyleSheet.create({
     borderBottomColor: colors.border,
   },
   headerLeft: { flex: 1, flexDirection: 'row', alignItems: 'center', gap: 4 },
-  headerTitle: { ...typography.h3, color: colors.text.strong },
+  headerTitle: { ...typography.h3, color: colors.text.strong, flexShrink: 1 },
   newChatBtn: {
     ...typography.body,
     fontFamily: fonts.bold,
     color: colors.primary,
     paddingHorizontal: spacing.sm,
   },
-  headerRight: { flexDirection: 'row', alignItems: 'center', gap: spacing.md },
+  headerRight: { flexDirection: 'row', alignItems: 'center', gap: spacing.md, flexShrink: 0 },
   avatar: {
     width: 32,
     height: 32,
@@ -739,7 +761,7 @@ const menuStyles = StyleSheet.create({
     paddingHorizontal: spacing.xl,
     paddingVertical: spacing.md,
   },
-  sheetTitle: { ...typography.h3, color: colors.text.strong },
+  sheetTitle: { ...typography.h3, color: colors.text.strong, flexShrink: 1 },
   closeBtn: {
     width: 32,
     height: 32,
@@ -763,7 +785,7 @@ const menuStyles = StyleSheet.create({
   },
   labelRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.xs },
   dot: { width: spacing.sm, height: spacing.sm, borderRadius: radius.full, backgroundColor: colors.primary },
-  menuLabel: { ...typography.h3, color: colors.text.strong },
+  menuLabel: { ...typography.h3, color: colors.text.strong, flexShrink: 1 },
   menuDesc: { ...typography.body, color: colors.text.sub },
   solRow: {
     marginHorizontal: spacing.xl,

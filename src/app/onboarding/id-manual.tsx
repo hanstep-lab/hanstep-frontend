@@ -4,6 +4,7 @@
 // 응답의 daysRemaining(D-day)은 이 화면에서 쓰지 않는다.
 
 import { useRef, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { View, Text, StyleSheet, TextInput } from 'react-native';
 import { router, type Href } from 'expo-router';
 import Screen from '../../components/Screen';
@@ -30,31 +31,29 @@ import type { VisaProfileFieldKey } from '../../types/api';
 // 칸 설정. 순서 = 화면 순서
 const FIELDS: {
   key: VisaProfileFieldKey;
-  label: string;
   placeholder: string;
-  hint?: string;
+  hint?: 'nationalityHint' | 'visaTypeHint'; // i18n onboarding.idManual.<hint>
   isDate?: boolean; // 숫자 키패드 + 하이픈 자동 입력
   maxLength?: number;
 }[] = [
   {
     key: 'nationality',
-    label: '국적 (Nationality)',
     placeholder: 'ABC',
-    hint: '여권에 적힌 영문 3자리 국가 코드 (예: PHL, VNM, CHN)',
+    hint: 'nationalityHint',
     maxLength: 3,
   },
-  { key: 'birthDate', label: '생년월일 (Birth)', placeholder: '1995-03-12', isDate: true },
+  { key: 'birthDate', placeholder: '1995-03-12', isDate: true },
   {
     key: 'visaType',
-    label: '체류자격 (Visa Status)',
     placeholder: 'E-9',
-    hint: `등록증에 적힌 대로 입력해 주세요. (${SUPPORTED_VISA_TYPES.join(', ')})`,
+    hint: 'visaTypeHint',
     maxLength: 10,
   },
-  { key: 'stayExpiry', label: '체류 만료일 (Expiry Date)', placeholder: 'YYYY-MM-DD', isDate: true },
+  { key: 'stayExpiry', placeholder: 'YYYY-MM-DD', isDate: true },
 ];
 
 export default function IdManualScreen() {
+  const { t } = useTranslation();
   const [values, setValues] = useState<VisaProfileValues>(EMPTY_VISA_PROFILE);
   const [errors, setErrors] = useState<VisaProfileErrors>({});
   const [navError, setNavError] = useState<string | null>(null);
@@ -96,7 +95,7 @@ export default function IdManualScreen() {
     } catch (e) {
       const fieldErrors = visaFieldErrorsFromApi(e);
       if (fieldErrors) setErrors(fieldErrors);
-      else setNavError(errorText(e, '저장하지 못했어요. 다시 시도해 주세요.'));
+      else setNavError(errorText(e, t('onboarding.idManual.saveError')));
     } finally {
       savingRef.current = false;
       setIsSaving(false);
@@ -107,7 +106,7 @@ export default function IdManualScreen() {
     <View style={styles.footerInner}>
       {navError ? <Text style={styles.navError}>{navError}</Text> : null}
       <Button
-        title={isSaving ? '저장 중...' : '저장하고 다음으로'}
+        title={isSaving ? t('onboarding.idManual.saving') : t('onboarding.idManual.saveNext')}
         onPress={handleSave}
         disabled={!canSave}
         showArrow={!isSaving}
@@ -116,17 +115,17 @@ export default function IdManualScreen() {
   );
 
   return (
-    <Screen title="사진 없이 직접 입력할게요" footer={footer}>
+    <Screen title={t('onboarding.idManual.screenTitle')} footer={footer}>
       {/* 촬영·확인을 대신하는 화면이라 세부 위치는 '등록증 확인' */}
-      <OnboardingProgress current={stageOf('ID_DOCUMENT')} total={TOTAL_STAGES} sub="등록증 확인" />
-      <Text style={styles.subtitle}>외국인등록증에 적힌 내용을 그대로 입력해 주세요.</Text>
+      <OnboardingProgress current={stageOf('ID_DOCUMENT')} total={TOTAL_STAGES} sub="idConfirm" />
+      <Text style={styles.subtitle}>{t('onboarding.idManual.subtitle')}</Text>
 
       <View style={styles.card}>
         {FIELDS.map((f, i) => {
           const error = errors[f.key];
           return (
             <View key={f.key} style={[styles.field, i > 0 && styles.fieldDivider]}>
-              <Text style={styles.label}>{f.label}</Text>
+              <Text style={styles.label}>{t(`onboarding.visaLabel.${f.key}`)}</Text>
               <TextInput
                 style={[styles.input, error != null && styles.inputError]}
                 value={values[f.key]}
@@ -142,7 +141,9 @@ export default function IdManualScreen() {
               {error != null ? (
                 <Text style={styles.errorText}>{error}</Text>
               ) : f.hint ? (
-                <Text style={styles.hint}>{f.hint}</Text>
+                <Text style={styles.hint}>
+                  {t(`onboarding.idManual.${f.hint}`, { types: SUPPORTED_VISA_TYPES.join(', ') })}
+                </Text>
               ) : null}
             </View>
           );

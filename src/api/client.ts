@@ -10,6 +10,7 @@ import { API_URL, ENTRY_TOKEN } from './config';
 import { entry } from './auth'; // auth.ts 도 client 를 import 하지만, entry 는 401 때 실행 시점에만 불러 순환 import 문제 없음
 import { useAuthStore } from '../store/authStore';
 import type { ApiError, ApiFieldError } from '../types/api';
+import i18n from '../i18n';
 
 const ENTRY_PATH = '/api/v1/auth/entry';
 
@@ -77,7 +78,7 @@ client.interceptors.response.use(
       : undefined;
     const apiError: ApiError = {
       code: data?.code ?? (error.response ? `HTTP_${error.response.status}` : noResponseCode(error)),
-      message: data?.message ?? error.message ?? '알 수 없는 오류가 발생했어요.',
+      message: data?.message ?? error.message ?? i18n.t('chat.error.unknown'),
       ...(fields && fields.length > 0 ? { fields } : {}),
     };
     return Promise.reject(apiError);

@@ -27,34 +27,34 @@ import {
   CHECK_TITLE,
   checkValue,
   REASON_TEXT,
-  REASON_FALLBACK,
   TIP_ORDER,
   TIP_LEVELS,
   TIP_MAX,
   TIPS,
   DEFAULT_TIP,
   ERROR_TEXT,
-  ERROR_FALLBACK,
   type BadgeTone,
 } from '../../constants/altCredit';
 import { getAltAssessment, type AltCreditAssessment, type AltCreditErrorCode } from '../../api/altCredit';
 import { getMe } from '../../api/user';
 import { getGlobalLoan, type GlobalLoan } from '../../api/credit';
-import { fmtNumber } from '../../utils/format';
+import { fmtNumber, fmtWon } from '../../utils/format';
+import { isKoreanUi } from '../../i18n';
 import type { ApiError } from '../../types/api';
 
 type Loaded = { alt: AltCreditAssessment; name: string; loan: GlobalLoan | null };
 
 
-// 원 → 만 원 표시. 만 원 미만은 버린다. 6,234,567 → "623만 원", 30,000,000 → "3,000만 원"
-const fmtManWon = (won: number) => `${fmtNumber(Math.floor(won / 10000))}만 원`;
+// 원 → 만 원 표시. 만 원 미만은 버린다. 6,234,567 → "623만 원", 30,000,000 → "3,000만 원" (영어 화면은 ₩6,230,000)
+const fmtManWon = (won: number) =>
+  isKoreanUi() ? `${fmtNumber(Math.floor(won / 10000))}만 원` : fmtWon(Math.floor(won / 10000) * 10000);
 
 // 오류 코드 → 안내 문구. 표에 없는 코드(404·401 등)는 기본 문구
 function errorText(code: string | undefined): string {
   if (code && Object.prototype.hasOwnProperty.call(ERROR_TEXT, code)) {
     return ERROR_TEXT[code as AltCreditErrorCode];
   }
-  return ERROR_FALLBACK;
+  return T.errorFallback;
 }
 
 // 작은 둥근 배지 (등급, 가입 조건 충족 여부)
@@ -197,7 +197,7 @@ export default function AltCreditScreen() {
   const tips = tipKeys.length > 0 ? tipKeys.map((key) => TIPS[key]) : [DEFAULT_TIP];
 
   const eligible = alt.decision === 'ELIGIBLE';
-  const reason = (alt.reasonCode && REASON_TEXT[alt.reasonCode]) || REASON_FALLBACK;
+  const reason = (alt.reasonCode && REASON_TEXT[alt.reasonCode]) || T.reasonFallback;
 
   return (
     <Screen>
@@ -205,7 +205,11 @@ export default function AltCreditScreen() {
       <View style={s.intro}>
         <StepBadge label={T.badge} />
         <ScreenTitle
-          title={`${name}님의 대안신용 점수는 ${fmtNumber(alt.score)}점이에요`}
+          title={
+            isKoreanUi()
+              ? `${name}님의 대안신용 점수는 ${fmtNumber(alt.score)}점이에요`
+              : `${name}'s alternative credit score is ${fmtNumber(alt.score)}`
+          }
           description={T.description}
         />
       </View>
@@ -217,7 +221,16 @@ export default function AltCreditScreen() {
             <Text style={s.score}>{fmtNumber(alt.score)}</Text>
             <Text style={s.scoreMax}> / {T.scoreMax}</Text>
           </View>
-          {band && <Pill label={`${fmtNumber(band.min)}~${fmtNumber(band.max)}점`} type="step" />}
+          {band && (
+            <Pill
+              label={
+                isKoreanUi()
+                  ? `${fmtNumber(band.min)}~${fmtNumber(band.max)}점`
+                  : `${fmtNumber(band.min)}–${fmtNumber(band.max)} pts`
+              }
+              type="step"
+            />
+          )}
         </View>
 
         {bandFill != null && (
@@ -296,7 +309,10 @@ export default function AltCreditScreen() {
                 label={T.limitLabel}
                 value={`${fmtManWon(alt.minLimit)} ~ ${fmtManWon(alt.maxLimit)}`}
               />
-              <TermRow label={T.termLabel} value={`${alt.loanTermMonths}개월`} />
+              <TermRow
+                label={T.termLabel}
+                value={isKoreanUi() ? `${alt.loanTermMonths}개월` : `${alt.loanTermMonths} months`}
+              />
             </View>
           ) : (
             <View style={s.unmetBox}>
@@ -391,12 +407,12 @@ const s = StyleSheet.create({
   loanName: { ...typography.h3, color: colors.text.strong },
   terms: { gap: spacing.sm },
   termRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', gap: spacing.md },
-  termLabel: { ...typography.body, color: colors.text.sub },
+  termLabel: { ...typography.body, color: colors.text.sub, flexShrink: 1 },
   termValue: { ...typography.body, fontFamily: fonts.bold, color: colors.text.strong, flexShrink: 1, textAlign: 'right' },
   checks: { gap: spacing.sm },
   checkRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
   checkTitle: { ...typography.body, color: colors.text.strong, flex: 1 },
-  checkValue: { ...typography.caption, color: colors.text.sub },
+  checkValue: { ...typography.caption, color: colors.text.sub, flexShrink: 0 },
   unmetBox: { gap: 2 },
   unmetTitle: { ...typography.body, fontFamily: fonts.bold, color: colors.required.text },
 

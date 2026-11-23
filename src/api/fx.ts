@@ -15,6 +15,7 @@ import {
   type MockAlertCurrency,
 } from './mock/fx';
 import { fmtRate } from '../utils/format';
+import i18n from '../i18n';
 import type {
   ApiError,
   FxAlertCreateRequest,
@@ -40,18 +41,13 @@ import type {
 // ---------------------------------------------------------------------------
 export type { FxPeriod };
 
-// 기간 탭(label)과 평균표(tableLabel) 이름. 서버 period 값(1M·3M·6M·1Y)과 같은 key
-const PERIOD_TEXT: Record<FxPeriod, { label: string; tableLabel: string }> = {
-  '1M': { label: '1개월', tableLabel: '1개월' },
-  '3M': { label: '3개월', tableLabel: '3개월(분기)' },
-  '6M': { label: '6개월', tableLabel: '6개월(반기)' },
-  '1Y': { label: '1년', tableLabel: '1년' },
-};
+// 서버 period 값(1M·3M·6M·1Y). 기간 탭(label)과 평균표(tableLabel) 이름은 i18n fx.period.<period>
+const PERIOD_KEYS: FxPeriod[] = ['1M', '3M', '6M', '1Y'];
+export const fxPeriodLabel = (p: FxPeriod) => i18n.t(`fx.period.${p}.label`);
+const periodTableLabel = (p: FxPeriod) =>
+  PERIOD_KEYS.includes(p) ? i18n.t(`fx.period.${p}.tableLabel`) : p;
 
-export const FX_PERIODS = (Object.keys(PERIOD_TEXT) as FxPeriod[]).map((key) => ({
-  key,
-  label: PERIOD_TEXT[key].label,
-}));
+export const FX_PERIODS = PERIOD_KEYS.map((key) => ({ key }));
 
 // 처음 고르는 통화
 export const FX_FIRST_CURRENCY = 'PHP';
@@ -64,25 +60,21 @@ const chipRank = (code: string) => {
   return i === -1 ? CHIP_ORDER.length : i;
 };
 
-// 통화 이름. 없는 통화는 코드만 보여 준다
-const CURRENCY_NAME: Record<string, string> = { PHP: '필리핀', USD: '미국' };
-const QUOTE_NAME = '대한민국 KRW';
+// 통화 이름 (i18n cards.currencyName, 채팅 환율 카드와 같은 문구). 없는 통화는 이름 없이 코드만 보여 준다
+const NAMED_CURRENCIES = ['PHP', 'USD'] as const;
 
 // 평균 표시 자릿수. 서버 평균은 소수 4자리라 화면 표시만 그 통화 환율 자릿수에 맞춘다
 // (PHP 는 ECB 참고값이 소수 3자리, USD 는 수출입은행 고시가 소수 2자리). 없는 통화는 2자리
 export const AVG_DECIMALS: Record<string, number> = { PHP: 3, USD: 2 };
 
-const INSUFFICIENT_TEXT = '데이터 부족';
+// 안내 코드 → 문구 (i18n fx.referenceOnly). 모르는 코드는 보여 주지 않는다
+const noticeText = (code: string): string | null => (code === 'REFERENCE_RATE_ONLY' ? i18n.t('fx.referenceOnly') : null);
+export const fxStaleText = () => i18n.t('fx.stale');
 
-const NOTICE_TEXT: Record<string, string> = {
-  REFERENCE_RATE_ONLY: '참고 환율이에요. 실제 송금 환율은 은행·송금 방식에 따라 달라요.',
-};
-export const FX_STALE_TEXT = '최신 값이 아닐 수 있어요';
-
-const AVERAGE_NOTE = '구간 평균 = 해당 기간 영업일 일별 고시값 평균';
+// 한국어 요약 문장 꼬리 (summaryText 는 한국어 문법으로 조립해서 한국어 화면에서만 쓴다)
 const SUMMARY_TAIL = '(과거 평균 비교이며 예측이 아니에요)';
 
-export const FX_LOAD_ERROR = '환율 정보를 불러오지 못했어요. 잠시 후 다시 시도해 주세요.';
+export const fxLoadError = () => i18n.t('fx.loadError');
 
 // 화면 색·화살표용. UP 빨강 / DOWN 파랑 / FLAT 기본색
 export type FxTrend = 'UP' | 'DOWN' | 'FLAT';
@@ -126,7 +118,11 @@ export type FxHistory = {
   avgText: string; // 반올림한 평균 또는 "데이터 부족"
 };
 
-const currencyName = (code: string) => CURRENCY_NAME[code] ?? '';
+export const fxCurrencyName = (code: string) =>
+  (NAMED_CURRENCIES as readonly string[]).includes(code)
+    ? i18n.t(`cards.currencyName.${code as (typeof NAMED_CURRENCIES)[number]}`)
+    : '';
+const currencyName = fxCurrencyName;
 const withName = (code: string) => (currencyName(code) ? `${currencyName(code)} ${code}` : code);
 
 // 표시용 반올림: 서버 환율·평균(소수 4자리까지)을 통화별 자릿수(AVG_DECIMALS)로 맞춰 "1,420.58" 처럼 만든다.
@@ -140,7 +136,7 @@ export function fmtFxRateByCurrency(n: number, currency: string): string {
 }
 
 function fmtAvg(avg: number | null, currency: string): string {
-  if (avg === null) return INSUFFICIENT_TEXT;
+  if (avg === null) return i18n.t('fx.insufficient');
   return fmtFxRateByCurrency(avg, currency);
 }
 
@@ -159,12 +155,43 @@ export function changeTrend(change: number | null): FxTrend | null {
   return 'FLAT';
 }
 
+// 영어 요약 문장. 한국어(summaryText)와 같은 규칙(서버 direction 만 보고 고름, 데이터 부족 구간은 뺌)
+const EN_PERIOD: Record<FxPeriod, string> = { '1M': '1-month', '3M': '3-month', '6M': '6-month', '1Y': '1-year' };
+const joinEn = (items: string[]) =>
+  items.length <= 1 ? items.join('') : `${items.slice(0, -1).join(', ')} and ${items[items.length - 1]}`;
+
+function summaryTextEn(averages: FxPeriodAverage[]): string {
+  const tail = '(Compared with past averages, not a forecast)';
+  const namesOf = (list: FxPeriodAverage[]) => list.map((a) => EN_PERIOD[a.period] ?? a.period);
+  const valid = averages.filter((a) => a.direction !== null);
+  const lacking = namesOf(averages.filter((a) => a.direction === null));
+  const lackText = lacking.length ? ` ${joinEn(lacking)}: not enough data, left out of the comparison.` : '';
+  if (valid.length === 0) return `Not enough data yet to compare with period averages. ${tail}`;
+
+  const groups = [
+    { dir: 'HIGHER' as const, phrase: 'higher than' },
+    { dir: 'LOWER' as const, phrase: 'lower than' },
+    { dir: 'SAME' as const, phrase: 'about the same as' },
+  ]
+    .map((g) => ({ ...g, names: namesOf(averages.filter((a) => a.direction === g.dir)) }))
+    .filter((g) => g.names.length > 0);
+
+  const part = (g: (typeof groups)[number]) =>
+    `${g.phrase} the ${joinEn(g.names)} average${g.names.length > 1 ? 's' : ''}`;
+  const body =
+    groups.length === 1 && groups[0].names.length === FX_PERIODS.length
+      ? `${groups[0].phrase} all four period averages`
+      : groups.map(part).join(', and ');
+  return `The current rate is ${body}.${lackText} ${tail}`;
+}
+
 // 요약 문장: 서버 direction 만 보고 고른다 (숫자 계산 없음). 데이터 부족 구간은 비교에서 뺀다
 function summaryText(averages: FxPeriodAverage[]): string {
+  if (i18n.language !== 'ko') return summaryTextEn(averages);
   const labelsOf = (dir: FxDirection) =>
-    averages.filter((a) => a.direction === dir).map((a) => PERIOD_TEXT[a.period].label);
+    averages.filter((a) => a.direction === dir).map((a) => fxPeriodLabel(a.period));
   const valid = averages.filter((a) => a.direction !== null);
-  const lacking = averages.filter((a) => a.direction === null).map((a) => PERIOD_TEXT[a.period].label);
+  const lacking = averages.filter((a) => a.direction === null).map((a) => fxPeriodLabel(a.period));
   const lackText = lacking.length ? ` ${lacking.join('·')}은 데이터가 부족해 비교에서 뺐어요.` : '';
 
   if (valid.length === 0) return `기간 평균과 비교할 데이터가 아직 부족해요. ${SUMMARY_TAIL}`;
@@ -191,11 +218,11 @@ function summaryText(averages: FxPeriodAverage[]): string {
 }
 
 function toFxRate(r: FxRateDetailResponse): FxRate {
-  const notices = r.notices.map((n) => NOTICE_TEXT[n]).filter((t): t is string => Boolean(t));
-  if (r.stale) notices.push(FX_STALE_TEXT);
+  const notices = r.notices.map(noticeText).filter((t): t is string => Boolean(t));
+  if (r.stale) notices.push(fxStaleText());
   return {
     currency: r.currency,
-    pairText: `${withName(r.currency)} / ${QUOTE_NAME}`,
+    pairText: `${withName(r.currency)} / ${i18n.t('fx.quoteName')}`,
     sourceLabel: r.sourceLabel,
     rate: r.rate,
     change: r.change,
@@ -206,10 +233,10 @@ function toFxRate(r: FxRateDetailResponse): FxRate {
     receiveRate: r.receiveRate,
     notices,
     summaryText: summaryText(r.periodAverages),
-    averageNote: AVERAGE_NOTE,
+    averageNote: i18n.t('fx.averageNote'),
     periodAverages: r.periodAverages.map((a) => ({
       period: a.period,
-      label: PERIOD_TEXT[a.period]?.tableLabel ?? a.period,
+      label: periodTableLabel(a.period),
       avgText: fmtAvg(a.avg, r.currency),
       diffRateText: fmtDiffRate(a.diffRate),
       trend: a.direction ? DIRECTION_TREND[a.direction] : null,
@@ -275,7 +302,8 @@ const ALERT_RATE_TYPE: FxRateType = 'BASE';
 // 통화별 슬라이더·+/- 한 칸 크기
 const ALERT_STEP: Record<AlertCurrency, number> = { PHP: 0.05, USD: 1 };
 
-export const COMPARATOR_TEXT: Record<FxComparator, string> = { GTE: '이상', LTE: '이하' };
+// 이상(GTE)·이하(LTE) 문구 (i18n fx.comparator)
+export const comparatorText = (c: FxComparator) => i18n.t(`fx.comparator.${c}`);
 
 // 목표가 현재보다 높으면 이상(GTE), 아니면 이하(LTE). 같은 값은 화면에서 등록을 막는다
 export const comparatorFor = (target: number, currentRate: number): FxComparator =>
@@ -320,7 +348,7 @@ function alertPresets(rate: number, low: number, step: number): FxAlertPreset[] 
   const toStep = (n: number) => Number((Math.round(n / step) * step).toFixed(decimalsOf(step)));
   return [
     ...[1, 3, 5].map((p) => ({ key: `-${p}%`, label: `-${p}%`, value: toStep(rate * (1 - p / 100)) })),
-    { key: 'low', label: '최저점', value: low },
+    { key: 'low', label: i18n.t('fx.presetLow'), value: low },
   ];
 }
 
@@ -384,12 +412,19 @@ function toFxAlert(a: FxAlertResponse): FxAlert {
   const triggered = a.status === 'TRIGGERED';
   const when = triggered && a.triggeredAt ? fmtDateTime(a.triggeredAt) : null;
   const reached =
-    a.triggeredRate !== null ? `${fmtRate(a.triggeredRate)} KRW에 도달했어요` : '목표 환율에 도달했어요';
+    a.triggeredRate !== null
+      ? i18n.t('fx.reachedRate', { rate: fmtRate(a.triggeredRate) })
+      : i18n.t('fx.reached');
   return {
     alertId: a.alertId,
     currency: a.currency,
     status: triggered ? 'TRIGGERED' : 'ACTIVE',
-    targetText: `목표: ${unit} ${a.currency} = ${fmtRate(a.targetRate)} KRW ${COMPARATOR_TEXT[a.comparator]}`,
+    targetText: i18n.t('fx.targetText', {
+      unit,
+      currency: a.currency,
+      rate: fmtRate(a.targetRate),
+      cmp: comparatorText(a.comparator),
+    }),
     triggeredText: triggered ? (when ? `${when} · ${reached}` : reached) : null,
   };
 }
@@ -425,9 +460,9 @@ const fmtMonthDay = (iso: string) => `${iso.slice(5, 7)}/${iso.slice(8, 10)}`;
 
 // "20.48원 (목표 20.50원 이하 · 11/19)"
 function reachedText(a: FxAlertResponse): string {
-  const rate = a.triggeredRate !== null ? `${fmtRate(a.triggeredRate)}원 ` : '';
+  const rate = a.triggeredRate !== null ? i18n.t('fx.noticeRate', { rate: fmtRate(a.triggeredRate) }) : '';
   const date = a.triggeredAt ? ` · ${fmtMonthDay(a.triggeredAt)}` : '';
-  return `${rate}(목표 ${fmtRate(a.targetRate)}원 ${COMPARATOR_TEXT[a.comparator]}${date})`;
+  return `${rate}${i18n.t('fx.noticeTarget', { target: fmtRate(a.targetRate), cmp: comparatorText(a.comparator), date })}`;
 }
 
 // 1건: "PHP 목표 환율 도달 · 20.48원 (목표 20.50원 이하 · 11/19)"
@@ -435,10 +470,10 @@ function reachedText(a: FxAlertResponse): string {
 export function toFxAlertNotice(alerts: FxAlertResponse[]): FxAlertNotice {
   if (alerts.length === 1) {
     const a = alerts[0];
-    return { title: '목표 환율 알림', body: `${a.currency} 목표 환율 도달 · ${reachedText(a)}` };
+    return { title: i18n.t('fx.noticeTitle'), body: i18n.t('fx.noticeBody', { currency: a.currency, text: reachedText(a) }) };
   }
   return {
-    title: `목표 환율 알림 ${alerts.length}건 도달`,
+    title: i18n.t('fx.noticeTitleMany', { n: alerts.length }),
     body: alerts.map((a) => `${a.currency} ${reachedText(a)}`).join('\n'),
   };
 }
@@ -486,28 +521,33 @@ export function createErrorText(
   switch (e.code) {
     case 'DUPLICATE_REQUEST':
       return {
-        title: '이미 등록된 알림이 있어요',
-        message: `${currency} ${COMPARATOR_TEXT[comparator]} 알림이 이미 있어요. 목록에서 기존 알림을 삭제한 뒤 다시 등록해 주세요.`,
+        title: i18n.t('fx.error.duplicateTitle'),
+        message: i18n.t('fx.error.duplicate', { currency, cmp: comparatorText(comparator) }),
       };
     case 'VALIDATION_ERROR':
-      return { title: '등록하지 못했어요', message: '목표 환율을 다시 확인해 주세요.' };
+      return { title: i18n.t('fx.error.createTitle'), message: i18n.t('fx.error.checkTarget') };
     case 'FX_RATE_NOT_FOUND':
       return {
-        title: '등록하지 못했어요',
-        message: '이 통화의 환율 정보가 아직 없어요. 잠시 후 다시 시도해 주세요.',
+        title: i18n.t('fx.error.createTitle'),
+        message: i18n.t('fx.error.noRate'),
       };
     default:
-      return { title: '등록하지 못했어요', message: '잠시 후 다시 시도해 주세요.' };
+      return { title: i18n.t('fx.error.createTitle'), message: i18n.t('common.retryLater') };
   }
 }
 
 // 삭제 실패 문구. RESOURCE_NOT_FOUND 는 이미 없는 알림이라 문구 없이 목록만 새로 불러온다(null)
 export function deleteErrorText(e: ApiError): FxAlertErrorText | null {
   if (e.code === 'RESOURCE_NOT_FOUND') return null;
-  return { title: '삭제하지 못했어요', message: '잠시 후 다시 시도해 주세요.' };
+  return { title: i18n.t('fx.error.deleteTitle'), message: i18n.t('common.retryLater') };
 }
 
+// 읽을 때마다 지금 언어 문구 (getter)
 export const FX_ALERT_LOAD_ERROR = {
-  setup: '환율 정보를 불러오지 못했어요. 잠시 후 다시 시도해 주세요.',
-  list: '알림 목록을 불러오지 못했어요.',
+  get setup() {
+    return i18n.t('fx.loadError');
+  },
+  get list() {
+    return i18n.t('fx.error.list');
+  },
 };

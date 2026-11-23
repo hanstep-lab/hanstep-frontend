@@ -14,37 +14,43 @@ import { Skeleton, SkeletonCard, SkeletonGroup } from '../../components/Skeleton
 import {
   LOAN_TEXT as T,
   LIMIT_REASON_TEXT,
-  LIMIT_REASON_FALLBACK,
   INCOME_SOURCE_TEXT,
   LOAN_ERROR_TEXT,
-  LOAN_ERROR_FALLBACK,
 } from '../../constants/credit';
 import { getGlobalLoan, type GlobalLoan } from '../../api/credit';
 import { fmtDate, fmtWon } from '../../utils/format';
+import { isKoreanUi } from '../../i18n';
 import type { ApiError, SolGlobalLoanLimitEstimate } from '../../types/api';
 
 // 오류 코드 → 안내 문구. 서버 메시지는 쓰지 않는다
 function errorText(code: string | undefined): string {
   if (code && Object.prototype.hasOwnProperty.call(LOAN_ERROR_TEXT, code)) return LOAN_ERROR_TEXT[code];
-  return LOAN_ERROR_FALLBACK;
+  return T.errorFallback;
 }
 
 // 모의 한도 기준 한 줄: "2025년 소득 · 최대 10개월(2027.09.30 만기) 기준". 없는 값은 그 부분만 뺀다
+// (영어 화면: "Based on 2025 income · up to 10 months (matures 2027.09.30)")
 function basisLine(e: SolGlobalLoanLimitEstimate): string | null {
+  const ko = isKoreanUi();
   const income =
     e.incomeSource === 'INCOME_RECORD'
       ? e.incomeYear != null
-        ? `${e.incomeYear}년 소득`
+        ? ko
+          ? `${e.incomeYear}년 소득`
+          : `${e.incomeYear} income`
         : null
       : e.incomeSource === 'CONTRACT_SALARY'
         ? INCOME_SOURCE_TEXT.CONTRACT_SALARY
         : null;
   const term =
     e.maxTermMonths != null
-      ? `최대 ${e.maxTermMonths}개월${e.latestMaturityOn ? `(${fmtDate(e.latestMaturityOn)} 만기)` : ''}`
+      ? ko
+        ? `최대 ${e.maxTermMonths}개월${e.latestMaturityOn ? `(${fmtDate(e.latestMaturityOn)} 만기)` : ''}`
+        : `up to ${e.maxTermMonths} months${e.latestMaturityOn ? ` (matures ${fmtDate(e.latestMaturityOn)})` : ''}`
       : null;
   const parts = [income, term].filter((p): p is string => p != null);
-  return parts.length > 0 ? `${parts.join(' · ')} 기준` : null;
+  if (parts.length === 0) return null;
+  return ko ? `${parts.join(' · ')} 기준` : `Based on ${parts.join(' · ')}`;
 }
 
 export default function GlobalLoanScreen() {
@@ -80,7 +86,7 @@ export default function GlobalLoanScreen() {
   const estimated = limitEstimate?.estimatedLimit ?? null;
   const basis = limitEstimate ? basisLine(limitEstimate) : null;
   const reason =
-    (limitEstimate?.reasonCode && LIMIT_REASON_TEXT[limitEstimate.reasonCode]) || LIMIT_REASON_FALLBACK;
+    (limitEstimate?.reasonCode && LIMIT_REASON_TEXT[limitEstimate.reasonCode]) || T.limitReasonFallback;
 
   return (
     <Screen
@@ -217,7 +223,7 @@ const s = StyleSheet.create({
     paddingVertical: spacing.md,
   },
   termDivider: { borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: colors.border },
-  termLabel: { ...typography.body, color: colors.text.sub },
+  termLabel: { ...typography.body, color: colors.text.sub, flexShrink: 1 },
   termValue: { ...typography.body, fontFamily: fonts.bold, color: colors.text.strong, flexShrink: 1, textAlign: 'right' },
 
   // 모의 한도 카드 (Figma 447:67)

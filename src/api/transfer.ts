@@ -7,6 +7,7 @@ import { USE_MOCK, mockDelay } from './config';
 import { MOCK_TRANSFER_CONTEXT, mockQuote, mockSubmit } from './mock/transfer';
 import { fmtNumber } from '../utils/format';
 import { errorText } from '../utils/errorText';
+import i18n, { isKoreanUi } from '../i18n';
 import type {
   ApiError,
   RemittanceProduct,
@@ -54,11 +55,16 @@ export async function submitTransfer(
 
 // ── 화면용 문구 ─────────────────────────────────────────
 
-const PRODUCT_LABEL: Record<RemittanceProduct, string> = {
-  SOL_EASY: '쏠편한 해외송금',
-  SOL_FAST: '쏠빠른 해외송금',
-};
-export const productLabel = (product: RemittanceProduct) => PRODUCT_LABEL[product] ?? product;
+// 송금 상품 이름 (i18n transfer.product)
+const PRODUCTS: readonly RemittanceProduct[] = ['SOL_EASY', 'SOL_FAST'];
+export const productLabel = (product: RemittanceProduct) =>
+  PRODUCTS.includes(product) ? i18n.t(`transfer.product.${product}`) : product;
+
+// 받는 분 국가명. 서버 country 는 한국어("필리핀")라 영어 화면은 countryCode 로 영어 이름을 쓴다.
+// 표에 없는 코드는 서버 값 그대로 (한국어 화면은 항상 서버 값)
+const COUNTRY_EN: Record<string, string> = { PH: 'Philippines', VN: 'Vietnam', CN: 'China', US: 'United States' };
+export const recipientCountry = (r: Pick<TransferRecipient, 'country' | 'countryCode'>) =>
+  (!isKoreanUi() && COUNTRY_EN[r.countryCode]) || r.country;
 
 // 기본 상품(defaultProduct) 견적. receiveAmount 와 적용 송금 환율은 이 상품 기준
 export const defaultQuoteOf = (quote: TransferQuote): RemittanceProductQuote | null =>
@@ -67,37 +73,38 @@ export const defaultQuoteOf = (quote: TransferQuote): RemittanceProductQuote | n
 // 기본 상품으로 이 금액을 보낼 수 있는지
 export const canSendQuote = (quote: TransferQuote) => defaultQuoteOf(quote)?.available === true;
 
-// 보낼 수 없는 이유 (quotes[].unavailableReason)
-const UNAVAILABLE_TEXT: Record<NonNullable<RemittanceProductQuote['unavailableReason']>, string> = {
-  AMOUNT_TOO_SMALL: '금액이 너무 작아 보낼 수 없어요. 수수료를 빼면 보낼 금액이 남지 않아요.',
-  LIMIT_EXCEEDED: '한 번에 보낼 수 있는 금액을 넘었어요.',
-  FEE_TABLE_UNAVAILABLE: '지금은 수수료 정보를 확인할 수 없어 보낼 수 없어요.',
-};
+// 보낼 수 없는 이유 (quotes[].unavailableReason, i18n transfer.unavailable)
+type UnavailableReason = NonNullable<RemittanceProductQuote['unavailableReason']>;
+const UNAVAILABLE_REASONS: readonly UnavailableReason[] = ['AMOUNT_TOO_SMALL', 'LIMIT_EXCEEDED', 'FEE_TABLE_UNAVAILABLE'];
+const unavailableText = (r: UnavailableReason | null | undefined) =>
+  r && UNAVAILABLE_REASONS.includes(r) ? i18n.t(`transfer.unavailable.${r}`) : null;
 
-// 참고값 안내 (referenceNotice)
-const REFERENCE_NOTICE_TEXT: Record<string, string> = {
-  LOCAL_PAYOUT_RATE_DIFFERS: '받는 페소 금액은 참고값이에요. 실제로는 필리핀 은행·취급점 환율로 바뀌어요.',
-  PHP_REF_RATE_UNAVAILABLE: '참고 환율을 불러오지 못해 받는 페소 금액을 보여 드릴 수 없어요.',
-};
+// 참고값 안내 (referenceNotice, i18n transfer.reference)
+const REFERENCE_NOTICES = ['LOCAL_PAYOUT_RATE_DIFFERS', 'PHP_REF_RATE_UNAVAILABLE'] as const;
+const referenceNoticeText = (code: string) =>
+  (REFERENCE_NOTICES as readonly string[]).includes(code)
+    ? i18n.t(`transfer.reference.${code as (typeof REFERENCE_NOTICES)[number]}`)
+    : null;
 
 // 견적 아래 안내 문구. 보낼 수 없으면 그 이유만, 아니면 USD 상한 안내와 참고값 안내
 export function quoteNoticeText(quote: TransferQuote): string | null {
   const main = defaultQuoteOf(quote);
   if (main && !main.available) {
-    return (main.unavailableReason && UNAVAILABLE_TEXT[main.unavailableReason]) || '이 금액으로는 보낼 수 없어요.';
+    return unavailableText(main.unavailableReason) || i18n.t('transfer.cannotSend');
   }
   const lines: string[] = [];
   if (main?.notices.includes('AMOUNT_CAPPED_AT_FEE_BOUNDARY') && main.unusedKrw) {
-    lines.push(`수수료 기준(USD 5,000)에 맞춰 USD 5,000.00까지만 보내고, ${fmtNumber(main.unusedKrw)}원은 출금하지 않아요.`);
+    lines.push(i18n.t('transfer.capped', { amount: fmtNumber(main.unusedKrw) }));
   }
   if (!quote.receiveAmount) {
     lines.push(
       quote.referenceNotice === 'PHP_REF_RATE_UNAVAILABLE'
-        ? REFERENCE_NOTICE_TEXT.PHP_REF_RATE_UNAVAILABLE
-        : '참고 환율을 불러오지 못했어요.',
+        ? i18n.t('transfer.reference.PHP_REF_RATE_UNAVAILABLE')
+        : i18n.t('transfer.refRateFailed'),
     );
-  } else if (REFERENCE_NOTICE_TEXT[quote.referenceNotice]) {
-    lines.push(REFERENCE_NOTICE_TEXT[quote.referenceNotice]);
+  } else {
+    const ref = referenceNoticeText(quote.referenceNotice);
+    if (ref) lines.push(ref);
   }
   return lines.length ? lines.join('\n') : null;
 }
@@ -105,10 +112,10 @@ export function quoteNoticeText(quote: TransferQuote): string | null {
 // ── 오류 문구 ─────────────────────────────────────────
 // 서버 message 는 사용자 언어(예: Reyes 는 vi)로 와서 아는 code 는 한국어 문구를 고른다(utils/errorText 관례).
 // 여기 없는 code 는 공통 errorText(네트워크·401·5xx 등)로 넘기고, 그래도 없으면 fallback 문구.
-const ERROR_TEXT: Record<string, string> = {
-  INSUFFICIENT_BALANCE: '출금가능 잔액보다 많이 보낼 수 없어요.',
-  INSUFFICIENT_DATA: '출금할 계좌를 찾지 못해 송금할 수 없어요. 마이데이터 연결을 확인해 주세요.', // 출금 계좌 없음(NO_ACCOUNT)
-};
+// 문구는 i18n transfer.error. INSUFFICIENT_DATA 는 출금 계좌 없음(NO_ACCOUNT)
+const ERROR_CODES = ['INSUFFICIENT_BALANCE', 'INSUFFICIENT_DATA'] as const;
 
 export const transferErrorText = (e: ApiError, fallback: string) =>
-  ERROR_TEXT[e.code] ?? errorText(e, fallback);
+  (ERROR_CODES as readonly string[]).includes(e.code)
+    ? i18n.t(`transfer.error.${e.code as (typeof ERROR_CODES)[number]}`)
+    : errorText(e, fallback);

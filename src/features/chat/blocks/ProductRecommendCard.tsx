@@ -206,7 +206,7 @@ const s = StyleSheet.create({
   titleRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.xs, flexShrink: 1 },
   dot: { width: spacing.sm, height: spacing.sm, borderRadius: radius.full, backgroundColor: colors.primary },
   title: { ...typography.body, fontFamily: fonts.bold, color: colors.text.strong, flexShrink: 1 },
-  headerMeta: { ...typography.badge, color: colors.text.sub, textAlign: 'right' },
+  headerMeta: { ...typography.badge, color: colors.text.sub, textAlign: 'right', flexShrink: 1 },
 
   items: { gap: spacing.md, paddingBottom: spacing.md },
   item: { gap: spacing.xs, padding: spacing.md, borderRadius: radius.lg, backgroundColor: colors.background },
@@ -222,6 +222,7 @@ const s = StyleSheet.create({
     backgroundColor: colors.surface,
     alignItems: 'center',
     justifyContent: 'center',
+    flexShrink: 0,
   },
   rankFirst: { backgroundColor: colors.primary },
   rankText: { ...typography.badge, fontFamily: fonts.bold, color: colors.primary },
@@ -229,7 +230,7 @@ const s = StyleSheet.create({
   nameRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.xs, flexWrap: 'wrap' },
   name: { ...typography.title, color: colors.text.strong, flexShrink: 1 },
   checkRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.xs },
-  checkText: { ...typography.badge, color: colors.text.strong },
+  checkText: { ...typography.badge, color: colors.text.strong, flexShrink: 1 },
   moreBtn: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: spacing.xs },
   moreText: { ...typography.badge, fontFamily: fonts.bold, color: colors.primary },
 
@@ -246,7 +247,7 @@ const s = StyleSheet.create({
   excludedTitle: { ...typography.badge, fontFamily: fonts.bold, color: colors.text.strong },
   excludedRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
   excludedLabel: { ...typography.badge, color: colors.text.sub },
-  excludedCount: { ...typography.badge, fontFamily: fonts.bold, color: colors.text.strong },
+  excludedCount: { ...typography.badge, fontFamily: fonts.bold, color: colors.text.strong, flexShrink: 0 },
 
   divider: { height: 1, backgroundColor: colors.background },
   footnote: { ...typography.badge, color: colors.text.sub, paddingTop: spacing.sm },
