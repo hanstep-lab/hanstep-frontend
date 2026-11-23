@@ -548,16 +548,18 @@ const styles = StyleSheet.create({
     backgroundColor: colors.primary,
     alignItems: 'center',
     justifyContent: 'center',
+    flexShrink: 0,
   },
   userInitial: { ...typography.title, color: colors.text.inverse },
-  userInfo: { gap: 4 },
+  userInfo: { flex: 1, gap: 4 }, // 영어 이름·체류 문구가 길면 배너 안에서 줄바꿈
   userNameRow: { flexDirection: 'row', alignItems: 'center', gap: 6 },
-  userName: { ...typography.body, fontFamily: fonts.bold, color: colors.text.strong },
+  userName: { ...typography.body, fontFamily: fonts.bold, color: colors.text.strong, flexShrink: 1 },
   countryTag: {
     backgroundColor: colors.primary,
     paddingHorizontal: 6,
     paddingVertical: 2,
     borderRadius: 4,
+    flexShrink: 0,
   },
   countryTagText: { ...typography.badge, color: colors.text.inverse },
   userSub: { ...typography.body, color: colors.text.sub },
@@ -590,7 +592,7 @@ const styles = StyleSheet.create({
     paddingVertical: 12,
   },
   chipOn: { backgroundColor: colors.primary },
-  chipText: { ...typography.body, fontFamily: fonts.bold, color: colors.text.strong },
+  chipText: { ...typography.body, fontFamily: fonts.bold, color: colors.text.strong, flexShrink: 1, textAlign: 'center' },
   chipTextOn: { color: colors.text.inverse },
 
   mydataBadge: {
@@ -610,14 +612,16 @@ const styles = StyleSheet.create({
     backgroundColor: colors.background,
     borderRadius: radius.lg,
     padding: 14,
+    gap: spacing.md,
   },
-  remitLeft: { gap: 2 },
+  remitLeft: { flex: 1, gap: 2 }, // 영어 설명이 길어도 오른쪽 체크박스를 밀어내지 않게
   remitNameRow: { flexDirection: 'row', alignItems: 'center', gap: 6 },
-  remitName: { ...typography.body, fontFamily: fonts.bold, color: colors.text.strong },
+  remitName: { ...typography.body, fontFamily: fonts.bold, color: colors.text.strong, flexShrink: 1 },
   bankTag: {
     backgroundColor: colors.border,
     paddingHorizontal: 4,
     borderRadius: 4,
+    flexShrink: 0,
   },
   bankTagText: { ...typography.badge, color: colors.text.sub },
   remitDesc: { ...typography.body, color: colors.text.sub },
@@ -640,8 +644,9 @@ const styles = StyleSheet.create({
     backgroundColor: colors.background,
     borderRadius: radius.lg,
     padding: 14,
+    gap: spacing.md,
   },
-  expenseLeft: { gap: 4 },
+  expenseLeft: { flex: 1, gap: 4 }, // 영어 항목 이름이 길면 줄바꿈, 금액 칸은 그대로
   expenseLabel: { ...typography.body, fontFamily: fonts.bold, color: colors.text.strong },
   expenseSub: { ...typography.body, color: colors.text.sub },
   amountBadge: {
@@ -655,6 +660,7 @@ const styles = StyleSheet.create({
     // 테두리는 항상 같은 두께(평소 투명) → 포커스로 색만 바뀌어도 칸 크기가 그대로
     borderWidth: 1.5,
     borderColor: 'transparent',
+    flexShrink: 0,
   },
   amountBadgeFocused: { borderColor: colors.primary },
   amountNum: { ...typography.body, fontFamily: fonts.bold, color: colors.text.strong },

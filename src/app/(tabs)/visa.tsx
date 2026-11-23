@@ -294,16 +294,16 @@ const s = StyleSheet.create({
   guideBadgeText: { ...typography.badge, fontFamily: fonts.bold, color: colors.primary },
   mainTitle: { ...typography.h2, color: colors.text.strong },
   sub: { ...typography.body, color: colors.text.sub },
-  label: { ...typography.badge, color: colors.text.sub },
-  sectionTitle: { ...typography.h3, color: colors.text.strong },
+  label: { ...typography.badge, color: colors.text.sub, flexShrink: 1 },
+  sectionTitle: { ...typography.h3, color: colors.text.strong, flexShrink: 1 },
 
   card: { backgroundColor: colors.surface, borderRadius: radius.lg, padding: spacing.xl, ...shadow.card },
 
   // 체류 현황 (바탕색 위에 흰 목표 상자)
   statusCard: { gap: spacing.sm },
   statusTop: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start' },
-  statusLeft: { gap: 7, paddingTop: 6 },
-  currentRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
+  statusLeft: { gap: 7, paddingTop: 6, flexShrink: 1 },
+  currentRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, flexWrap: 'wrap' },
   currentVisa: { ...typography.amount, color: colors.text.strong },
   grayPill: { backgroundColor: colors.tagBg, borderRadius: radius.full, paddingHorizontal: spacing.sm, paddingVertical: 2 },
   targetBox: {
@@ -316,7 +316,7 @@ const s = StyleSheet.create({
   },
   targetVisa: { ...typography.title, color: colors.primary },
   ddayRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'flex-end', gap: 6 },
-  ddayBox: { backgroundColor: colors.background, borderRadius: radius.sm, paddingHorizontal: spacing.sm, paddingVertical: 2 },
+  ddayBox: { backgroundColor: colors.background, borderRadius: radius.sm, paddingHorizontal: spacing.sm, paddingVertical: 2, flexShrink: 0 },
   ddayText: { ...typography.title, color: colors.text.strong },
 
   // 점수 (카드 + 아래 감점 안내 한 줄)
@@ -333,7 +333,7 @@ const s = StyleSheet.create({
   },
   warnText: { ...typography.badge, flex: 1, lineHeight: 16, fontFamily: fonts.bold, color: colors.required.text },
   scoreCard: { gap: 14 },
-  totalCol: { alignItems: 'flex-end', gap: 2 },
+  totalCol: { alignItems: 'flex-end', gap: 2, flexShrink: 0 },
   totalRow: { flexDirection: 'row', alignItems: 'baseline', gap: 2 },
   totalNum: { ...typography.h2, color: colors.primary },
   totalUnit: { ...typography.body, fontFamily: fonts.bold, color: colors.text.sub },
@@ -343,7 +343,7 @@ const s = StyleSheet.create({
 
   // 로드맵
   roadmap: { gap: spacing.lg },
-  totalSteps: { ...typography.badge, color: colors.primary },
+  totalSteps: { ...typography.badge, color: colors.primary, flexShrink: 0 },
   stepList: { gap: spacing.lg },
   timelineLine: {
     position: 'absolute',
@@ -365,7 +365,7 @@ const s = StyleSheet.create({
     backgroundColor: colors.background,
   },
   summaryRowTitle: { ...typography.body, color: colors.text.strong },
-  summaryScore: { ...typography.body, fontFamily: fonts.bold, color: colors.primary },
+  summaryScore: { ...typography.body, fontFamily: fonts.bold, color: colors.primary, flexShrink: 0 },
   note: { ...typography.badge, lineHeight: 16, color: colors.text.sub },
 
   // 로드맵 없음(404)

@@ -319,7 +319,7 @@ const styles = StyleSheet.create({
     ...shadow.card,
   },
   infoCardTop: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
-  infoCardTitle: { ...typography.h3, color: colors.text.strong },
+  infoCardTitle: { ...typography.h3, color: colors.text.strong, flexShrink: 1 },
   infoCardDesc: { ...typography.body, color: colors.text.sub },
 
   viewfinderWrap: { paddingHorizontal: spacing.xl, alignItems: 'center' },
@@ -356,8 +356,9 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.lg,
     paddingVertical: spacing.xs,
     borderRadius: radius.full,
+    flexShrink: 1,
   },
-  scanBtnText: { ...typography.body, fontFamily: fonts.bold, color: colors.text.inverse },
+  scanBtnText: { ...typography.body, fontFamily: fonts.bold, color: colors.text.inverse, textAlign: 'center' },
 
   permissionBox: {
     flex: 1,
@@ -381,8 +382,9 @@ const styles = StyleSheet.create({
     paddingHorizontal: 14,
     paddingVertical: spacing.xs,
     borderRadius: radius.full,
+    flexShrink: 1, // 영어 안내가 길면 줄바꿈
   },
-  hintChipText: { ...typography.body, fontFamily: fonts.bold, color: colors.text.strong },
+  hintChipText: { ...typography.body, fontFamily: fonts.bold, color: colors.text.strong, textAlign: 'center' },
 
   tipRow: { flexDirection: 'row', gap: spacing.sm },
   tipCard: {

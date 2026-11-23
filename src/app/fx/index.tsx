@@ -445,7 +445,8 @@ export default function FxScreen() {
 
 const s = StyleSheet.create({
   stateText: { ...typography.body, color: colors.text.sub, textAlign: 'center' },
-  row: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
+  // gap·flexShrink: 영어처럼 긴 문구도 줄 안에서 줄바꿈되게 (짧으면 모양 그대로)
+  row: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', gap: spacing.sm },
 
   // 통화 칩: FX-002 알림 화면(alert.tsx) 칩과 같은 모양
   chipScroll: { marginHorizontal: -spacing.xl, flexGrow: 0 },
@@ -496,7 +497,7 @@ const s = StyleSheet.create({
   price: { ...typography.h2, color: colors.text.strong },
   priceUnit: { ...typography.subtitle, color: colors.text.sub },
   changeRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.xs, paddingBottom: spacing.md },
-  changeText: { ...typography.body },
+  changeText: { ...typography.body, flexShrink: 1 },
   changeBadge: { borderRadius: radius.full, paddingHorizontal: spacing.xs },
   changeBadgeText: { ...typography.badge },
 
@@ -509,21 +510,22 @@ const s = StyleSheet.create({
     paddingVertical: spacing.md,
   },
   dot: { width: 8, height: 8, borderRadius: radius.full, backgroundColor: colors.primary },
-  asOfText: { ...typography.badge, color: colors.text.sub },
+  asOfText: { ...typography.badge, color: colors.text.sub, flexShrink: 1 },
   bankRates: { flexDirection: 'row', gap: spacing.md, paddingHorizontal: spacing.lg, paddingVertical: spacing.md },
-  bankRateText: { ...typography.body, color: colors.text.strong },
+  bankRateText: { ...typography.body, color: colors.text.strong, flexShrink: 1 },
   notices: { gap: spacing.xs, paddingHorizontal: spacing.xl, paddingVertical: spacing.md },
   noticeRow: { flexDirection: 'row', alignItems: 'flex-start', gap: spacing.xs },
   noticeText: { ...typography.badge, color: colors.text.sub, flex: 1 },
 
   chartCard: { padding: spacing.lg, gap: spacing.sm },
-  sectionTitle: { ...typography.h3, color: colors.text.strong },
+  sectionTitle: { ...typography.h3, color: colors.text.strong, flexShrink: 1 },
   tabList: {
     flexDirection: 'row',
     gap: spacing.xs,
     padding: spacing.xs,
     borderRadius: radius.full,
     backgroundColor: colors.background,
+    flexShrink: 0,
   },
   tab: { paddingHorizontal: spacing.sm, borderRadius: radius.full },
   tabSelected: { backgroundColor: colors.surface },
@@ -543,7 +545,7 @@ const s = StyleSheet.create({
   maxRight: { right: 0 },
   maxDot: { width: 6, height: 6, borderRadius: radius.full, backgroundColor: colors.primary },
   maxText: { ...typography.badge, color: colors.primary },
-  statText: { ...typography.badge, color: colors.text.sub },
+  statText: { ...typography.badge, color: colors.text.sub, flexShrink: 1 },
   statCurrent: { color: colors.primary },
 
   avgSection: { gap: spacing.sm, paddingTop: spacing.sm },

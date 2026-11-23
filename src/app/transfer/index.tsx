@@ -429,7 +429,8 @@ const s = StyleSheet.create({
     padding: spacing.xl,
     ...shadow.card,
   },
-  row: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
+  // gap·flexShrink: 영어처럼 긴 문구가 카드 밖으로 밀리지 않고 줄바꿈되게 (짧으면 모양 그대로)
+  row: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', gap: spacing.md },
   subText: { ...typography.body, color: colors.text.sub },
 
   recipientLeft: { flex: 1, flexDirection: 'row', alignItems: 'center', gap: spacing.md },
@@ -479,11 +480,11 @@ const s = StyleSheet.create({
 
   // 송금 내역·외국인 해외송금 확인 카드: 왼쪽 이름 · 오른쪽 값 줄
   listCard: { gap: spacing.sm },
-  itemLabel: { ...typography.body, color: colors.text.sub },
-  itemLabelStrong: { ...typography.body, fontFamily: fonts.bold, color: colors.text.strong },
-  itemValue: { ...typography.body, color: colors.text.strong },
-  itemValueStrong: { ...typography.body, fontFamily: fonts.bold, color: colors.text.strong },
-  receiveValue: { ...typography.h3, color: colors.primary },
+  itemLabel: { ...typography.body, color: colors.text.sub, flexShrink: 1 },
+  itemLabelStrong: { ...typography.body, fontFamily: fonts.bold, color: colors.text.strong, flexShrink: 1 },
+  itemValue: { ...typography.body, color: colors.text.strong, flexShrink: 1, textAlign: 'right' },
+  itemValueStrong: { ...typography.body, fontFamily: fonts.bold, color: colors.text.strong, flexShrink: 1, textAlign: 'right' },
+  receiveValue: { ...typography.h3, color: colors.primary, flexShrink: 0 },
   divider: { height: 1, backgroundColor: colors.background },
   detail: { gap: spacing.sm, paddingTop: spacing.xs },
   detailToggle: { flexDirection: 'row', alignItems: 'center', justifyContent: 'flex-end', gap: spacing.xs },
@@ -501,9 +502,10 @@ const s = StyleSheet.create({
     borderRadius: radius.full,
     paddingHorizontal: spacing.sm,
     paddingVertical: 2,
+    flexShrink: 0,
   },
   bankBadgeText: { ...typography.badge, fontFamily: fonts.bold, color: colors.primary },
-  limitValue: { ...typography.body, fontFamily: fonts.bold, color: colors.primary },
+  limitValue: { ...typography.body, fontFamily: fonts.bold, color: colors.primary, flexShrink: 0 },
   progressTrack: { height: 8, borderRadius: radius.full, backgroundColor: colors.background, overflow: 'hidden' },
   progressFill: { height: 8, borderRadius: radius.full, backgroundColor: colors.primary },
 });

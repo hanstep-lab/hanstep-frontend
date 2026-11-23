@@ -83,7 +83,7 @@ const styles = StyleSheet.create({
   total: { ...typography.badge, color: colors.text.sub },
 
   subRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
-  subLabel: { ...typography.caption, fontFamily: fonts.bold, color: colors.text.sub },
+  subLabel: { ...typography.caption, fontFamily: fonts.bold, color: colors.text.sub, flexShrink: 1 },
   subDots: { flexDirection: 'row', alignItems: 'center', gap: 4 },
   subDot: { width: 6, height: 6, borderRadius: radius.full },
 });

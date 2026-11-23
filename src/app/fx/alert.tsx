@@ -385,7 +385,7 @@ export default function FxAlertScreen() {
 
 const s = StyleSheet.create({
   stateText: { ...typography.body, color: colors.text.sub, textAlign: 'center', padding: spacing.lg },
-  rowBetween: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
+  rowBetween: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', gap: spacing.sm },
 
   intro: { gap: 3 },
   eyebrow: { ...typography.badge, fontFamily: fonts.bold, color: colors.primary },
@@ -423,10 +423,10 @@ const s = StyleSheet.create({
     paddingBottom: spacing.md,
   },
   dot: { width: 8, height: 8, borderRadius: radius.full, backgroundColor: colors.primary },
-  sourceText: { ...typography.badge, color: colors.text.sub },
+  sourceText: { ...typography.badge, color: colors.text.sub, flexShrink: 1 },
   cardBody: { padding: spacing.lg, gap: spacing.lg },
 
-  rateRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start' },
+  rateRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', gap: spacing.sm },
   rateInfo: { gap: 2, flexShrink: 1 },
   label: { ...typography.badge, color: colors.text.sub },
   rate: { ...typography.h2, color: colors.text.strong },
@@ -435,7 +435,7 @@ const s = StyleSheet.create({
   sparkBox: { backgroundColor: colors.background, borderRadius: radius.md, padding: spacing.sm, height: 40 },
 
   targetSection: { gap: spacing.sm, paddingTop: spacing.sm },
-  sectionTitle: { ...typography.h3, color: colors.text.strong },
+  sectionTitle: { ...typography.h3, color: colors.text.strong, flexShrink: 1 },
   stepper: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -458,7 +458,7 @@ const s = StyleSheet.create({
   targetUnit: { ...typography.body, fontFamily: fonts.bold, color: colors.text.sub },
 
   sliderBlock: { gap: spacing.xs, paddingTop: spacing.sm },
-  rangeLabels: { flexDirection: 'row', justifyContent: 'space-between' },
+  rangeLabels: { flexDirection: 'row', justifyContent: 'space-between', gap: spacing.sm },
 
   presetRow: { flexDirection: 'row', gap: 6, paddingTop: 6 },
   preset: {
@@ -476,7 +476,7 @@ const s = StyleSheet.create({
 
   optionTitle: { ...typography.body, fontFamily: fonts.bold, color: colors.text.strong },
 
-  activeCount: { ...typography.badge, fontFamily: fonts.bold, color: colors.primary },
+  activeCount: { ...typography.badge, fontFamily: fonts.bold, color: colors.primary, flexShrink: 0 },
   alertItem: {
     flexDirection: 'row',
     alignItems: 'center',

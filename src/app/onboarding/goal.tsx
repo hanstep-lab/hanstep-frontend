@@ -166,6 +166,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
+    gap: spacing.md,
     overflow: 'hidden',
   },
   cardOn:  { backgroundColor: colors.primary },
@@ -174,7 +175,7 @@ const styles = StyleSheet.create({
   cardLeft: { flex: 1, gap: 2 },
   cardTitleRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
 
-  cardLabel: { ...typography.h3 },
+  cardLabel: { ...typography.h3, flexShrink: 1 },
   labelOn:   { color: colors.text.inverse },
   labelOff:  { color: colors.text.strong },
 
@@ -182,7 +183,7 @@ const styles = StyleSheet.create({
   descOn:   { color: colors.onColor.sub },
   descOff:  { color: colors.text.sub },
 
-  tagPill: { paddingHorizontal: spacing.sm, paddingVertical: 2, borderRadius: radius.full },
+  tagPill: { paddingHorizontal: spacing.sm, paddingVertical: 2, borderRadius: radius.full, flexShrink: 0 },
   tagPillOn:  { backgroundColor: colors.onColor.fill },
   tagPillOff: { backgroundColor: colors.background },
   tagText: { ...typography.badge },
@@ -190,6 +191,7 @@ const styles = StyleSheet.create({
   tagTextOff: { color: colors.text.sub },
 
   checkCircle: {
+    flexShrink: 0,
     width: 28,
     height: 28,
     borderRadius: radius.full,

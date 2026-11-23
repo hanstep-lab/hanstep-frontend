@@ -317,7 +317,7 @@ const styles = StyleSheet.create({
   },
   retryText: { ...typography.body, fontFamily: fonts.bold, color: colors.text.inverse },
 
-  profileTop: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
+  profileTop: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', gap: spacing.sm },
   profileLeft: { flexDirection: 'row', alignItems: 'center', gap: 12, flex: 1 },
   avatar: {
     width: 48,
@@ -326,11 +326,12 @@ const styles = StyleSheet.create({
     backgroundColor: colors.primary,
     alignItems: 'center',
     justifyContent: 'center',
+    flexShrink: 0,
   },
   avatarText: { ...typography.h3, color: colors.text.inverse },
   profileInfo: { gap: 4, flex: 1 },
   profileNameRow: { flexDirection: 'row', alignItems: 'center', gap: 6, flexWrap: 'wrap' },
-  profileName: { ...typography.subtitle, fontFamily: fonts.bold, color: colors.text.strong },
+  profileName: { ...typography.subtitle, fontFamily: fonts.bold, color: colors.text.strong, flexShrink: 1 },
   countryTag: {
     backgroundColor: colors.background,
     paddingHorizontal: spacing.sm,
@@ -346,6 +347,7 @@ const styles = StyleSheet.create({
     borderRadius: radius.full,
     paddingHorizontal: 10,
     paddingVertical: 4,
+    flexShrink: 0,
   },
   langChipText: { ...typography.badge, color: colors.primary },
 
@@ -370,9 +372,9 @@ const styles = StyleSheet.create({
     padding: 14,
     gap: 6,
   },
-  goalTop: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
-  goalLabel: { ...typography.body, fontFamily: fonts.bold, color: colors.text.strong },
-  goalAmount: { ...typography.subtitle, fontFamily: fonts.bold, color: colors.text.strong },
+  goalTop: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', gap: spacing.sm },
+  goalLabel: { ...typography.body, fontFamily: fonts.bold, color: colors.text.strong, flexShrink: 1 },
+  goalAmount: { ...typography.subtitle, fontFamily: fonts.bold, color: colors.text.strong, flexShrink: 0, textAlign: 'right' },
   goalSub: { ...typography.body, color: colors.text.sub },
 
   incomeBox: {
@@ -385,7 +387,7 @@ const styles = StyleSheet.create({
   incomeAmount: { ...typography.amount, color: colors.text.strong },
 
   distSection: { gap: spacing.sm },
-  distLabelRow: { flexDirection: 'row', justifyContent: 'space-between' },
+  distLabelRow: { flexDirection: 'row', justifyContent: 'space-between', gap: spacing.sm },
   distLabel: { ...typography.badge, color: colors.text.sub },
   distBar: {
     height: 12,
@@ -397,11 +399,11 @@ const styles = StyleSheet.create({
   distSeg: { height: '100%' },
 
   legendList: { gap: 10 },
-  legendRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingVertical: 4 },
-  legendLeft: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
+  legendRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingVertical: 4, gap: spacing.sm },
+  legendLeft: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, flexShrink: 1 },
   legendDot: { width: 10, height: 10, borderRadius: radius.full },
-  legendLabel: { ...typography.body, color: colors.text.strong },
-  legendAmount: { ...typography.body, fontFamily: fonts.bold, color: colors.text.strong },
+  legendLabel: { ...typography.body, color: colors.text.strong, flexShrink: 1 },
+  legendAmount: { ...typography.body, fontFamily: fonts.bold, color: colors.text.strong, flexShrink: 0, textAlign: 'right' },
 
   btnBlock: { gap: 12, paddingTop: spacing.sm },
   navError: { ...typography.body, color: colors.errorText, textAlign: 'center' },

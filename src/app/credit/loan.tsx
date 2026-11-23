@@ -223,7 +223,7 @@ const s = StyleSheet.create({
     paddingVertical: spacing.md,
   },
   termDivider: { borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: colors.border },
-  termLabel: { ...typography.body, color: colors.text.sub },
+  termLabel: { ...typography.body, color: colors.text.sub, flexShrink: 1 },
   termValue: { ...typography.body, fontFamily: fonts.bold, color: colors.text.strong, flexShrink: 1, textAlign: 'right' },
 
   // 모의 한도 카드 (Figma 447:67)

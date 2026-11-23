@@ -123,9 +123,10 @@ const s = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
+    gap: spacing.md, // 영어처럼 긴 문구도 줄 안에서 줄바꿈되게
   },
-  summaryLabel: { ...typography.body, color: colors.text.sub },
-  summaryValue: { ...typography.body, fontFamily: fonts.bold, color: colors.text.strong },
+  summaryLabel: { ...typography.body, color: colors.text.sub, flexShrink: 1 },
+  summaryValue: { ...typography.body, fontFamily: fonts.bold, color: colors.text.strong, flexShrink: 1, textAlign: 'right' },
   divider: {
     height: StyleSheet.hairlineWidth,
     backgroundColor: colors.border,

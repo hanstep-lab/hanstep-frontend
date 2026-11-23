@@ -50,10 +50,10 @@ const s = StyleSheet.create({
   wrap: { gap: spacing.sm, marginTop: spacing.sm },
   card: { backgroundColor: colors.surface, borderRadius: radius.xl, padding: spacing.lg, gap: spacing.sm },
   head: { flexDirection: 'row', alignItems: 'center', gap: spacing.xs },
-  title: { ...typography.body, fontFamily: fonts.bold, color: colors.text.strong },
+  title: { ...typography.body, fontFamily: fonts.bold, color: colors.text.strong, flexShrink: 1 },
   scoreRow: { flexDirection: 'row', alignItems: 'baseline', gap: spacing.sm },
-  score: { ...typography.h2, color: colors.primary },
-  sub: { ...typography.badge, color: colors.text.sub },
+  score: { ...typography.h2, color: colors.primary, flexShrink: 0 },
+  sub: { ...typography.badge, color: colors.text.sub, flexShrink: 1 },
   statusBox: {
     alignSelf: 'flex-start',
     backgroundColor: colors.background,

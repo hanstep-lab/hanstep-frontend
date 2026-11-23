@@ -264,6 +264,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
+    gap: spacing.md,
   },
   instCardDefault: {
     backgroundColor: colors.surface,
@@ -272,16 +273,18 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
+    gap: spacing.md,
   },
-  instCardLeft: { gap: 2 },
+  instCardLeft: { flex: 1, gap: 2 }, // 영어 설명이 길어도 오른쪽 체크·추가 원을 밀어내지 않게
   instCardTitle: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
-  instName: { ...typography.h3, color: colors.text.inverse },
-  instNameDark: { ...typography.h3, color: colors.text.strong },
+  instName: { ...typography.h3, color: colors.text.inverse, flexShrink: 1 },
+  instNameDark: { ...typography.h3, color: colors.text.strong, flexShrink: 1 },
   instTag: {
     backgroundColor: colors.onColor.fill,
     paddingHorizontal: spacing.sm,
     paddingVertical: 2,
     borderRadius: radius.full,
+    flexShrink: 0,
   },
   instTagText: { ...typography.badge, color: colors.text.inverse },
   instTagDark: {
@@ -289,6 +292,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.sm,
     paddingVertical: 2,
     borderRadius: radius.full,
+    flexShrink: 0,
   },
   instTagTextDark: { ...typography.badge, color: colors.text.sub },
   stateText: { ...typography.body, color: colors.text.sub, textAlign: 'center', paddingVertical: spacing.lg },
@@ -301,6 +305,7 @@ const styles = StyleSheet.create({
     backgroundColor: colors.onColor.fill,
     alignItems: 'center',
     justifyContent: 'center',
+    flexShrink: 0,
   },
   instAdd: {
     width: 28,
@@ -309,6 +314,7 @@ const styles = StyleSheet.create({
     backgroundColor: colors.background,
     alignItems: 'center',
     justifyContent: 'center',
+    flexShrink: 0,
   },
 
   consentSection: { gap: spacing.xs },
@@ -336,6 +342,7 @@ const styles = StyleSheet.create({
     borderColor: colors.border,
     alignItems: 'center',
     justifyContent: 'center',
+    flexShrink: 0,
   },
   checkCircleOn: {
     backgroundColor: colors.primary,
@@ -349,12 +356,13 @@ const styles = StyleSheet.create({
     borderColor: colors.border,
     alignItems: 'center',
     justifyContent: 'center',
+    flexShrink: 0,
   },
   checkCircleSmOn: {
     backgroundColor: colors.primary,
     borderColor: colors.primary,
   },
-  agreeAllText: { ...typography.title, color: colors.text.strong },
+  agreeAllText: { ...typography.title, color: colors.text.strong, flexShrink: 1 },
   consentLabel: { ...typography.body, color: colors.text.sub, flex: 1 },
 
   footer: {

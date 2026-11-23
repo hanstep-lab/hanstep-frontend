@@ -52,7 +52,7 @@ const s = StyleSheet.create({
   titleRow: { flexDirection: 'row', alignItems: 'center', gap: 6, flexWrap: 'wrap' },
   title: { ...typography.subtitle, color: colors.text.strong },
   sub: { ...typography.caption, color: colors.text.sub },
-  right: { alignItems: 'flex-end', gap: 3 },
+  right: { alignItems: 'flex-end', gap: 3, flexShrink: 0 },
   scoreSub: { ...typography.caption, fontFamily: fonts.bold, color: colors.text.sub },
   scoreSubPending: { color: colors.pending },
 });

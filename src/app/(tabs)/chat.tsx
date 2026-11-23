@@ -622,14 +622,14 @@ const styles = StyleSheet.create({
     borderBottomColor: colors.border,
   },
   headerLeft: { flex: 1, flexDirection: 'row', alignItems: 'center', gap: 4 },
-  headerTitle: { ...typography.h3, color: colors.text.strong },
+  headerTitle: { ...typography.h3, color: colors.text.strong, flexShrink: 1 },
   newChatBtn: {
     ...typography.body,
     fontFamily: fonts.bold,
     color: colors.primary,
     paddingHorizontal: spacing.sm,
   },
-  headerRight: { flexDirection: 'row', alignItems: 'center', gap: spacing.md },
+  headerRight: { flexDirection: 'row', alignItems: 'center', gap: spacing.md, flexShrink: 0 },
   avatar: {
     width: 32,
     height: 32,
@@ -761,7 +761,7 @@ const menuStyles = StyleSheet.create({
     paddingHorizontal: spacing.xl,
     paddingVertical: spacing.md,
   },
-  sheetTitle: { ...typography.h3, color: colors.text.strong },
+  sheetTitle: { ...typography.h3, color: colors.text.strong, flexShrink: 1 },
   closeBtn: {
     width: 32,
     height: 32,
@@ -785,7 +785,7 @@ const menuStyles = StyleSheet.create({
   },
   labelRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.xs },
   dot: { width: spacing.sm, height: spacing.sm, borderRadius: radius.full, backgroundColor: colors.primary },
-  menuLabel: { ...typography.h3, color: colors.text.strong },
+  menuLabel: { ...typography.h3, color: colors.text.strong, flexShrink: 1 },
   menuDesc: { ...typography.body, color: colors.text.sub },
   solRow: {
     marginHorizontal: spacing.xl,

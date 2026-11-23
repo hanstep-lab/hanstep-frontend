@@ -49,7 +49,7 @@ export default function StepCard({ number, label, meta, title, desc, docs = [], 
 
 const s = StyleSheet.create({
   wrap: { flexDirection: 'row', alignItems: 'flex-start', gap: 10 },
-  numberWrap: { paddingTop: STEP_NUMBER_TOP },
+  numberWrap: { paddingTop: STEP_NUMBER_TOP, flexShrink: 0 },
   number: {
     width: STEP_NUMBER_SIZE,
     height: STEP_NUMBER_SIZE,
@@ -70,7 +70,7 @@ const s = StyleSheet.create({
   },
   cardRequired: { borderWidth: 1.5, borderColor: colors.required.border },
   top: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: spacing.sm },
-  meta: { ...typography.body, color: colors.text.sub },
+  meta: { ...typography.body, color: colors.text.sub, flexShrink: 1, textAlign: 'right' },
   title: { ...typography.titleLg, color: colors.text.strong },
   desc: { ...typography.bodyLg, color: colors.text.sub },
   tags: { flexDirection: 'row', flexWrap: 'wrap', gap: 6 },

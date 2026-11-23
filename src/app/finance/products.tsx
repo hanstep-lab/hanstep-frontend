@@ -158,9 +158,9 @@ const s = StyleSheet.create({
   flex: { flex: 1 },
   rowBetween: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: spacing.sm },
   stateText: { ...typography.body, color: colors.text.sub, textAlign: 'center', paddingVertical: spacing.xl },
-  label: { ...typography.badge, color: colors.text.sub },
+  label: { ...typography.badge, color: colors.text.sub, flexShrink: 1 },
   sub: { ...typography.body, color: colors.text.sub },
-  sectionTitle: { ...typography.h3, color: colors.text.strong },
+  sectionTitle: { ...typography.h3, color: colors.text.strong, flexShrink: 1 },
 
   titleBlock: { gap: 3 },
   badge: {
@@ -186,7 +186,7 @@ const s = StyleSheet.create({
     backgroundColor: colors.background,
   },
   rowTitle: { ...typography.body, color: colors.text.strong },
-  rowValue: { ...typography.body, fontFamily: fonts.bold, color: colors.primary },
+  rowValue: { ...typography.body, fontFamily: fonts.bold, color: colors.primary, flexShrink: 0 },
 
   section: { gap: spacing.lg },
   productList: { gap: spacing.md },
@@ -196,8 +196,9 @@ const s = StyleSheet.create({
     borderRadius: radius.full,
     paddingHorizontal: spacing.sm,
     paddingVertical: 2,
+    flexShrink: 1,
   },
-  rateBlock: { alignItems: 'flex-end' },
+  rateBlock: { alignItems: 'flex-end', flexShrink: 0 },
   rate: { ...typography.body, fontFamily: fonts.bold, color: colors.primary },
   productName: { ...typography.title, color: colors.text.strong },
   noteHighlight: { color: colors.primary },
