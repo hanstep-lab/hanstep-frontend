@@ -4,10 +4,7 @@ import type { SolGlobalLoanIncomeSource, SolGlobalLoanLimitReason } from '../typ
 
 export const LOAN_TEXT = {
   loading: '상품 정보를 불러오는 중이에요.',
-  applyButton: '신한 SOL에서 신청하기',
   askButton: '신한걸음에 물어보기',
-  preparingTitle: '준비 중',
-  preparingBody: '곧 사용할 수 있어요.',
 
   // 모의 한도 구역 (Figma 447:62 "진단과 비교" 자리)
   limitTitle: '신한걸음 모의 한도',
