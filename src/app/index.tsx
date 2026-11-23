@@ -23,6 +23,7 @@ import { ENTRY_TOKEN } from '../api/config';
 import { colors, fonts, radius, spacing } from '../constants/theme';
 import { confirmDialog } from '../utils/confirm';
 import { errorText } from '../utils/errorText';
+import { setAppLanguage } from '../i18n';
 
 const IMG = {
   sol: require('../../assets/images/sol-home/sol.png'), // 신한은행 캐릭터 쏠
@@ -81,6 +82,7 @@ export default function SolGlobalHome() {
       const entryRes = await entry(ENTRY_TOKEN);
       setToken(entryRes.accessToken);
       const me = await getMe();
+      setAppLanguage(me.preferredLanguage); // 신한걸음 화면 문구를 사용자 언어로
       if (me.onboarding.completed) {
         router.push('/chat' as Href);
       } else {

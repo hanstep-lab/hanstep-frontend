@@ -16,6 +16,7 @@ import { changeLanguage } from '../../api/user';
 import { saveProfile } from '../../api/onboarding';
 import { colors, typography, spacing, radius, fonts, shadow } from '../../constants/theme';
 import { LANGUAGES } from '../../constants/languages';
+import { setAppLanguage } from '../../i18n';
 import type { Language, ResidencePurpose } from '../../types/api';
 
 // ── 데이터 ──────────────────────────────────────────────────────────────
@@ -74,7 +75,8 @@ export default function LanguageScreen() {
   const [lang, setLang]       = useState<Language | null>(storeLanguage);
   const [purpose, setPurpose] = useState<ResidencePurpose | null>(storePurpose);
 
-  const selectLang = (code: Language) => { setLang(code); setStoreLang(code); };
+  // 언어를 고르면 화면 문구도 바로 그 언어로 바뀐다
+  const selectLang = (code: Language) => { setLang(code); setStoreLang(code); setAppLanguage(code); };
   const selectPurpose = (code: ResidencePurpose) => { setPurpose(code); setStorePurpose(code); };
 
   const canProceed = !!lang && !!purpose && !isNavigating;

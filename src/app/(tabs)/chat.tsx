@@ -24,6 +24,7 @@ import {
 } from '../../api/mock/chat';
 import { createChatSession, streamChatMessage, type ChatCardBlock } from '../../api/chat';
 import { getMe } from '../../api/user';
+import { setAppLanguage } from '../../i18n';
 import { getFxAlerts } from '../../api/fx';
 import { hasUnseenIds } from '../../utils/fxAlertStorage';
 import type { ApiError } from '../../types/api';
@@ -187,6 +188,7 @@ export default function ChatScreen() {
         if (cancelled) return;
         setUserName(me.shortName || null);
         setCardLang(cardLanguage(me.preferredLanguage));
+        setAppLanguage(me.preferredLanguage); // 앱을 채팅에서 다시 열었을 때도 사용자 언어로
       })
       .catch(() => {});
     return () => {
