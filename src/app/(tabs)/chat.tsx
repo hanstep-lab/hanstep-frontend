@@ -7,7 +7,6 @@ import {
   ScrollView,
   StyleSheet,
   Modal,
-  Alert,
   KeyboardAvoidingView,
 } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -87,10 +86,6 @@ function getTodayString(): string {
 function getLandingDateString(): string {
   const d = new Date();
   return `${d.getFullYear()}년 ${d.getMonth() + 1}월 ${d.getDate()}일`;
-}
-
-function preparingAlert() {
-  Alert.alert('준비 중', '곧 사용할 수 있어요.');
 }
 
 export default function ChatScreen() {
@@ -447,9 +442,9 @@ function MenuSheet({
 }) {
   // Modal 은 별도 창이라 화면의 SafeAreaView 하단 여백이 안 먹는다. 시트에 시스템 내비게이션 바 높이를 더한다
   const insets = useSafeAreaInsets();
-  // action 이 없는 메뉴(설정)는 아직 "준비 중"
+  // action 이 없는 메뉴는 목록에서 숨긴다(hidden). 혹시 보이더라도 눌러서 아무것도 하지 않는다
   const handleItem = (action?: ChatAction) => {
-    if (!action) return preparingAlert();
+    if (!action) return;
     onClose();
     runAction(action);
   };
