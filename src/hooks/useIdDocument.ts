@@ -11,8 +11,8 @@ import type { DocumentResponse } from '../types/api';
 import { errorText } from '../utils/errorText';
 import { ocrTimeMark } from '../utils/ocrTiming';
 
-const INTERVAL_MS = 2000;
-// 2초 × 60 = 약 2분. 2026-11-19 실서버 측정: OCR 처리만 약 60초(조회 27회째 도착)라 1분 한도는 너무 빠듯함
+const INTERVAL_MS = 1000;
+// 1초 × 60 = 약 1분. 11/23 운영 기준선: 업로드 → 결과까지 중앙값 약 3.8초, 최대 약 7.7초
 const MAX_TRIES = 60;
 
 type Phase = 'waiting' | 'ready' | 'failed' | 'timeout';

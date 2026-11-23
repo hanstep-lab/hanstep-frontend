@@ -1,12 +1,11 @@
 // 업로드 전 등록증 사진 정리: 가이드 틀 영역만 잘라 내고 → 긴 변을 줄여 JPEG 로 저장 (원본은 지움).
 // 배경(손·책상)이 빠져 OCR 이 읽을 면적이 줄고, 등록증 밖 내용이 서버에 올라가지 않는다.
-// 크기 규칙: 앱 긴 변(MAX_LONG_SIDE) ≥ 서버 Worker 가 추론 전에 줄이는 크기. Worker 는 2000px 이하로 정한다.
-
+// 크기 규칙: 앱 긴 변(MAX_LONG_SIDE) ≥ 서버 Worker 축소 크기(OCR_MAX_SIDE, 11/23 기준 1280px). Worker 값을 바꾸면 여기도 같이 맞춘다.
 import { ImageManipulator, SaveFormat } from 'expo-image-manipulator';
 import { File } from 'expo-file-system';
 
-const MAX_LONG_SIDE = 2000; // 긴 변 최대. Worker 크기보다 작아지면 안 된다
-const JPEG_QUALITY = 0.85; // 0~1. 1 = 압축 없음
+const MAX_LONG_SIDE = 1280; // 긴 변 최대. Worker 크기보다 작아지면 안 된다
+const JPEG_QUALITY = 0.8; // 0~1. 1 = 압축 없음
 const CROP_MARGIN = 0.05; // 가이드 틀 바깥 여유 (틀 너비·높이의 5%). 미리보기와 사진의 비율 차이로 생기는 어긋남을 덮는다
 
 type Photo = { uri: string; width: number; height: number };
