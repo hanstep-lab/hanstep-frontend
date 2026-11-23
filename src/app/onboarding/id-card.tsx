@@ -267,11 +267,8 @@ export default function IdCardScreen() {
             <View style={styles.captureOuter}>
               <View style={styles.captureInner}>
                 <View style={styles.captureCenter}>
-                  {isCapturing || (frozen && !ocrFailed && !ocrTimeout) ? (
-                    <ActivityIndicator color={colors.primary} />
-                  ) : (
-                    <Ionicons name="camera" size={24} color={colors.primary} />
-                  )}
+                  {/* 진행 상태는 사진 영역의 안내(스피너·문구)가 보여 주므로 버튼은 아이콘만. 누를 수 없을 땐 흐리게 */}
+                  <Ionicons name="camera" size={24} color={colors.primary} />
                 </View>
               </View>
             </View>
