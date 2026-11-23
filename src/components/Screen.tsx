@@ -1,6 +1,6 @@
 import { ReactNode } from 'react';
-import { View, ScrollView, StyleSheet, KeyboardAvoidingView, type StyleProp, type ViewStyle } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { View, ScrollView, StyleSheet, KeyboardAvoidingView, Dimensions, type StyleProp, type ViewStyle } from 'react-native';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import Header from './Header';
 import { colors, spacing } from '../constants/theme';
 
@@ -13,6 +13,13 @@ type ScreenProps = {
 };
 
 export default function Screen({ children, footer, title = '신한걸음', showBack = true, contentStyle }: ScreenProps) {
+  // [진단 임시] 하단 시스템 바 확인용. 커밋하지 않음
+  const insets = useSafeAreaInsets();
+  if (__DEV__) {
+    const win = Dimensions.get('window');
+    const scr = Dimensions.get('screen');
+    console.log(`[안전영역] Screen(${title}) insets 위 ${insets.top} 아래 ${insets.bottom} / window ${win.height} screen ${scr.height}`);
+  }
   return (
     <SafeAreaView style={styles.safe} edges={['top', 'bottom']}>
       <Header title={title} showBack={showBack} />

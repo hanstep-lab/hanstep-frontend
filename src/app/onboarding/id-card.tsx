@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { View, Text, Pressable, ScrollView, StyleSheet, Linking, Alert, ActivityIndicator } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
+import { Dimensions } from 'react-native'; // [진단 임시]
 import { Ionicons } from '@expo/vector-icons';
 import { router, useFocusEffect, useIsFocused, type Href } from 'expo-router';
 import { CameraView, useCameraPermissions } from 'expo-camera';
@@ -59,6 +60,18 @@ export default function IdCardScreen() {
     } else {
       Linking.openSettings(); // 다시 묻기가 막힌 경우 설정 앱으로
     }
+  };
+
+  // [진단 임시] 하단 시스템 바 확인용. 커밋하지 않음
+  const diagInsets = useSafeAreaInsets();
+  const logScrollLayout = (y: number, height: number) => {
+    if (!__DEV__) return;
+    const win = Dimensions.get('window');
+    const scr = Dimensions.get('screen');
+    console.log(
+      `[안전영역] id-card insets 위 ${diagInsets.top} 아래 ${diagInsets.bottom} / window ${win.height} screen ${scr.height}` +
+        ` / 스크롤 영역 아래 끝 ${Math.round(y + height)} (여백이 적용됐으면 약 ${Math.round(win.height - diagInsets.bottom)})`,
+    );
   };
 
   const cameraRef = useRef<CameraView>(null);
@@ -123,7 +136,11 @@ export default function IdCardScreen() {
     <SafeAreaView style={styles.safe} edges={['top', 'bottom']}>
       <Header title="외국인등록증 촬영" showBack />
 
-      <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
+      <ScrollView
+        contentContainerStyle={styles.content}
+        showsVerticalScrollIndicator={false}
+        onLayout={(e) => logScrollLayout(e.nativeEvent.layout.y, e.nativeEvent.layout.height)}
+      >
         <View style={styles.progressWrap}>
           <OnboardingProgress current={stageOf('ID_DOCUMENT')} total={TOTAL_STAGES} sub="등록증 촬영" />
         </View>
