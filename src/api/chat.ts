@@ -10,6 +10,7 @@ import { useAuthStore } from '../store/authStore';
 import { client, refreshAccessToken } from './client';
 import { API_URL, USE_MOCK, mockDelay } from './config';
 import { createSseParser } from './sse';
+import i18n from '../i18n';
 import { getMockResponse, type SuggestionChip } from './mock/chat';
 
 // 앱이 모르는 카드 자리(개발 빌드 __DEV__ 에서만 생긴다). 카드 목록이 "Unsupported card: {type}" 회색 칸으로 그린다.
@@ -69,19 +70,23 @@ export async function streamChatMessage(
 // 이벤트: started → tool_call(0개 이상) → delta(여러 번) → sources → done 또는 error. 그 뒤 서버가 연결을 닫는다
 // ---------------------------------------------------------------------------
 
-// toolName → 완료 문구. 서버는 문구를 주지 않는다 (Swagger ChatToolCallEvent). 표에 없는 이름은 문구 없이 넘어간다
-const TOOL_LABELS: Record<string, string> = {
-  get_financial_analysis: '재무 분석을 확인했어요',
-  get_remittance_recipients: '받는 분 정보를 확인했어요',
-  quote_remittance: '송금 금액을 계산했어요',
-  fx_rate_summary: '환율을 확인했어요',
-  calculate_e74_score: 'E-7-4 점수를 계산했어요',
-  get_fx_rate: '환율을 확인했어요',
-  get_visa_roadmap: '비자 로드맵을 확인했어요',
-  search_visa_policies: '비자 정책을 찾아봤어요',
-  search_finance_policy: '금융 정책을 찾아봤어요',
-  recommend_savings_products: '적금 상품을 찾아봤어요',
-};
+// toolName → 완료 문구 (i18n chat.tool). 서버는 문구를 주지 않는다 (Swagger ChatToolCallEvent). 표에 없는 이름은 문구 없이 넘어간다
+const TOOL_NAMES = [
+  'get_financial_analysis',
+  'get_remittance_recipients',
+  'quote_remittance',
+  'fx_rate_summary',
+  'calculate_e74_score',
+  'get_fx_rate',
+  'get_visa_roadmap',
+  'search_visa_policies',
+  'search_finance_policy',
+  'recommend_savings_products',
+] as const;
+const toolLabel = (name: string): string | undefined =>
+  (TOOL_NAMES as readonly string[]).includes(name)
+    ? i18n.t(`chat.tool.${name as (typeof TOOL_NAMES)[number]}`)
+    : undefined;
 
 // 화면이 그릴 줄 아는 카드 type. 이 밖의 type 은 버린다 (Swagger: 모르는 type 은 무시)
 const KNOWN_BLOCK_TYPES: ReadonlySet<string> = new Set<ChatBlock['type']>([
@@ -162,7 +167,7 @@ async function realStream(
 
   // ③ 스트림 시작 전 오류(400·401·404·409)는 일반 JSON 오류로 온다
   if (!res.ok) throw await httpError(res);
-  if (!res.body) throw networkError(new Error('응답 본문이 없어요'));
+  if (!res.body) throw networkError(new Error(i18n.t('chat.error.noBody')));
 
   // ④ 조각 읽기 → 파서 → 이벤트 처리
   let done = false;
@@ -176,7 +181,7 @@ async function realStream(
         if (typeof d.text === 'string') onDelta(d.text);
         break;
       case 'chat.tool_call': {
-        const label = TOOL_LABELS[String(d.toolName)];
+        const label = toolLabel(String(d.toolName));
         if (label && d.status === 'SUCCEEDED') onStatus?.(label);
         break;
       }
@@ -186,7 +191,7 @@ async function realStream(
         blocks = parseBlocks(d.blocks); // 카드는 도구가 성공했을 때만 온다. 없으면 null
         break;
       case 'chat.error':
-        failed = { code: String(d.code ?? 'INTERNAL_ERROR'), message: String(d.message ?? '답변을 만들지 못했어요.') };
+        failed = { code: String(d.code ?? 'INTERNAL_ERROR'), message: String(d.message ?? i18n.t('chat.error.answerFailed')) };
         break;
       // chat.started(5단계에서 assistantMessageId 사용), chat.sources, 모르는 이벤트는 무시
     }
@@ -207,7 +212,7 @@ async function realStream(
   // ⑤ 끝 판단. 연결이 닫힌 것만으로는 성공이 아니다 (서버가 죽어도 닫힌다)
   if (failed) throw failed;
   if (done) return { blocks };
-  throw { code: 'STREAM_INTERRUPTED', message: '답변이 중간에 끊겼어요.' } satisfies ApiError;
+  throw { code: 'STREAM_INTERRUPTED', message: i18n.t('chat.error.interrupted') } satisfies ApiError;
 }
 
 // 실패 응답 본문 { code, message, details, requestId } → ApiError. client.ts 응답 인터셉터와 같은 규칙
@@ -215,12 +220,12 @@ async function httpError(res: { status: number; json: () => Promise<unknown> }):
   const body = (await res.json().catch(() => null)) as { code?: string; message?: string } | null;
   return {
     code: body?.code ?? `HTTP_${res.status}`,
-    message: body?.message ?? '알 수 없는 오류가 발생했어요.',
+    message: body?.message ?? i18n.t('chat.error.unknown'),
   };
 }
 
 function networkError(e: unknown): ApiError {
-  return { code: 'NETWORK', message: e instanceof Error ? e.message : '네트워크 오류가 발생했어요.' };
+  return { code: 'NETWORK', message: e instanceof Error ? e.message : i18n.t('chat.error.network') };
 }
 
 // data 줄(JSON 한 줄) 읽기. 깨졌으면 null
@@ -279,5 +284,5 @@ function wait(ms: number, signal?: AbortSignal): Promise<void> {
 }
 
 function aborted(): ApiError {
-  return { code: 'ABORTED', message: '답변을 멈췄어요.' };
+  return { code: 'ABORTED', message: i18n.t('chat.error.aborted') };
 }

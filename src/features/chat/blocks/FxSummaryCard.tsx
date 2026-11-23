@@ -4,6 +4,7 @@
 // - Figma 와 다른 점: 제목 "주요 통화 환율"(PHP 는 고시가 아님), 통화마다 출처·기준일이 달라 박스·각주에 나눠 적음,
 //   "원"·화살표는 그림 대신 글자·Ionicons(기존 FX 화면과 같음), 하락 색은 theme colors.fall
 // - periodAverages·unavailableCurrencies 는 지금 보여 주지 않는다
+import { useTranslation } from 'react-i18next';
 import { View, Text, StyleSheet } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import Button from '../../../components/Button';
@@ -14,14 +15,12 @@ import { changeTrend, fmtFxRateByCurrency, FX_STALE_TEXT, type FxTrend } from '.
 import type { ChatAction } from '../../../api/mock/chat';
 import type { ChatFxSummaryBlock, ChatFxSummaryCurrency } from '../../../types/api';
 import { currencySymbol, currencyWithName, fxSourceText } from './labels';
+import i18n from '../../../i18n';
 
 type Props = {
   block: ChatFxSummaryBlock;
   onAction: (action: ChatAction) => void;
 };
-
-const TITLE = '주요 통화 환율';
-const SEND_RATE_FALLBACK = '시장 환율 참고값'; // sendRate·receiveRate 가 null 인 통화(PHP)
 
 const trendColor = (t: FxTrend | null) =>
   t === 'UP' ? colors.rise : t === 'DOWN' ? colors.fall : colors.text.sub;
@@ -29,7 +28,7 @@ const trendColor = (t: FxTrend | null) =>
 // "수출입은행 고시 · 11.06 기준". 모르는 출처면 날짜만
 function sourceDateText(c: ChatFxSummaryCurrency): string {
   const src = fxSourceText(c.source);
-  const date = `${fmtDate(c.asOf, { short: true })} 기준`;
+  const date = i18n.t('cards.fx.asOf', { date: fmtDate(c.asOf, { short: true }) });
   return src ? `${src} · ${date}` : date;
 }
 
@@ -48,10 +47,11 @@ function footnoteText(currencies: ChatFxSummaryCurrency[]): string {
     const date = fmtDate(c.asOf, { short: true });
     return src ? `${c.currency} ${src}(${date})` : `${c.currency}(${date})`;
   });
-  return `기준: ${parts.join(' · ')}`;
+  return i18n.t('cards.fx.footnote', { parts: parts.join(' · ') });
 }
 
 export default function FxSummaryCard({ block, onAction }: Props) {
+  const { t } = useTranslation();
   const { currencies } = block;
   if (currencies.length === 0) return null;
   const headerMeta = headerMetaText(currencies);
@@ -63,7 +63,7 @@ export default function FxSummaryCard({ block, onAction }: Props) {
         <View style={s.header}>
           <View style={s.titleRow}>
             <View style={s.dot} />
-            <Text style={s.title}>{TITLE}</Text>
+            <Text style={s.title}>{t('cards.fx.title')}</Text>
           </View>
           {headerMeta ? (
             <Text style={s.headerMeta} numberOfLines={2}>
@@ -85,10 +85,10 @@ export default function FxSummaryCard({ block, onAction }: Props) {
                   <View style={s.flex}>
                     <View style={s.nameRow}>
                       <Text style={s.name}>{currencyWithName(c.currency)}</Text>
-                      {c.isMock && <Tag label="데모" />}
+                      {c.isMock && <Tag label={t('cards.demo')} />}
                     </View>
                     <Text style={s.itemSub}>
-                      {c.unit} {c.currency} 매매기준율
+                      {t('cards.fx.baseRate', { unit: c.unit, currency: c.currency })}
                     </Text>
                     {/* stale 이면 기준일을 강조하고 안내를 붙인다 */}
                     <Text style={[s.itemSub, c.stale && s.staleText]}>{sourceDateText(c)}</Text>
@@ -98,7 +98,7 @@ export default function FxSummaryCard({ block, onAction }: Props) {
                 <View style={s.itemRight}>
                   <View style={s.priceRow}>
                     <Text style={s.price}>{fmtFxRateByCurrency(c.rate, c.currency)}</Text>
-                    <Text style={s.priceUnit}>원</Text>
+                    <Text style={s.priceUnit}>{t('cards.fx.won')}</Text>
                   </View>
                   {/* 전 영업일 값이 없으면(change null) 전일 대비 줄을 숨긴다 */}
                   {c.change !== null && (
@@ -125,10 +125,10 @@ export default function FxSummaryCard({ block, onAction }: Props) {
         {/* 표: 통화 / 매매기준율 / 송금 보낼 때 / 송금 받을 때 */}
         <View style={s.table}>
           <View style={s.tableRow}>
-            <Text style={[s.th, s.cell]}>통화</Text>
-            <Text style={[s.th, s.cell, s.right]}>매매기준율</Text>
-            <Text style={[s.th, s.cell, s.right]}>송금 보낼 때</Text>
-            <Text style={[s.th, s.cell, s.right]}>송금 받을 때</Text>
+            <Text style={[s.th, s.cell]}>{t('cards.fx.thCurrency')}</Text>
+            <Text style={[s.th, s.cell, s.right]}>{t('cards.fx.thBase')}</Text>
+            <Text style={[s.th, s.cell, s.right]}>{t('cards.fx.thSend')}</Text>
+            <Text style={[s.th, s.cell, s.right]}>{t('cards.fx.thReceive')}</Text>
           </View>
           {currencies.map((c) => (
             <View key={c.currency}>
@@ -137,8 +137,8 @@ export default function FxSummaryCard({ block, onAction }: Props) {
                 <Text style={[s.tdHead, s.cell]}>{c.currency}</Text>
                 <Text style={[s.td, s.cell, s.right]}>{fmtFxRateByCurrency(c.rate, c.currency)}</Text>
                 {c.sendRate === null || c.receiveRate === null ? (
-                  // 송금 환율이 없는 통화는 두 칸을 합쳐 안내 (Figma PHP 행)
-                  <Text style={[s.td, s.cellWide, s.right]}>{SEND_RATE_FALLBACK}</Text>
+                  // 송금 환율이 없는 통화(PHP)는 두 칸을 합쳐 안내 (Figma PHP 행)
+                  <Text style={[s.td, s.cellWide, s.right]}>{t('cards.fx.sendRateFallback')}</Text>
                 ) : (
                   <>
                     <Text style={[s.td, s.cell, s.right]}>{fmtFxRateByCurrency(c.sendRate, c.currency)}</Text>
@@ -156,13 +156,13 @@ export default function FxSummaryCard({ block, onAction }: Props) {
       {/* 버튼은 앱 고정 3개 (Figma 의 다른 통화 보기 버튼은 넣지 않음) */}
       <View style={s.btnRow}>
         <View style={s.flex}>
-          <Button title="환율 상세 보기" variant="secondary" onPress={() => onAction('fx')} />
+          <Button title={t('cards.fx.detail')} variant="secondary" onPress={() => onAction('fx')} />
         </View>
         <View style={s.flex}>
-          <Button title="환율 알림 받기" variant="secondary" onPress={() => onAction('fx_alert')} />
+          <Button title={t('cards.fx.alert')} variant="secondary" onPress={() => onAction('fx_alert')} />
         </View>
       </View>
-      <Button title="이 환율로 바로 송금하기" onPress={() => onAction('transfer')} />
+      <Button title={t('cards.fx.transfer')} onPress={() => onAction('transfer')} />
     </View>
   );
 }
