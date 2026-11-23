@@ -1,5 +1,6 @@
 // 점수 항목 한 줄 (Figma 522:2 Score Row). 점수 문자열은 서버(Mock) 값을 그대로 받는다.
 // default: 확정 점수(파랑) / pending: 증빙 대기(회색 + 주황 안내) / required: 필수요건 미충족(빨강)
+import { useTranslation } from 'react-i18next';
 import { View, Text, StyleSheet } from 'react-native';
 import Tag from './Tag';
 import { colors, typography, fonts, spacing, radius } from '../constants/theme';
@@ -15,12 +16,13 @@ type ScoreRowProps = {
 };
 
 export default function ScoreRow({ title, sub, score, scoreSub, state = 'default' }: ScoreRowProps) {
+  const { t } = useTranslation();
   return (
     <View style={[s.row, state === 'required' && s.rowRequired]}>
       <View style={s.left}>
         <View style={s.titleRow}>
           <Text style={s.title}>{title}</Text>
-          {state === 'required' && <Tag label="필수요건" type="required" />}
+          {state === 'required' && <Tag label={t('visa.requiredTag')} type="required" />}
         </View>
         <Text style={s.sub}>{sub}</Text>
       </View>
