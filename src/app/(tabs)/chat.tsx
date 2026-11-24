@@ -509,8 +509,9 @@ function MessageItem({
         />
       )}
       {msg.status === 'done' && msg.question && isCreditQuestion(msg.question) && (
-        // 대출·신용 질문: 대안신용 사전진단 화면으로 바로 가는 버튼 (AI 답과 상관없이 FE 가 붙인다)
-        <Button title={t('chat.creditCheck')} variant="secondary" onPress={() => runAction('credit')} />
+        // 대출·신용 질문: 대안신용 사전진단 화면으로 바로 가는 버튼 (AI 답과 상관없이 FE 가 붙인다).
+        // 모양은 송금 카드의 [송금하기](RemittanceConfirmCard)와 같다
+        <Button title={t('chat.creditCheck')} showArrow onPress={() => runAction('credit')} />
       )}
       {msg.suggestions && msg.suggestions.length > 0 && (
         <SuggestionChipRow
