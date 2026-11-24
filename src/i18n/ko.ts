@@ -614,6 +614,16 @@ const ko = {
       fixedLabel: '고정 생활비',
     },
   },
+
+  // 국적별 환영 (환영 화면, SOL 홈 쏠 인사). 현지어 인사말(Mabuhay 등)은 화면 언어와 상관없어 constants/countryWelcome.ts 에 둔다
+  welcome: {
+    skip: '건너뛰기',
+    start: '시작하기',
+    ph: {
+      message: '신한걸음에 오신 걸 환영해요.\n한국 생활, 이제 쏠과 한 걸음씩 함께해요.',
+      homeLine: '오늘도 신한걸음이 함께해요',
+    },
+  },
 };
 
 export default ko;

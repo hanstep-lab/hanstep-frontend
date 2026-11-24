@@ -603,6 +603,15 @@ const en: Translation = {
       fixedLabel: 'Fixed living costs',
     },
   },
+
+  welcome: {
+    skip: 'Skip',
+    start: 'Get started',
+    ph: {
+      message: "Welcome to Shinhan Step.\nLet's take life in Korea one step at a time, with SOL.",
+      homeLine: 'Shinhan Step is with you today, too',
+    },
+  },
 };
 
 export default en;
