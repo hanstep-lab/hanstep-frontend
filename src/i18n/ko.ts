@@ -96,6 +96,7 @@ const ko = {
     },
     preparing: '답변을 준비하고 있어요…',
     retry: '다시 시도',
+    creditCheck: '대안신용 사전진단 해보기', // 대출·신용 질문 답변 아래 버튼 (features/chat/creditLink.ts)
     menuTitle: '전체 메뉴',
     unseenAlert: '확인하지 않은 도달 알림 있음',
     backToSol: 'SOL Global로 돌아가기',

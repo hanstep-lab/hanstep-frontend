@@ -92,6 +92,7 @@ const en: Translation = {
     },
     preparing: 'Preparing an answer…',
     retry: 'Try again',
+    creditCheck: 'Try the alternative credit check',
     menuTitle: 'All menus',
     unseenAlert: 'Unread rate alert',
     backToSol: 'Back to SOL Global',

@@ -37,6 +37,8 @@ import {
   remainingScenario,
   type ScenarioQuestion,
 } from '../../features/chat/demoScenario';
+import { isCreditQuestion } from '../../features/chat/creditLink';
+import Button from '../../components/Button';
 
 function openTransfer(amountKRW: number | null) {
   useTransferStore.getState().setInitialAmount(amountKRW);
@@ -505,6 +507,10 @@ function MessageItem({
           onAction={runAction}
           onOpenTransferPath={openTransferPath}
         />
+      )}
+      {msg.status === 'done' && msg.question && isCreditQuestion(msg.question) && (
+        // 대출·신용 질문: 대안신용 사전진단 화면으로 바로 가는 버튼 (AI 답과 상관없이 FE 가 붙인다)
+        <Button title={t('chat.creditCheck')} variant="secondary" onPress={() => runAction('credit')} />
       )}
       {msg.suggestions && msg.suggestions.length > 0 && (
         <SuggestionChipRow
