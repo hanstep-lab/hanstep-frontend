@@ -8,6 +8,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { router, type Href } from 'expo-router';
 import Button from '../../components/Button';
+import Header from '../../components/Header';
 import Pill from '../../components/Pill';
 import ScoreRow from '../../components/ScoreRow';
 import StepCard, { STEP_NUMBER_SIZE, STEP_NUMBER_TOP } from '../../components/StepCard';
@@ -204,12 +205,7 @@ export default function VisaScreen() {
 
   return (
     <SafeAreaView style={s.safe} edges={['top']}>
-      <View style={s.header}>
-        {/* 제목만 표시. 화살표·새 대화·히스토리·메뉴 버튼은 "준비 중"만 띄워서 뺐다 (#54) */}
-        <View style={s.headerTitle}>
-          <Text style={s.headerTitleText}>{t('common.appName')}</Text>
-        </View>
-      </View>
+      <Header title={t('common.appName')} />
 
       <ScrollView contentContainerStyle={s.content} showsVerticalScrollIndicator={false}>
         <View style={s.titleBlock}>
@@ -270,16 +266,6 @@ const s = StyleSheet.create({
   right: { textAlign: 'right' },
   rowBetween: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: spacing.sm },
   stateText: { ...typography.body, color: colors.text.sub, textAlign: 'center', paddingVertical: spacing.xl },
-
-  header: {
-    height: 56,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: spacing.xl,
-  },
-  headerTitle: { flexDirection: 'row', alignItems: 'center', gap: spacing.xs, minHeight: 44 },
-  headerTitleText: { ...typography.h3, fontFamily: fonts.medium, color: colors.text.strong },
 
   content: { paddingHorizontal: spacing.xl, paddingTop: spacing.xs, paddingBottom: spacing.xxl, gap: spacing.xl },
 
