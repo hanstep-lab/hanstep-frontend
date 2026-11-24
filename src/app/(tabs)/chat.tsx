@@ -34,6 +34,7 @@ import AnswerText from '../../features/chat/AnswerText';
 import { cardLanguage, type CardLanguage } from '../../features/chat/blocks/productLines';
 import {
   SCENARIO_KEYS,
+  SCENARIO_REPLY_KEYS,
   remainingScenario,
   type ScenarioQuestion,
 } from '../../features/chat/demoScenario';
@@ -229,10 +230,12 @@ export default function ChatScreen() {
   };
 
   const canSend = !!input.trim() && !streaming; // 글자가 있고 답하는 중이 아닐 때만 보내기 버튼 켜기
-  // 시연 시나리오 칩: 대화 중에만, 아직 안 보낸 질문이 남았을 때만 입력창 위에 보인다 (첫 화면은 LandingContent 목록)
+  // 시연 시나리오 칩: 대화 중에만, 아직 안 보낸 질문이 남았을 때만 입력창 위에 보인다 (첫 화면은 LandingContent 목록).
+  // 재질의 답(엄마한테)은 그 질문을 보낸 뒤 바로 다음 칩으로 나온다
   const scenarioLeft = remainingScenario(
     SCENARIO_KEYS.map(key => ({ key, text: t(`chat.landing.${key}`) })),
     askedSet,
+    Object.fromEntries(SCENARIO_REPLY_KEYS.map(key => [key, t(`chat.scenarioReply.${key}`)])),
   );
   const showScenario = messages.length > 0 && scenarioLeft.length > 0;
 
