@@ -19,7 +19,6 @@ import { colors, typography, spacing, radius, fonts } from '../../constants/them
 import {
   type ChatAction,
   type SuggestionChip,
-  LANDING_SUGGESTIONS,
   MENU_GROUPS,
 } from '../../api/mock/chat';
 import { createChatSession, streamChatMessage, type ChatCardBlock } from '../../api/chat';
@@ -33,6 +32,11 @@ import { useTransferStore } from '../../store/transferStore';
 import ChatBlocks from '../../features/chat/blocks/ChatBlocks';
 import AnswerText from '../../features/chat/AnswerText';
 import { cardLanguage, type CardLanguage } from '../../features/chat/blocks/productLines';
+import {
+  SCENARIO_KEYS,
+  remainingScenario,
+  type ScenarioQuestion,
+} from '../../features/chat/demoScenario';
 
 function openTransfer(amountKRW: number | null) {
   useTransferStore.getState().setInitialAmount(amountKRW);
@@ -223,6 +227,12 @@ export default function ChatScreen() {
   };
 
   const canSend = !!input.trim() && !streaming; // 글자가 있고 답하는 중이 아닐 때만 보내기 버튼 켜기
+  // 시연 시나리오 칩: 대화 중에만, 아직 안 보낸 질문이 남았을 때만 입력창 위에 보인다 (첫 화면은 LandingContent 목록)
+  const scenarioLeft = remainingScenario(
+    SCENARIO_KEYS.map(key => ({ key, text: t(`chat.landing.${key}`) })),
+    askedSet,
+  );
+  const showScenario = messages.length > 0 && scenarioLeft.length > 0;
 
   return (
     <SafeAreaView style={styles.safe} edges={['top', 'bottom']}>
@@ -281,7 +291,9 @@ export default function ChatScreen() {
           )}
         </ScrollView>
 
-        <View style={styles.inputBar}>
+        {showScenario && <ScenarioChipRow questions={scenarioLeft} disabled={streaming} onSend={send} />}
+
+        <View style={[styles.inputBar, showScenario && styles.inputBarJoined]}>
           <Pressable style={styles.micBtn}>
             <Ionicons name="mic-outline" size={24} color={colors.text.sub} />
           </Pressable>
@@ -327,10 +339,10 @@ function LandingContent({ onSend, userName }: { onSend: (t: string) => void; use
       </Text>
       <Text style={landStyles.sub}>{t('chat.landingSub')}</Text>
       <View style={landStyles.card}>
-        {LANDING_SUGGESTIONS.map((key, i) => (
+        {SCENARIO_KEYS.map((key, i) => (
           <Pressable
             key={key}
-            style={[landStyles.row, i < LANDING_SUGGESTIONS.length - 1 && landStyles.rowBorder]}
+            style={[landStyles.row, i < SCENARIO_KEYS.length - 1 && landStyles.rowBorder]}
             onPress={() => onSend(t(`chat.landing.${key}`))}
           >
             <Text style={landStyles.rowText}>· {t(`chat.landing.${key}`)}</Text>
@@ -338,6 +350,57 @@ function LandingContent({ onSend, userName }: { onSend: (t: string) => void; use
         ))}
       </View>
     </View>
+  );
+}
+
+// 대화 중 입력창 바로 위 시연 시나리오 칩 줄. 맨 앞(다음 순서) 칩을 강조한다.
+// 답하는 중에는 send 가 무시하므로 칩도 막고 비활성 모양으로 보인다
+function ScenarioChipRow({
+  questions,
+  disabled,
+  onSend,
+}: {
+  questions: ScenarioQuestion[];
+  disabled: boolean;
+  onSend: (t: string) => void;
+}) {
+  return (
+    <ScrollView
+      horizontal
+      showsHorizontalScrollIndicator={false}
+      keyboardShouldPersistTaps="handled" // 키보드가 떠 있어도 칩을 한 번에 누를 수 있게
+      style={scenarioStyles.scroll}
+      contentContainerStyle={scenarioStyles.list}
+    >
+      {questions.map((q, i) => {
+        const next = i === 0;
+        return (
+          <Pressable
+            key={q.key}
+            style={[
+              scenarioStyles.chip,
+              next && scenarioStyles.chipNext,
+              next && disabled && scenarioStyles.chipNextDisabled,
+            ]}
+            onPress={() => onSend(q.text)}
+            disabled={disabled}
+            accessibilityRole="button"
+            accessibilityState={{ disabled }}
+          >
+            <Text
+              numberOfLines={1}
+              style={[
+                scenarioStyles.chipText,
+                next && scenarioStyles.chipTextNext,
+                !next && disabled && scenarioStyles.chipTextDisabled,
+              ]}
+            >
+              {q.text}
+            </Text>
+          </Pressable>
+        );
+      })}
+    </ScrollView>
   );
 }
 
@@ -656,6 +719,7 @@ const styles = StyleSheet.create({
     borderTopWidth: StyleSheet.hairlineWidth,
     borderTopColor: colors.border,
   },
+  inputBarJoined: { borderTopWidth: 0 }, // 위에 시나리오 칩 줄이 있으면 구분선은 칩 줄 위에만
   micBtn: { padding: 4 },
   textInput: {
     flex: 1,
@@ -689,6 +753,30 @@ const landStyles = StyleSheet.create({
   row: { paddingHorizontal: spacing.lg, paddingVertical: spacing.md },
   rowBorder: { borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: colors.border },
   rowText: { ...typography.body, color: colors.text.strong },
+});
+
+// 시연 시나리오 칩 줄. 모양은 fx/alert.tsx 통화 칩(chip·chipSelected)을 따르고, 입력창과 같은 흰 바탕에 붙여 한 덩어리로 보이게 한다
+const scenarioStyles = StyleSheet.create({
+  scroll: {
+    flexGrow: 0, // 가로 ScrollView 가 세로로 늘어나지 않게 (칩 한 줄 높이 유지)
+    backgroundColor: colors.surface,
+    borderTopWidth: StyleSheet.hairlineWidth,
+    borderTopColor: colors.border,
+  },
+  list: { paddingHorizontal: spacing.lg, paddingTop: spacing.sm, gap: spacing.sm },
+  chip: {
+    // 짧은 질문(1-2·2·4-2)은 다 보이고 긴 질문(3·4-1)은 말줄임. 375pt 화면에서 옆 칩이 50pt쯤 보여서 넘길 수 있는 줄 알 수 있다
+    maxWidth: 300,
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.sm,
+    borderRadius: radius.full,
+    backgroundColor: colors.background,
+  },
+  chipNext: { backgroundColor: colors.primary },
+  chipNextDisabled: { backgroundColor: colors.disabled },
+  chipText: { ...typography.body, fontFamily: fonts.bold, color: colors.text.sub },
+  chipTextNext: { color: colors.text.inverse },
+  chipTextDisabled: { color: colors.text.placeholder },
 });
 
 const msgStyles = StyleSheet.create({
