@@ -27,6 +27,7 @@ import type {
 } from '../../types/api';
 import { errorText } from '../../utils/errorText';
 import { commitmentLabel } from '../../utils/commitmentLabel';
+import { firstName } from '../../utils/name';
 
 const MAN = 10_000;
 
@@ -68,12 +69,6 @@ function parseMan(text: string): number | null {
 
 // 숫자와 소수점만 남김
 const onlyNumber = (t: string) => t.replace(/[^\d.]/g, '');
-
-// "MARK ANTHONY REYES" → "Mark"
-function firstName(displayName: string): string {
-  const w = displayName.trim().split(/\s+/)[0] ?? '';
-  return w ? w[0].toUpperCase() + w.slice(1).toLowerCase() : '';
-}
 
 function initials(displayName: string): string {
   const words = displayName.trim().split(/\s+/);

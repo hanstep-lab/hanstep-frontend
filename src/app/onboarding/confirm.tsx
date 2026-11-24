@@ -7,7 +7,7 @@ import { useTranslation } from 'react-i18next';
 import { View, Text, ScrollView, StyleSheet, Pressable } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
-import { router } from 'expo-router';
+import { router, type Href } from 'expo-router';
 import Header from '../../components/Header';
 import Button from '../../components/Button';
 import { useOnboardingStep } from '../../hooks/useOnboardingStep';
@@ -22,6 +22,8 @@ import type { CommitmentType, OnboardingSummaryResponse } from '../../types/api'
 import { errorText } from '../../utils/errorText';
 import { commitmentLabel } from '../../utils/commitmentLabel';
 import i18n from '../../i18n';
+import { useOnboardingStore } from '../../store/onboardingStore';
+import { countryWelcome } from '../../constants/countryWelcome';
 
 // 고정 생활비로 묶이는 항목 (서버 totals.fixedLiving 과 같은 기준)
 const FIXED_TYPES: CommitmentType[] = ['RENT', 'UTILITY', 'TELECOM', 'LIVING_MINIMUM', 'OTHER'];
@@ -85,6 +87,7 @@ export default function ConfirmScreen() {
   const { t } = useTranslation();
   const [summary, setSummary] = useState<OnboardingSummaryResponse | null>(null);
   const [loadError, setLoadError] = useState<string | null>(null);
+  const setWelcomeProfile = useOnboardingStore((s) => s.setWelcomeProfile);
 
   const load = useCallback(() => {
     setLoadError(null);
@@ -99,6 +102,13 @@ export default function ConfirmScreen() {
 
   const { user, visa, goals, balance } = summary ?? {};
   const goalRows = summary ? buildGoalRows(summary) : [];
+
+  // 온보딩이 끝나면 국적·이름을 저장(SOL 홈 쏠 인사용)하고, 환영 설정이 있는 국적이면 챗봇 전에 환영 화면으로
+  const onCompleted = (): Href | undefined => {
+    if (!user) return undefined;
+    setWelcomeProfile({ nationalityCode: user.nationalityCode, displayName: user.displayName });
+    return countryWelcome(user.nationalityCode) ? ('/welcome' as Href) : undefined;
+  };
 
   return (
     <SafeAreaView style={styles.safe} edges={['top', 'bottom']}>
@@ -271,7 +281,7 @@ export default function ConfirmScreen() {
           <Button
             title={isNavigating ? t('common.processing') : t('onboarding.confirm.start')}
             showArrow={!isNavigating}
-            onPress={() => goNext()}
+            onPress={() => goNext(undefined, { onCompleted })}
             disabled={isNavigating}
           />
           <Button

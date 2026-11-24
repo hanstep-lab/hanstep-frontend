@@ -9,6 +9,10 @@ import { updateStep } from '../api/onboarding';
 import { errorText } from '../utils/errorText';
 import i18n from '../i18n';
 
+type GoNextOptions = {
+  onCompleted?: () => Href | undefined;
+};
+
 export function useOnboardingStep() {
   const [isNavigating, setIsNavigating] = useState(false);
   const [navError, setNavError] = useState<string | null>(null);
@@ -21,16 +25,19 @@ export function useOnboardingStep() {
 
   // beforeComplete: 단계 완료 API 전에 실행할 비동기 작업(예: 언어 변경, 프로필 저장).
   // 여기서 throw 하면 updateStep 은 호출되지 않고 navError 로 처리된다.
-  const goNext = async (beforeComplete?: () => Promise<void>) => {
+  // options.onCompleted: 온보딩이 끝났을 때(서버 응답 기준) 실행. 경로를 돌려주면 /chat 대신 그곳으로 간다
+  //   (예: ON-006 → 필리핀 사용자는 환영 화면). 넘기지 않으면 지금처럼 /chat
+  const goNext = async (beforeComplete?: () => Promise<void>, options?: GoNextOptions) => {
     if (!step || isNavigating) return;
     setNavError(null);
     setIsNavigating(true);
+    const finish = () => router.replace(options?.onCompleted?.() ?? '/chat');
     try {
       if (beforeComplete) await beforeComplete();
       const res = await updateStep(step.stepCode);
 
       if (res.onboardingCompleted) {
-        router.replace('/chat');
+        finish();
       } else if (res.currentStep) {
         const nextRoute = getRouteFromStepCode(res.currentStep);
         if (isLast) {
@@ -39,7 +46,7 @@ export function useOnboardingStep() {
           router.push(nextRoute as Href);
         }
       } else {
-        router.replace('/chat');
+        finish(); // 다음 단계가 없으면 끝난 것으로 본다
       }
     } catch (e: any) {
       setNavError(errorText(e, i18n.t('common.navError')));
