@@ -103,8 +103,8 @@ describe('시나리오 문구 (ko·en)', () => {
   });
 });
 
-describe('showDemoScenario (시나리오 추천을 보여 줄 화면 언어)', () => {
-  it('한국어 화면에서는 숨기고(#90), 영어 화면에서는 보여 준다', () => {
+describe('showDemoScenario (대화 중 시나리오 칩 줄을 보여 줄 화면 언어)', () => {
+  it('한국어 화면에서는 칩 줄을 숨기고(#90·#95), 영어 화면에서는 보여 준다', () => {
     expect(showDemoScenario('ko')).toBe(false);
     expect(showDemoScenario('en')).toBe(true);
   });

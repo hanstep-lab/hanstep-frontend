@@ -238,7 +238,7 @@ export default function ChatScreen() {
     askedSet,
     Object.fromEntries(SCENARIO_REPLY_KEYS.map(key => [key, t(`chat.scenarioReply.${key}`)])),
   );
-  // 한국어 화면에서는 시나리오 칩을 보여 주지 않는다(#90)
+  // 한국어 화면에서는 대화 중 시나리오 칩 줄만 숨긴다(#90·#95). 첫 화면 질문 목록은 한국어에서도 보인다
   const showScenario = showDemoScenario(i18n.language) && messages.length > 0 && scenarioLeft.length > 0;
 
   return (
@@ -344,23 +344,18 @@ function LandingContent({ onSend, userName }: { onSend: (t: string) => void; use
       <Text style={landStyles.greeting}>
         {`${hello}\n${t('chat.landingAsk')}`}
       </Text>
-      {/* 시연 시나리오 질문 목록. 한국어 화면에서는 안내 문구와 함께 숨긴다(#90) */}
-      {showDemoScenario(i18n.language) && (
-        <>
-          <Text style={landStyles.sub}>{t('chat.landingSub')}</Text>
-          <View style={landStyles.card}>
-            {SCENARIO_KEYS.map((key, i) => (
-              <Pressable
-                key={key}
-                style={[landStyles.row, i < SCENARIO_KEYS.length - 1 && landStyles.rowBorder]}
-                onPress={() => onSend(t(`chat.landing.${key}`))}
-              >
-                <Text style={landStyles.rowText}>· {t(`chat.landing.${key}`)}</Text>
-              </Pressable>
-            ))}
-          </View>
-        </>
-      )}
+      <Text style={landStyles.sub}>{t('chat.landingSub')}</Text>
+      <View style={landStyles.card}>
+        {SCENARIO_KEYS.map((key, i) => (
+          <Pressable
+            key={key}
+            style={[landStyles.row, i < SCENARIO_KEYS.length - 1 && landStyles.rowBorder]}
+            onPress={() => onSend(t(`chat.landing.${key}`))}
+          >
+            <Text style={landStyles.rowText}>· {t(`chat.landing.${key}`)}</Text>
+          </Pressable>
+        ))}
+      </View>
     </View>
   );
 }
