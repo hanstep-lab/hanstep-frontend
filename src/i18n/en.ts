@@ -90,6 +90,9 @@ const en: Translation = {
       s3: "I want to move out of the company dormitory, but I don't have enough for the deposit. Banks say I have no credit history. Can I still get a loan?",
       s4: 'I want to stay and work in Korea long-term. Which visa should I prepare for?',
     },
+    scenarioReply: {
+      s1: 'To mom',
+    },
     preparing: 'Preparing an answer…',
     retry: 'Try again',
     creditCheck: 'Try the alternative credit check',
