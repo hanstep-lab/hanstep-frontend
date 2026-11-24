@@ -17,6 +17,10 @@ import {
   submitTransfer,
   canSendQuote,
   defaultQuoteOf,
+  compareQuoteOf,
+  compareReceiveOf,
+  productLabel,
+  quoteUnavailableText,
   quoteNoticeText,
   transferErrorText,
   recipientCountry,
@@ -159,6 +163,9 @@ export default function TransferScreen() {
   // 기본 상품으로 보낼 수 없는 금액(예: 수수료보다 작음)이면 송금 버튼을 막는다
   const canSubmit = amount > 0 && !!quote && canSendQuote(quote) && !submitting;
   const mainQuote = quote ? defaultQuoteOf(quote) : null;
+  // 비교 상품(쏠빠른). 견적을 다 받았을 때만 송금 내역 아래에 보여 준다
+  const compareQuote = quote && !quoteLoading && !quoteError ? compareQuoteOf(quote) : null;
+  const compareReceive = quote && compareQuote ? compareReceiveOf(compareQuote, quote) : null;
   const notice = quote ? quoteNoticeText(quote) : null;
   const deliveryLine = [mainQuote ? deliveryText(mainQuote.deliveryType) : null, BANK_BIC[recipient.bank] ? `BIC ${BANK_BIC[recipient.bank]}` : null]
     .filter(Boolean)
@@ -259,6 +266,7 @@ export default function TransferScreen() {
       <View style={s.section}>
         <Text style={s.sectionLabel}>{t('transfer.breakdown')}</Text>
         <View style={[s.card, s.listCard]}>
+          {quote ? <Text style={s.productName}>{productLabel(quote.defaultProduct)}</Text> : null}
           <View style={s.row}>
             <Text style={s.itemLabelStrong}>
               {t('transfer.receive')}
@@ -366,6 +374,49 @@ export default function TransferScreen() {
           ) : null}
         </View>
         {notice ? <Text style={s.noticeText}>{notice}</Text> : null}
+
+        {/* 비교 상품(쏠빠른) 견적: 서버 quotes[] 의 기본이 아닌 상품. 비교로만 보여 주고 송금은 기본 상품으로 한다 */}
+        {quote && compareQuote ? (
+          <View style={[s.card, s.listCard, s.compareCard]}>
+            <Text style={s.productName}>{t('transfer.compare.title', { product: productLabel(compareQuote.product) })}</Text>
+            {compareQuote.available ? (
+              <>
+                {compareReceive ? (
+                  <View style={s.row}>
+                    <Text style={s.itemLabel}>
+                      {t('transfer.receive')}
+                      {compareReceive.reference ? t('transfer.referenceSuffix') : ''}
+                    </Text>
+                    <Text style={[s.itemValueStrong, s.noShrink]}>{compareReceive.text}</Text>
+                  </View>
+                ) : null}
+                {feeText(compareQuote) ? (
+                  <View style={s.row}>
+                    <Text style={s.itemLabel}>{t('transfer.fee')}</Text>
+                    <Text style={s.itemValue}>{feeText(compareQuote)}</Text>
+                  </View>
+                ) : null}
+                {compareQuote.totalWithdrawKrw != null ? (
+                  <View style={s.row}>
+                    <Text style={s.itemLabel}>{t('transfer.totalWithdraw')}</Text>
+                    <Text style={s.itemValue}>{t('money.won', { amount: fmtNumber(compareQuote.totalWithdrawKrw) })}</Text>
+                  </View>
+                ) : null}
+                {deliveryText(compareQuote.deliveryType) ? (
+                  <View style={s.row}>
+                    <Text style={s.itemLabel}>{t('transfer.compare.delivery')}</Text>
+                    <Text style={s.itemValue}>{deliveryText(compareQuote.deliveryType)}</Text>
+                  </View>
+                ) : null}
+              </>
+            ) : (
+              <Text style={s.itemLabel}>{quoteUnavailableText(compareQuote)}</Text>
+            )}
+            <Text style={s.compareNote}>
+              {t('transfer.compare.note', { product: productLabel(quote.defaultProduct) })}
+            </Text>
+          </View>
+        ) : null}
       </View>
 
       {/* 출금 계좌 */}
@@ -505,6 +556,10 @@ const s = StyleSheet.create({
   detailToggle: { flexDirection: 'row', alignItems: 'center', justifyContent: 'flex-end', gap: spacing.xs },
   detailToggleText: { ...typography.badge, fontFamily: fonts.bold, color: colors.primary },
   noticeText: { ...typography.badge, color: colors.text.sub, paddingHorizontal: spacing.xs },
+  productName: { ...typography.badge, fontFamily: fonts.bold, color: colors.primary },
+  compareCard: { marginTop: spacing.sm },
+  noShrink: { flexShrink: 0 }, // 금액은 한 줄로 두고 긴 라벨(영어)이 대신 줄바꿈되게
+  compareNote: { ...typography.badge, color: colors.text.sub },
   errorText: { ...typography.badge, color: colors.error },
 
   accountName: { ...typography.title, color: colors.text.strong },

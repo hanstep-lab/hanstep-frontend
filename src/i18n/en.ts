@@ -341,6 +341,11 @@ const en: Translation = {
     detailToggle: '{{action}} withdrawal and fee details',
     collapse: 'Hide',
     expand: 'Show',
+    compare: {
+      title: 'If you send with {{product}}',
+      delivery: 'Delivery',
+      note: 'For comparison only. Your transfer goes through {{product}}.',
+    },
     account: 'Withdrawal account',
     foreignerCheck: 'Foreigner overseas transfer check',
     fxBank: 'Designated FX bank',

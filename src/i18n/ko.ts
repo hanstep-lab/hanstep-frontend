@@ -349,6 +349,12 @@ const ko = {
     detailToggle: '출금 총액·수수료 내역 {{action}}',
     collapse: '접기',
     expand: '자세히 보기',
+    // 비교 상품(쏠빠른) 견적. 상품 이름이 모두 '송금'으로 끝나 '으로'를 붙인다
+    compare: {
+      title: '{{product}}으로 보내면',
+      delivery: '받는 방법',
+      note: '비교용 예상 금액이에요. 송금은 {{product}}으로 진행돼요.',
+    },
     account: '출금 계좌',
     foreignerCheck: '외국인 해외송금 확인',
     fxBank: '거래외국환은행',
