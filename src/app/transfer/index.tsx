@@ -186,12 +186,17 @@ export default function TransferScreen() {
         </View>
         <View style={[s.card, s.row]}>
           <View style={s.recipientLeft}>
+            {/* 나라 배지는 원 아래 가운데에 살짝 겹쳐 둔다. 영어 나라 이름(Philippines)처럼 원보다 넓어도 양쪽으로 고르게 퍼진다 */}
             <View>
               <View style={s.flagCircle}>
                 <Text style={s.flagText}>{recipient.countryCode}</Text>
               </View>
-              <View style={s.countryBadge}>
-                <Text style={s.countryBadgeText}>{recipientCountry(recipient)}</Text>
+              <View style={s.countryBadgeWrap} pointerEvents="none">
+                <View style={s.countryBadge}>
+                  <Text style={s.countryBadgeText} numberOfLines={1}>
+                    {recipientCountry(recipient)}
+                  </Text>
+                </View>
               </View>
             </View>
             <View style={s.flex}>
@@ -433,7 +438,8 @@ const s = StyleSheet.create({
   row: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', gap: spacing.md },
   subText: { ...typography.body, color: colors.text.sub },
 
-  recipientLeft: { flex: 1, flexDirection: 'row', alignItems: 'center', gap: spacing.md },
+  // gap: 원보다 넓은 나라 배지(Philippines)와 옆 글자 사이가 붙지 않게 spacing.lg
+  recipientLeft: { flex: 1, flexDirection: 'row', alignItems: 'center', gap: spacing.lg },
   flagCircle: {
     width: 48,
     height: 48,
@@ -443,13 +449,22 @@ const s = StyleSheet.create({
     justifyContent: 'center',
   },
   flagText: { ...typography.h3, fontFamily: fonts.medium, color: colors.primary },
-  // Figma 는 파란 배경에 검은 글자라 읽기 어려워서 primarySoft 배경 + primary 글자로 둠 (확인 필요)
-  countryBadge: {
+  // 나라 배지 자리: 원(48) 아래쪽에 걸치고, 원보다 넓은 이름(Philippines·United States)도 원 가운데 기준으로 양쪽에 퍼지게
+  // 원보다 넓은 투명 칸을 겹쳐 두고 그 안에서 가운데 정렬한다. 원 칸 폭은 48 그대로라 이름 줄이 밀리지 않는다
+  countryBadgeWrap: {
     position: 'absolute',
-    right: -spacing.xs,
-    bottom: -spacing.xs,
-    backgroundColor: colors.primarySoft,
+    top: 48 - spacing.sm,
+    left: -spacing.xxl,
+    right: -spacing.xxl,
+    alignItems: 'center',
+  },
+  // Figma 는 파란 배경에 검은 글자라 읽기 어려워서 primaryLight 배경 + primary 글자로 둠 (확인 필요).
+  // 원에 걸쳐도 비치지 않게 불투명 배경, 흰 테두리로 원과 나눈다
+  countryBadge: {
+    backgroundColor: colors.primaryLight,
     borderRadius: radius.full,
+    borderWidth: 2,
+    borderColor: colors.surface,
     paddingHorizontal: spacing.sm,
   },
   countryBadgeText: { ...typography.badge, color: colors.primary },
