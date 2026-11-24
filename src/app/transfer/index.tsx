@@ -229,14 +229,26 @@ export default function TransferScreen() {
         <View style={[s.card, s.amountCard]}>
           <View style={s.row}>
             <View style={s.amountRow}>
-              <TextInput
-                value={amount > 0 ? fmtNumber(amount) : ''}
-                onChangeText={handleChange}
-                placeholder="0"
-                placeholderTextColor={colors.text.sub}
-                keyboardType="number-pad"
-                style={s.amountInput}
-              />
+              {/* 금액 칸 너비는 뒤에 깔린 보이지 않는 같은 숫자 글자가 정한다(#92).
+                  iOS 는 빠른 금액 버튼처럼 값을 코드로 바꾸면 TextInput 이 넓어지지 않아 첫 글자("5")만 보였다 */}
+              <View style={s.amountBox}>
+                <Text
+                  style={[s.amountInput, s.amountSizer]}
+                  numberOfLines={1}
+                  accessibilityElementsHidden
+                  importantForAccessibility="no-hide-descendants"
+                >
+                  {amount > 0 ? fmtNumber(amount) : '0'}
+                </Text>
+                <TextInput
+                  value={amount > 0 ? fmtNumber(amount) : ''}
+                  onChangeText={handleChange}
+                  placeholder="0"
+                  placeholderTextColor={colors.text.sub}
+                  keyboardType="number-pad"
+                  style={[s.amountInput, StyleSheet.absoluteFill]}
+                />
+              </View>
               <Text style={s.amountUnit}>{t('transfer.won')}</Text>
             </View>
             {amount > 0 && (
@@ -520,7 +532,11 @@ const s = StyleSheet.create({
   deliveryText: { ...typography.badge, color: colors.text.sub },
   amountCard: { gap: spacing.md },
   amountRow: { flex: 1, flexDirection: 'row', alignItems: 'baseline', gap: spacing.xs },
-  amountInput: { ...typography.h2, color: colors.primary, padding: 0, minWidth: 24 },
+  amountInput: { ...typography.h2, color: colors.primary, padding: 0 },
+  // 금액 칸 자리: 안의 보이지 않는 숫자 글자 너비만큼(줄보다 길면 줄어듦). TextInput 은 이 칸을 꽉 채운다
+  amountBox: { flexShrink: 1, minWidth: 24 },
+  // 너비만 잡는 글자. 커서가 숫자 끝에 붙어 잘리지 않게 오른쪽을 조금 더 둔다
+  amountSizer: { opacity: 0, paddingRight: spacing.xs },
   amountUnit: { ...typography.h3, fontFamily: fonts.medium, color: colors.text.strong },
   clearBtn: {
     width: 32,
