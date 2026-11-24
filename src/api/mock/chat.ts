@@ -30,9 +30,6 @@ export function getVisaDday(): number {
   return Math.ceil((expiry.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
 }
 
-// 첫 화면 질문. 문구는 i18n chat.landing.<키> (누르면 그 언어 문구를 질문으로 보낸다)
-export const LANDING_SUGGESTIONS = ['q1', 'q2', 'q3', 'q4'] as const;
-
 // action 이 없는 메뉴는 "준비 중" (설정). hidden 이면 메뉴 목록에 보이지 않는다(항목·화면 코드는 남겨 둠)
 // 이름·설명 문구는 i18n chat.menu.items.<key>, 그룹 제목은 chat.menu.sections.<section>.
 // 금융상품 추천 설명만 이름(users/me shortName)이 있으면 chat.menu.productsDescNamed 를 쓴다(chat.tsx)

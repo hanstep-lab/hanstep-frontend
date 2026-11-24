@@ -29,7 +29,8 @@ export default function VisaRoadmapLinkCard({ block, onAction }: Props) {
         <Text style={s.sub}>{t('cards.roadmap.steps', { n: block.stepCount })}</Text>
         <Text style={s.note}>{t('cards.roadmap.note')}</Text>
       </View>
-      <Button title={t('cards.roadmap.visaTab')} variant="secondary" onPress={() => onAction('visa_tab')} />
+      {/* 모양은 송금 카드의 [송금하기](RemittanceConfirmCard)와 같다 */}
+      <Button title={t('cards.roadmap.visaTab')} showArrow onPress={() => onAction('visa_tab')} />
     </View>
   );
 }
