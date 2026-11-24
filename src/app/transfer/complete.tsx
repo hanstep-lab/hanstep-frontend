@@ -34,7 +34,8 @@ export default function TransferCompleteScreen() {
 
   const handleBack = () => {
     reset();
-    router.replace('/(tabs)/chat' as Href);
+    // 송금 화면을 연 기존 챗봇으로 돌아간다 (새로 열면 대화·세션이 처음부터 시작됨). 챗봇이 없으면 새로 연다
+    router.dismissTo('/(tabs)/chat' as Href);
   };
 
   return (

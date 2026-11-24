@@ -252,7 +252,8 @@ export default function VisaScreen() {
             </View>
             <RoadmapSection steps={data.view.steps} />
             <SummaryCard summary={data.view.summary} />
-            <Button title={t('products.ask')} onPress={() => router.push('/(tabs)/chat' as Href)} />
+            {/* 같은 탭 묶음의 챗봇 탭으로 옮긴다 (push 로 새로 열면 대화·세션이 처음부터 시작됨) */}
+            <Button title={t('products.ask')} onPress={() => router.navigate('/(tabs)/chat' as Href)} />
           </FadeIn>
         )}
       </ScrollView>

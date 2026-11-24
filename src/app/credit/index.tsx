@@ -200,7 +200,12 @@ export default function AltCreditScreen() {
   const reason = (alt.reasonCode && REASON_TEXT[alt.reasonCode]) || T.reasonFallback;
 
   return (
-    <Screen>
+    <Screen
+      footer={
+        // 기존 챗봇으로 돌아간다 (push 로 새로 열면 대화·세션이 처음부터 시작됨). SOL 글로벌론 상세(loan.tsx)와 같은 버튼
+        <Button title={T.askButton} showArrow onPress={() => router.dismissTo('/(tabs)/chat' as Href)} />
+      }
+    >
       {/* 상단 */}
       <View style={s.intro}>
         <StepBadge label={T.badge} />

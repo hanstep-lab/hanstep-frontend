@@ -28,6 +28,7 @@ const ALT_CREDIT_TEXT_KO = {
   limitLabel: '예상 한도',
   termLabel: '대출 기간',
   detailButton: '상품 자세히 보기',
+  askButton: '신한걸음에 물어보기', // 화면 아래 고정 버튼 → 기존 챗봇으로 돌아간다
   checkUnknown: '확인 불가', // 가입 조건 met 이 null 일 때 옆 값 대신
   tipsTitle: '점수를 높이는 방법',
   notice: '신한걸음 사전진단 결과예요. 실제 대출 가능 여부와 금리는 은행 심사에 따라 달라요.',
@@ -195,6 +196,7 @@ const ALT_CREDIT_TEXT_EN = {
   limitLabel: 'Estimated limit',
   termLabel: 'Loan term',
   detailButton: 'View product details',
+  askButton: 'Ask Shinhan Step',
   checkUnknown: 'Unknown',
   tipsTitle: 'How to raise your score',
   notice: "This is a Shinhan Step pre-check. Actual loan approval and rates depend on the bank's review.",
