@@ -17,6 +17,10 @@ import {
   submitTransfer,
   canSendQuote,
   defaultQuoteOf,
+  compareQuoteOf,
+  compareReceiveOf,
+  productLabel,
+  quoteUnavailableText,
   quoteNoticeText,
   transferErrorText,
   recipientCountry,
@@ -159,6 +163,9 @@ export default function TransferScreen() {
   // 기본 상품으로 보낼 수 없는 금액(예: 수수료보다 작음)이면 송금 버튼을 막는다
   const canSubmit = amount > 0 && !!quote && canSendQuote(quote) && !submitting;
   const mainQuote = quote ? defaultQuoteOf(quote) : null;
+  // 비교 상품(쏠빠른). 견적을 다 받았을 때만 송금 내역 아래에 보여 준다
+  const compareQuote = quote && !quoteLoading && !quoteError ? compareQuoteOf(quote) : null;
+  const compareReceive = quote && compareQuote ? compareReceiveOf(compareQuote, quote) : null;
   const notice = quote ? quoteNoticeText(quote) : null;
   const deliveryLine = [mainQuote ? deliveryText(mainQuote.deliveryType) : null, BANK_BIC[recipient.bank] ? `BIC ${BANK_BIC[recipient.bank]}` : null]
     .filter(Boolean)
@@ -186,12 +193,17 @@ export default function TransferScreen() {
         </View>
         <View style={[s.card, s.row]}>
           <View style={s.recipientLeft}>
+            {/* 나라 배지는 원 아래 가운데에 살짝 겹쳐 둔다. 영어 나라 이름(Philippines)처럼 원보다 넓어도 양쪽으로 고르게 퍼진다 */}
             <View>
               <View style={s.flagCircle}>
                 <Text style={s.flagText}>{recipient.countryCode}</Text>
               </View>
-              <View style={s.countryBadge}>
-                <Text style={s.countryBadgeText}>{recipientCountry(recipient)}</Text>
+              <View style={s.countryBadgeWrap} pointerEvents="none">
+                <View style={s.countryBadge}>
+                  <Text style={s.countryBadgeText} numberOfLines={1}>
+                    {recipientCountry(recipient)}
+                  </Text>
+                </View>
               </View>
             </View>
             <View style={s.flex}>
@@ -254,6 +266,7 @@ export default function TransferScreen() {
       <View style={s.section}>
         <Text style={s.sectionLabel}>{t('transfer.breakdown')}</Text>
         <View style={[s.card, s.listCard]}>
+          {quote ? <Text style={s.productName}>{productLabel(quote.defaultProduct)}</Text> : null}
           <View style={s.row}>
             <Text style={s.itemLabelStrong}>
               {t('transfer.receive')}
@@ -361,6 +374,46 @@ export default function TransferScreen() {
           ) : null}
         </View>
         {notice ? <Text style={s.noticeText}>{notice}</Text> : null}
+
+        {/* 비교 상품(쏠빠른) 견적: 서버 quotes[] 의 기본이 아닌 상품. 비교로만 보여 주고 송금은 기본 상품으로 한다 */}
+        {quote && compareQuote ? (
+          <View style={[s.card, s.listCard, s.compareCard]}>
+            <Text style={s.productName}>{t('transfer.compare.title', { product: productLabel(compareQuote.product) })}</Text>
+            {compareQuote.available ? (
+              <>
+                {compareReceive ? (
+                  <View style={s.row}>
+                    <Text style={s.itemLabel}>
+                      {t('transfer.receive')}
+                      {compareReceive.reference ? t('transfer.referenceSuffix') : ''}
+                    </Text>
+                    <Text style={[s.itemValueStrong, s.noShrink]}>{compareReceive.text}</Text>
+                  </View>
+                ) : null}
+                {feeText(compareQuote) ? (
+                  <View style={s.row}>
+                    <Text style={s.itemLabel}>{t('transfer.fee')}</Text>
+                    <Text style={s.itemValue}>{feeText(compareQuote)}</Text>
+                  </View>
+                ) : null}
+                {compareQuote.totalWithdrawKrw != null ? (
+                  <View style={s.row}>
+                    <Text style={s.itemLabel}>{t('transfer.totalWithdraw')}</Text>
+                    <Text style={s.itemValue}>{t('money.won', { amount: fmtNumber(compareQuote.totalWithdrawKrw) })}</Text>
+                  </View>
+                ) : null}
+                {deliveryText(compareQuote.deliveryType) ? (
+                  <View style={s.row}>
+                    <Text style={s.itemLabel}>{t('transfer.compare.delivery')}</Text>
+                    <Text style={s.itemValue}>{deliveryText(compareQuote.deliveryType)}</Text>
+                  </View>
+                ) : null}
+              </>
+            ) : (
+              <Text style={s.itemLabel}>{quoteUnavailableText(compareQuote)}</Text>
+            )}
+          </View>
+        ) : null}
       </View>
 
       {/* 출금 계좌 */}
@@ -433,7 +486,8 @@ const s = StyleSheet.create({
   row: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', gap: spacing.md },
   subText: { ...typography.body, color: colors.text.sub },
 
-  recipientLeft: { flex: 1, flexDirection: 'row', alignItems: 'center', gap: spacing.md },
+  // gap: 원보다 넓은 나라 배지(Philippines)와 옆 글자 사이가 붙지 않게 spacing.lg
+  recipientLeft: { flex: 1, flexDirection: 'row', alignItems: 'center', gap: spacing.lg },
   flagCircle: {
     width: 48,
     height: 48,
@@ -443,13 +497,22 @@ const s = StyleSheet.create({
     justifyContent: 'center',
   },
   flagText: { ...typography.h3, fontFamily: fonts.medium, color: colors.primary },
-  // Figma 는 파란 배경에 검은 글자라 읽기 어려워서 primarySoft 배경 + primary 글자로 둠 (확인 필요)
-  countryBadge: {
+  // 나라 배지 자리: 원(48) 아래쪽에 걸치고, 원보다 넓은 이름(Philippines·United States)도 원 가운데 기준으로 양쪽에 퍼지게
+  // 원보다 넓은 투명 칸을 겹쳐 두고 그 안에서 가운데 정렬한다. 원 칸 폭은 48 그대로라 이름 줄이 밀리지 않는다
+  countryBadgeWrap: {
     position: 'absolute',
-    right: -spacing.xs,
-    bottom: -spacing.xs,
-    backgroundColor: colors.primarySoft,
+    top: 48 - spacing.sm,
+    left: -spacing.xxl,
+    right: -spacing.xxl,
+    alignItems: 'center',
+  },
+  // Figma 는 파란 배경에 검은 글자라 읽기 어려워서 primaryLight 배경 + primary 글자로 둠 (확인 필요).
+  // 원에 걸쳐도 비치지 않게 불투명 배경, 흰 테두리로 원과 나눈다
+  countryBadge: {
+    backgroundColor: colors.primaryLight,
     borderRadius: radius.full,
+    borderWidth: 2,
+    borderColor: colors.surface,
     paddingHorizontal: spacing.sm,
   },
   countryBadgeText: { ...typography.badge, color: colors.primary },
@@ -490,6 +553,9 @@ const s = StyleSheet.create({
   detailToggle: { flexDirection: 'row', alignItems: 'center', justifyContent: 'flex-end', gap: spacing.xs },
   detailToggleText: { ...typography.badge, fontFamily: fonts.bold, color: colors.primary },
   noticeText: { ...typography.badge, color: colors.text.sub, paddingHorizontal: spacing.xs },
+  productName: { ...typography.badge, fontFamily: fonts.bold, color: colors.primary },
+  compareCard: { marginTop: spacing.sm },
+  noShrink: { flexShrink: 0 }, // 금액은 한 줄로 두고 긴 라벨(영어)이 대신 줄바꿈되게
   errorText: { ...typography.badge, color: colors.error },
 
   accountName: { ...typography.title, color: colors.text.strong },

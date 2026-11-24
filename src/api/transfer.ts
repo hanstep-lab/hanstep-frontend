@@ -73,11 +73,38 @@ export const defaultQuoteOf = (quote: TransferQuote): RemittanceProductQuote | n
 // 기본 상품으로 이 금액을 보낼 수 있는지
 export const canSendQuote = (quote: TransferQuote) => defaultQuoteOf(quote)?.available === true;
 
+// 비교용 상품 견적: 기본 상품이 아닌 상품 하나(지금은 쏠빠른). 화면에 비교로만 보여 주고 송금은 기본 상품으로 한다.
+// 두 상품 모두 보낼 수 없는 금액이면 null (견적 아래 안내 문구가 이미 이유를 말해서 같은 말을 되풀이하지 않는다)
+export function compareQuoteOf(quote: TransferQuote): RemittanceProductQuote | null {
+  const other = quote.quotes.find((q) => q.product !== quote.defaultProduct);
+  if (!other) return null;
+  return other.available || defaultQuoteOf(quote)?.available ? other : null;
+}
+
+// 비교 상품의 받는 분 수취 예상. PHP 참고 금액이 있으면 기본 상품(receiveAmount)처럼 소수점 아래를 버린 참고값,
+// 없으면 받는 USD 금액. 둘 다 없으면 null. reference: PHP 참고값인지(라벨에 '(참고)'를 붙일지)
+export function compareReceiveOf(
+  q: RemittanceProductQuote,
+  quote: TransferQuote,
+): { text: string; reference: boolean } | null {
+  const currency = quote.receiveAmount?.currency ?? quote.appliedRate?.currency;
+  if (q.recipientAmountPhpRef != null && currency) {
+    const amount = fmtNumber(Math.floor(q.recipientAmountPhpRef));
+    return { text: i18n.t('cards.remit.receiveAmount', { amount, currency }), reference: true };
+  }
+  if (q.recipientAmountUsd != null) return { text: `US$${fmtNumber(q.recipientAmountUsd)}`, reference: false };
+  return null;
+}
+
 // 보낼 수 없는 이유 (quotes[].unavailableReason, i18n transfer.unavailable)
 type UnavailableReason = NonNullable<RemittanceProductQuote['unavailableReason']>;
 const UNAVAILABLE_REASONS: readonly UnavailableReason[] = ['AMOUNT_TOO_SMALL', 'LIMIT_EXCEEDED', 'FEE_TABLE_UNAVAILABLE'];
 const unavailableText = (r: UnavailableReason | null | undefined) =>
   r && UNAVAILABLE_REASONS.includes(r) ? i18n.t(`transfer.unavailable.${r}`) : null;
+
+// 그 상품으로 보낼 수 없는 이유 문구 (모르는 이유면 '이 금액으로는 보낼 수 없어요')
+export const quoteUnavailableText = (q: RemittanceProductQuote) =>
+  unavailableText(q.unavailableReason) || i18n.t('transfer.cannotSend');
 
 // 참고값 안내 (referenceNotice, i18n transfer.reference)
 const REFERENCE_NOTICES = ['LOCAL_PAYOUT_RATE_DIFFERS', 'PHP_REF_RATE_UNAVAILABLE'] as const;
