@@ -24,6 +24,12 @@ import { colors, fonts, radius, spacing } from '../constants/theme';
 import { confirmDialog } from '../utils/confirm';
 import { errorText } from '../utils/errorText';
 import { setAppLanguage } from '../i18n';
+import { useTranslation } from 'react-i18next';
+import Animated from 'react-native-reanimated';
+import { useOnboardingStore } from '../store/onboardingStore';
+import { countryWelcome, greetingWithName } from '../constants/countryWelcome';
+import { useSolGreeting } from '../features/welcome/useSolGreeting';
+import { firstName } from '../utils/name';
 
 const IMG = {
   sol: require('../../assets/images/sol-home/sol.png'), // 신한은행 캐릭터 쏠
@@ -73,6 +79,12 @@ export default function SolGlobalHome() {
   const [showBubble, setShowBubble] = useState(true);
   const [page, setPage] = useState(0);
   const busy = entering || resetting; // 진입·초기화가 겹치지 않게 두 버튼을 함께 막는다
+
+  // 국적별 쏠 인사 (이번 실행에서 온보딩을 마친 필리핀 사용자). 설정이 없으면 기존 홈 그대로
+  const { t } = useTranslation();
+  const profile = useOnboardingStore((s) => s.welcomeProfile);
+  const welcome = countryWelcome(profile?.nationalityCode);
+  const greet = useSolGreeting(welcome != null);
 
   // AI 버튼: 신한걸음 진입 (SOL 로그인 완료 전제, 진입 토큰으로 JWT 발급)
   const enterShinhan = async () => {
@@ -144,9 +156,11 @@ export default function SolGlobalHome() {
         </Text>
         <View style={styles.headerActions}>
           <View>
+            {/* 탭: 신한걸음 진입. 길게 누르기: 쏠 인사 다시 보기 (인사 대상일 때만) */}
             <Pressable
               style={styles.aiButton}
               onPress={enterShinhan}
+              onLongPress={welcome ? greet.play : undefined}
               disabled={busy}
               accessibilityRole="button"
               accessibilityLabel="신한걸음 AI 시작하기"
@@ -154,15 +168,36 @@ export default function SolGlobalHome() {
               {entering ? (
                 <ActivityIndicator color={colors.primary} />
               ) : (
-                <Image source={IMG.sol} style={styles.solFace} contentFit="contain" />
+                <Animated.View style={greet.solStyle}>
+                  <Image source={IMG.sol} style={styles.solFace} contentFit="contain" />
+                </Animated.View>
               )}
               <View style={styles.aiBadge}>
                 <Text style={styles.aiBadgeText}>AI</Text>
               </View>
             </Pressable>
 
-            {/* AI 안내 말풍선. X 로 닫으면 이번 실행 동안 숨김 */}
-            {showBubble ? (
+            {/* 쏠 인사 말풍선. 떠 있는 동안은 아래 AI 안내 말풍선을 숨긴다 */}
+            {greet.visible && welcome ? (
+              <Animated.View
+                style={[styles.greetWrap, greet.bubbleStyle]}
+                pointerEvents="none"
+                accessibilityLiveRegion="polite"
+              >
+                <View style={styles.greetArrowWrap}>
+                  <Image source={IMG.bubbleArrow} style={styles.bubbleArrow} />
+                </View>
+                <View style={styles.greetBubble}>
+                  <Text style={styles.greetTitle} numberOfLines={1}>
+                    {`${greetingWithName(welcome, profile ? firstName(profile.displayName) : '')} 👋`}
+                  </Text>
+                  <Text style={styles.greetLine} numberOfLines={2}>
+                    {t(`welcome.${welcome.textKey}.homeLine`)}
+                  </Text>
+                </View>
+              </Animated.View>
+            ) : /* AI 안내 말풍선. X 로 닫으면 이번 실행 동안 숨김 */
+            showBubble ? (
               <View style={styles.bubbleWrap} pointerEvents="box-none">
                 <View style={styles.bubbleArrowWrap}>
                   <Image source={IMG.bubbleArrow} style={styles.bubbleArrow} />
@@ -222,10 +257,10 @@ export default function SolGlobalHome() {
 
       {/* SOL 앱 탭 모양 (화면 전환 없음: 홈은 현재 화면, 나머지는 모양만) */}
       <View style={[styles.tabBar, { paddingBottom: Math.max(insets.bottom, spacing.md) }]}>
-        {TABS.map((t) => (
-          <View key={t.label} style={styles.tab}>
-            <Image source={t.icon} style={styles.icon26} />
-            <Text style={[styles.tabLabel, t.on ? styles.tabLabelOn : styles.tabLabelOff]}>{t.label}</Text>
+        {TABS.map((tab) => (
+          <View key={tab.label} style={styles.tab}>
+            <Image source={tab.icon} style={styles.icon26} />
+            <Text style={[styles.tabLabel, tab.on ? styles.tabLabelOn : styles.tabLabelOff]}>{tab.label}</Text>
           </View>
         ))}
       </View>
@@ -296,6 +331,25 @@ const styles = StyleSheet.create({
   bubbleText: { fontFamily: fonts.medium, fontSize: 11, color: colors.text.inverse },
   bubbleClose: { position: 'absolute', right: 6, top: 5 },
   bubbleCloseIcon: { width: 7, height: 7 },
+
+  // 쏠 인사 말풍선. 두 줄이라 AI 안내 말풍선보다 넓고, 오른쪽 화면 밖으로 넘치지 않게 왼쪽으로 당겨 둔다
+  greetWrap: {
+    position: 'absolute',
+    left: -48,
+    top: 43,
+    width: 214,
+  },
+  greetArrowWrap: { paddingLeft: 15 + 48, marginBottom: -1 },
+  greetBubble: {
+    backgroundColor: colors.primary,
+    borderRadius: 9,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    gap: 2,
+    boxShadow: '0px 4px 5px rgba(0, 70, 255, 0.25)',
+  },
+  greetTitle: { fontFamily: fonts.bold, fontSize: 13, color: colors.text.inverse },
+  greetLine: { fontFamily: fonts.medium, fontSize: 11, color: colors.onColor.sub },
 
   icon10: { width: 10, height: 10 },
   icon20: { width: 20, height: 20 },

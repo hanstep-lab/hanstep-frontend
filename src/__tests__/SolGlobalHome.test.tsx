@@ -9,6 +9,11 @@ import { useToastStore } from '../store/toastStore';
 
 jest.mock('react-native-safe-area-context', () => require('react-native-safe-area-context/jest/mock').default);
 jest.mock('expo-router', () => ({ router: { push: jest.fn(), replace: jest.fn() } }));
+// 쏠 인사 연출(reanimated)은 네이티브 모듈이 필요해 테스트에서 뺀다 (이 파일은 데모 초기화만 검사)
+jest.mock('react-native-reanimated', () => ({ __esModule: true, default: { View: require('react-native').View } }));
+jest.mock('../features/welcome/useSolGreeting', () => ({
+  useSolGreeting: () => ({ visible: false, play: jest.fn(), solStyle: {}, bubbleStyle: {} }),
+}));
 jest.mock('../features/demo/demoReset', () => ({ resetDemoAccount: jest.fn() }));
 jest.mock('../utils/confirm', () => ({ confirmDialog: jest.fn() }));
 
