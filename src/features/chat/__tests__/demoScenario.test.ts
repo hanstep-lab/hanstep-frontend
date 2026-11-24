@@ -1,4 +1,10 @@
-import { remainingScenario, SCENARIO_KEYS, SCENARIO_REPLY_KEYS, type ScenarioQuestion } from '../demoScenario';
+import {
+  remainingScenario,
+  SCENARIO_KEYS,
+  SCENARIO_REPLY_KEYS,
+  showDemoScenario,
+  type ScenarioQuestion,
+} from '../demoScenario';
 import ko from '../../../i18n/ko';
 import en from '../../../i18n/en';
 
@@ -94,5 +100,12 @@ describe('시나리오 문구 (ko·en)', () => {
   ])('%s: 재질의 답 키가 모두 있고 비어 있지 않다', (_lang, replies) => {
     expect(Object.keys(replies)).toEqual([...SCENARIO_REPLY_KEYS]);
     for (const key of SCENARIO_REPLY_KEYS) expect((replies as Record<string, string>)[key].trim()).not.toBe('');
+  });
+});
+
+describe('showDemoScenario (시나리오 추천을 보여 줄 화면 언어)', () => {
+  it('한국어 화면에서는 숨기고(#90), 영어 화면에서는 보여 준다', () => {
+    expect(showDemoScenario('ko')).toBe(false);
+    expect(showDemoScenario('en')).toBe(true);
   });
 });

@@ -7,6 +7,9 @@ export const SCENARIO_KEYS = ['s1', 's2', 's3', 's4'] as const;
 // 비자 재질의 답("왜 아직 신청할 수 없나요?")은 넣지 않는다 (발표자가 직접 입력)
 export const SCENARIO_REPLY_KEYS = ['s1'] as const;
 
+// 시연은 영어 화면으로 한다. 한국어 화면에서는 시나리오 추천(첫 화면 목록·대화 중 칩)을 보여 주지 않는다(#90)
+export const showDemoScenario = (language: string) => language !== 'ko';
+
 export type ScenarioKey = (typeof SCENARIO_KEYS)[number];
 export type ScenarioReplyKey = (typeof SCENARIO_REPLY_KEYS)[number];
 
