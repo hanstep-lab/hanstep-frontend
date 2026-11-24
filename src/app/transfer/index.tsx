@@ -412,9 +412,6 @@ export default function TransferScreen() {
             ) : (
               <Text style={s.itemLabel}>{quoteUnavailableText(compareQuote)}</Text>
             )}
-            <Text style={s.compareNote}>
-              {t('transfer.compare.note', { product: productLabel(quote.defaultProduct) })}
-            </Text>
           </View>
         ) : null}
       </View>
@@ -559,7 +556,6 @@ const s = StyleSheet.create({
   productName: { ...typography.badge, fontFamily: fonts.bold, color: colors.primary },
   compareCard: { marginTop: spacing.sm },
   noShrink: { flexShrink: 0 }, // 금액은 한 줄로 두고 긴 라벨(영어)이 대신 줄바꿈되게
-  compareNote: { ...typography.badge, color: colors.text.sub },
   errorText: { ...typography.badge, color: colors.error },
 
   accountName: { ...typography.title, color: colors.text.strong },

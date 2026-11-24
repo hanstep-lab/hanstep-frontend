@@ -353,7 +353,6 @@ const ko = {
     compare: {
       title: '{{product}}으로 보내면',
       delivery: '받는 방법',
-      note: '비교용 예상 금액이에요. 송금은 {{product}}으로 진행돼요.',
     },
     account: '출금 계좌',
     foreignerCheck: '외국인 해외송금 확인',
