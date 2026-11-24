@@ -85,7 +85,7 @@ const en: Translation = {
     landingAsk: 'What would you like to know about life and money in Korea?',
     landingSub: 'Try one of these questions',
     landing: {
-      s1: 'send 700000WON to mom',
+      s1: 'Send 700000won',
       s2: 'After sending money, how can I save the rest?',
       s3: "I want to move out of the company dormitory, but I don't have enough for the deposit. Banks say I have no credit history. Can I still get a loan?",
       s4: 'I want to stay and work in Korea long-term. Which visa should I prepare for?',
