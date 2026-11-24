@@ -36,6 +36,7 @@ import {
   SCENARIO_KEYS,
   SCENARIO_REPLY_KEYS,
   remainingScenario,
+  showDemoScenario,
   type ScenarioQuestion,
 } from '../../features/chat/demoScenario';
 import { isCreditQuestion } from '../../features/chat/creditLink';
@@ -237,7 +238,8 @@ export default function ChatScreen() {
     askedSet,
     Object.fromEntries(SCENARIO_REPLY_KEYS.map(key => [key, t(`chat.scenarioReply.${key}`)])),
   );
-  const showScenario = messages.length > 0 && scenarioLeft.length > 0;
+  // 한국어 화면에서는 시나리오 칩을 보여 주지 않는다(#90)
+  const showScenario = showDemoScenario(i18n.language) && messages.length > 0 && scenarioLeft.length > 0;
 
   return (
     <SafeAreaView style={styles.safe} edges={['top', 'bottom']}>
@@ -342,18 +344,23 @@ function LandingContent({ onSend, userName }: { onSend: (t: string) => void; use
       <Text style={landStyles.greeting}>
         {`${hello}\n${t('chat.landingAsk')}`}
       </Text>
-      <Text style={landStyles.sub}>{t('chat.landingSub')}</Text>
-      <View style={landStyles.card}>
-        {SCENARIO_KEYS.map((key, i) => (
-          <Pressable
-            key={key}
-            style={[landStyles.row, i < SCENARIO_KEYS.length - 1 && landStyles.rowBorder]}
-            onPress={() => onSend(t(`chat.landing.${key}`))}
-          >
-            <Text style={landStyles.rowText}>· {t(`chat.landing.${key}`)}</Text>
-          </Pressable>
-        ))}
-      </View>
+      {/* 시연 시나리오 질문 목록. 한국어 화면에서는 안내 문구와 함께 숨긴다(#90) */}
+      {showDemoScenario(i18n.language) && (
+        <>
+          <Text style={landStyles.sub}>{t('chat.landingSub')}</Text>
+          <View style={landStyles.card}>
+            {SCENARIO_KEYS.map((key, i) => (
+              <Pressable
+                key={key}
+                style={[landStyles.row, i < SCENARIO_KEYS.length - 1 && landStyles.rowBorder]}
+                onPress={() => onSend(t(`chat.landing.${key}`))}
+              >
+                <Text style={landStyles.rowText}>· {t(`chat.landing.${key}`)}</Text>
+              </Pressable>
+            ))}
+          </View>
+        </>
+      )}
     </View>
   );
 }
