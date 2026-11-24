@@ -75,7 +75,7 @@ export const colors = {
 
   // 국기 색 (국적별 환영 연출). assets/flags 의 SVG 와 같은 값
   flag: {
-    ph: { sun: '#FCD116', blue: '#0038A8', red: '#CE1126' },
+    ph: { sun: '#FCD116' },
   },
 };
 

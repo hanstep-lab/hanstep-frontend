@@ -11,7 +11,7 @@ export type CountryWelcome = {
   greeting: string; // 현지어 환영 인사. 화면 언어와 상관없이 같은 말이라 i18n 이 아니라 여기 둔다
   flag: number; // assets/flags 국기 이미지 (require)
   textKey: 'ph'; // i18n welcome.{textKey}.message·homeLine
-  palette: { sun: string; blue: string; red: string }; // 환영 화면 연출 색 (theme 토큰)
+  palette: { sun: string }; // 환영 화면 쏠 뒤 해 색 (theme 토큰)
 };
 
 const COUNTRY_WELCOME: Record<string, CountryWelcome> = {
