@@ -765,8 +765,8 @@ const scenarioStyles = StyleSheet.create({
   },
   list: { paddingHorizontal: spacing.lg, paddingTop: spacing.sm, gap: spacing.sm },
   chip: {
-    // 짧은 질문(1-2·2·4-2)은 다 보이고 긴 질문(3·4-1)은 말줄임. 375pt 화면에서 옆 칩이 50pt쯤 보여서 넘길 수 있는 줄 알 수 있다
-    maxWidth: 300,
+    // 짧은 질문(1·2, 영어 2번 319pt 포함)은 다 보이고 긴 질문(3·4)은 말줄임. 375pt 화면에서도 옆 칩이 20pt쯤 보여서 넘길 수 있는 줄 알 수 있다
+    maxWidth: 330,
     paddingHorizontal: spacing.md,
     paddingVertical: spacing.sm,
     borderRadius: radius.full,
