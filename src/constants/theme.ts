@@ -72,6 +72,11 @@ export const colors = {
     field: 'rgba(255, 255, 255, 0.12)',
     mrz: 'rgba(220, 220, 220, 0.5)',
   },
+
+  // 국기 색 (국적별 환영 연출). assets/flags 의 SVG 와 같은 값
+  flag: {
+    ph: { sun: '#FCD116' },
+  },
 };
 
 //폰트
