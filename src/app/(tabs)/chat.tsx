@@ -540,11 +540,11 @@ function MenuSheet({
   // Modal 은 별도 창이라 화면의 SafeAreaView 하단 여백이 안 먹는다. 시트에 시스템 내비게이션 바 높이를 더한다
   const { t } = useTranslation();
   const insets = useSafeAreaInsets();
-  // 'SOL Global로 돌아가기' 줄: 구분선 아래 빈 영역의 세로 가운데에 둔다.
-  // 영역 높이 = 예전(위 8 + 글자 줄 18 + 아래 8 + 시트 아래 4 + 시스템 내비게이션 바)의 2/3. 위아래 여백을 같게 나눈다
-  const solLine = typography.body.lineHeight;
-  const solArea = Math.round((spacing.sm * 2 + spacing.xs + insets.bottom + solLine) * (2 / 3));
-  const solPad = Math.max((solArea - solLine) / 2, spacing.sm);
+  // 'SOL Global로 돌아가기' 줄: 위아래 spacing.md, 그 아래에 시스템 내비게이션 바(갤럭시 하단 바·iPhone 홈 인디케이터)
+  // 높이를 그대로 더 띄운다(#93). 예전에는 내비게이션 바 높이까지 합쳐 2/3 로 줄여서 갤럭시 3버튼 바 뒤로 글자가 가려졌다.
+  // Modal 은 내비게이션 바 아래까지 그리게 정해 두어(statusBarTranslucent·navigationBarTranslucent) 어느 Android 에서도 같다
+  const solPadTop = spacing.md;
+  const solPadBottom = spacing.md + insets.bottom;
   // action 이 없는 메뉴는 목록에서 숨긴다(hidden). 혹시 보이더라도 눌러서 아무것도 하지 않는다
   const handleItem = (action?: ChatAction) => {
     if (!action) return;
@@ -615,7 +615,14 @@ function MenuSheet({
   }, [visible]);
 
   return (
-    <Modal visible={visible} transparent animationType="none" onRequestClose={sheet.close}>
+    <Modal
+      visible={visible}
+      transparent
+      animationType="none"
+      onRequestClose={sheet.close}
+      statusBarTranslucent
+      navigationBarTranslucent
+    >
       <View style={menuStyles.wrap}>
         <Animated.View style={[menuStyles.dim, { opacity: dimOpacity }]}>
           <Pressable style={menuStyles.dimTouch} onPress={sheet.close} />
@@ -623,7 +630,7 @@ function MenuSheet({
         <Animated.View
           style={[
             menuStyles.sheet,
-            { paddingBottom: 0, transform: [{ translateY: dragY }] }, // 아래 여백은 SOL 줄(solPad)이 맡는다
+            { paddingBottom: 0, transform: [{ translateY: dragY }] }, // 아래 여백은 SOL 줄(solPadBottom)이 맡는다
           ]}
         >
           <View {...headPan.panHandlers}>
@@ -667,7 +674,7 @@ function MenuSheet({
               </View>
             ))}
             <Pressable
-              style={[menuStyles.solRow, { paddingTop: solPad, paddingBottom: solPad }]}
+              style={[menuStyles.solRow, { paddingTop: solPadTop, paddingBottom: solPadBottom }]}
               onPress={() => {
                 onClose();
                 router.replace('/'); // SOL Global 홈(SG-000)으로
