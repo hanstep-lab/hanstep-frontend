@@ -811,7 +811,17 @@ export type ChatE74ScoreBlock = {
   isScenario: boolean;
 };
 
-// calculate_e74_score → 판정에 더 필요한 입력. question 은 받은 그대로 보여 준다
+// get_visa_roadmap → 비자 로드맵 이동 카드 (프롬프트 v4.7부터, hanstep-AI #127). 단계 내용은 비자 탭 로드맵 화면이 보여 준다.
+// 계약: hanstep-AI specs/chat/chat_blocks_v1.md 3.4절
+export type ChatVisaRoadmapLinkBlock = {
+  type: 'VISA_ROADMAP_LINK';
+  roadmapId: number; // visa_roadmaps.id. 챗봇이 만든 로드맵이 그 사용자의 최신 로드맵이다
+  stepCount: number; // 단계 수
+  applicableFrom: string | null; // 신청 가능일 YYYY-MM-DD. 판정할 수 없으면 null
+  ruleStatus: string | null; // DRAFT·APPROVED·RETIRED. 화면에 쓰지 않는다
+};
+
+// calculate_e74_score·get_visa_roadmap → 판정에 더 필요한 입력. question 은 받은 그대로 보여 준다
 export type ChatMissingInputsBlock = {
   type: 'MISSING_INPUTS';
   fields: { field: string; question: string }[];
@@ -832,6 +842,7 @@ export type ChatBlock =
   | ChatRemittanceConfirmBlock
   | ChatFxSummaryBlock
   | ChatE74ScoreBlock
+  | ChatVisaRoadmapLinkBlock
   | ChatMissingInputsBlock
   | ChatProductRecommendBlock;
 

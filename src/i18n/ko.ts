@@ -203,6 +203,14 @@ const ko = {
       note: '입력한 정보로 계산한 참고용 모의 진단이에요. 실제 심사 결과와 다를 수 있어요.',
       visaTab: '비자 탭에서 자세히 보기',
     },
+    roadmap: {
+      title: 'E-7-4 전환 로드맵',
+      steps: '준비 단계 {{n}}개',
+      applicableFrom: '{{date}}부터 신청 가능',
+      applicableUnknown: '신청 가능일은 아직 판정할 수 없어요',
+      note: '입력한 정보로 만든 참고용 사전진단이에요. 실제 심사 결과와 다를 수 있어요.',
+      visaTab: '비자 탭에서 로드맵 보기',
+    },
     missing: {
       title: '판정에 더 필요한 정보',
       more: '외 {{n}}개',

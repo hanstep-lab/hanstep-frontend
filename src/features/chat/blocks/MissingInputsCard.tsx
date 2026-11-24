@@ -1,5 +1,5 @@
-// MISSING_INPUTS (calculate_e74_score). 판정에 더 필요한 입력을 질문 목록으로 보여 준다. 누르는 동작은 없다.
-// - question 은 받은 그대로 보여 준다 (지금은 한국어로 오지만 서버에서 고칠 예정). field 로 문구를 만들지 않는다
+// MISSING_INPUTS (calculate_e74_score·get_visa_roadmap). 판정에 더 필요한 입력을 질문 목록으로 보여 준다. 누르는 동작은 없다.
+// - question 은 받은 그대로 보여 준다 (서버가 사용자 언어로 준다: ko 한국어, 그 밖 영어). field 로 문구를 만들지 않는다
 // - 3개까지 보여 주고 나머지는 "외 N개"
 import { useTranslation } from 'react-i18next';
 import { View, Text, StyleSheet } from 'react-native';

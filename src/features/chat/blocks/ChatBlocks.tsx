@@ -7,6 +7,7 @@ import type { ChatCardBlock } from '../../../api/chat';
 import RemittanceConfirmCard from './RemittanceConfirmCard';
 import FxSummaryCard from './FxSummaryCard';
 import E74ScoreCard from './E74ScoreCard';
+import VisaRoadmapLinkCard from './VisaRoadmapLinkCard';
 import MissingInputsCard from './MissingInputsCard';
 import ProductRecommendCard from './ProductRecommendCard';
 import type { CardLanguage } from './productLines';
@@ -32,6 +33,8 @@ export default function ChatBlocks({ blocks, userName, language, onAction, onOpe
             return <FxSummaryCard key={key} block={b} onAction={onAction} />;
           case 'E74_SCORE_CARD':
             return <E74ScoreCard key={key} block={b} onAction={onAction} />;
+          case 'VISA_ROADMAP_LINK':
+            return <VisaRoadmapLinkCard key={key} block={b} onAction={onAction} />;
           case 'MISSING_INPUTS':
             return <MissingInputsCard key={key} block={b} />;
           case 'PRODUCT_RECOMMEND_CARD':

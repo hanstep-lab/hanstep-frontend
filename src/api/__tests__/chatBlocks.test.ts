@@ -29,6 +29,13 @@ describe('parseBlocks', () => {
     g.__DEV__ = false;
     expect(parseBlocks([fx, { type: 'NEW_CARD' }, product])).toEqual([fx, product]);
   });
+
+  it('비자 로드맵 카드(VISA_ROADMAP_LINK, 프롬프트 v4.7)는 운영 빌드에서도 남는다', () => {
+    g.__DEV__ = false;
+    const roadmap = { type: 'VISA_ROADMAP_LINK', roadmapId: 1, stepCount: 3, applicableFrom: null, ruleStatus: null };
+    const missing = { type: 'MISSING_INPUTS', fields: [{ field: 'a', question: 'q' }] };
+    expect(parseBlocks([roadmap, missing])).toEqual([roadmap, missing]);
+  });
 });
 
 describe('blockSummary ([chat.done] 개발 로그)', () => {
