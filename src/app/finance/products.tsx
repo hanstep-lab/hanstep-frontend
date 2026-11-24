@@ -146,7 +146,8 @@ export default function ProductsScreen() {
           </View>
 
           <View style={s.actions}>
-            <Button title={t('products.ask')} onPress={() => router.push('/(tabs)/chat' as Href)} />
+            {/* 기존 챗봇으로 돌아간다 (push 로 새로 열면 대화·세션이 처음부터 시작됨) */}
+            <Button title={t('products.ask')} onPress={() => router.dismissTo('/(tabs)/chat' as Href)} />
           </View>
         </FadeIn>
       )}
