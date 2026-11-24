@@ -37,7 +37,7 @@ describe('remainingScenario (대화 중 시나리오 칩)', () => {
     const asked = new Set([en.chat.landing.s1]);
     expect(remainingScenario(EN, asked)[0]).toEqual({
       key: 's2',
-      text: 'After sending money, how can I save the rest?',
+      text: 'I have some money left every month after sending money home. How should I save it?',
     });
   });
 });
