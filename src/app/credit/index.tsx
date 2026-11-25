@@ -245,8 +245,6 @@ export default function AltCreditScreen() {
             ))}
           </View>
         )}
-
-        {band && <Text style={s.caption}>{T.bandNotice}</Text>}
       </View>
 
       {/* 진단 근거 */}
