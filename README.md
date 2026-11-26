@@ -12,12 +12,32 @@
 
 서비스 소개, 전체 아키텍처, 팀 소개는 [조직 프로필](https://github.com/hanstep-lab)에 있습니다.
 
-<p align="center">
-  <img src="docs/screenshots/sol-home.png" width="190" alt="SOL Global 홈">
-  <img src="docs/screenshots/chat-home.png" width="190" alt="AI 채팅">
-  <img src="docs/screenshots/visa-roadmap.png" width="190" alt="체류자격 전환 로드맵">
-  <img src="docs/screenshots/credit.png" width="190" alt="대안신용 사전진단">
-</p>
+<br/>
+<hr/>
+<div align="center">
+
+<h3>금융의 첫걸음부터 성장의 다음 걸음까지</h3>
+
+국내 거주 외국인을 위한 AI 금융 성장 지원 플랫폼 <b>신한걸음</b>의 모바일 앱
+
+![React Native](https://img.shields.io/badge/React%20Native-61DAFB?style=flat&logo=react&logoColor=black)
+![Expo](https://img.shields.io/badge/Expo-000020?style=flat&logo=expo&logoColor=white)
+![TypeScript](https://img.shields.io/badge/TypeScript-3178C6?style=flat&logo=typescript&logoColor=white)
+
+<br>
+
+<img width="190" alt="SOL Global 홈" src="https://github.com/user-attachments/assets/85e1cd38-6f00-41c4-83be-caa9e477c416" />
+&nbsp;&nbsp;
+<img width="190" alt="AI 채팅" src="https://github.com/user-attachments/assets/b4528ac0-e031-4139-b187-b2e18b87f64d" />
+&nbsp;&nbsp;
+<img width="190" alt="해외송금" src="https://github.com/user-attachments/assets/089b2ea9-ad29-4643-917d-e7052a9a8a06" />
+&nbsp;&nbsp;
+<img width="190" alt="대안신용 사전진단" src="https://github.com/user-attachments/assets/6e8f7a62-701a-4b96-a146-166ef8b4fa00" />
+
+<sub>SOL Global 홈 &nbsp;·&nbsp; AI 채팅 &nbsp;·&nbsp; 해외송금 &nbsp;·&nbsp; 대안신용 사전진단</sub>
+</div>
+
+<br>
 
 ## 사용 시나리오
 
@@ -52,7 +72,7 @@ SOL Global 홈의 AI 버튼으로 들어와 언어 선택 → 외국인등록증
 
 | 국적별 환영 | 채팅 첫 화면 |
 | :---: | :---: |
-| <img width="180" alt="국적별 환영" src="https://github.com/user-attachments/assets/83120f7e-2004-40af-84b7-e8c2a8ded4df" /> | <img width="180" alt="채팅 첫 화면" src="https://github.com/user-attachments/assets/3992a42b-3986-4473-bf38-1f5d141834a6" /> |
+| <img width="180" alt="국적별 환영" src="https://github.com/user-attachments/assets/83120f7e-2004-40af-84b7-e8c2a8ded4df" /> | <img width="180" alt="AI 채팅" src="https://github.com/user-attachments/assets/b4528ac0-e031-4139-b187-b2e18b87f64d" /> |
 | `/welcome` | `/chat` |
 
 ### 송금과 환율
